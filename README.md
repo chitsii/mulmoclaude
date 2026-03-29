@@ -1,6 +1,6 @@
 # MulmoClaude
 
-Experience GUI-chat! You chat with Claude, and it responds not just with text but with interactive visual tools — documents, spreadsheets, mind maps, images, forms, 3D scenes, piano, and more.
+Experience GUI-chat! You chat with Claude Code, and it responds not just with text but with interactive visual tools — documents, spreadsheets, mind maps, images, forms, 3D scenes, piano, and more.
 
 ## Installation
 
