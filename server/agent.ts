@@ -13,7 +13,14 @@ export type AgentEvent =
   | { type: "error"; message: string };
 
 // Plugin names that have a corresponding MCP tool definition in mcp-server.ts
-const MCP_PLUGINS = new Set(["manageTodoList", "switchRole"]);
+const MCP_PLUGINS = new Set([
+  "manageTodoList",
+  "presentDocument",
+  "presentSpreadsheet",
+  "createMindMap",
+  "generateImage",
+  "switchRole",
+]);
 
 export async function* runAgent(
   message: string,

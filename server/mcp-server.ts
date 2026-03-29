@@ -53,6 +53,152 @@ const ALL_TOOLS: Record<string, ToolDef> = {
     },
     endpoint: "/api/todos",
   },
+  presentDocument: {
+    name: "presentDocument",
+    description: "Display a document in markdown format.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Title for the document" },
+        markdown: {
+          type: "string",
+          description: "The markdown content to display.",
+        },
+      },
+      required: ["title", "markdown"],
+    },
+    endpoint: "/api/present-document",
+  },
+  presentSpreadsheet: {
+    name: "presentSpreadsheet",
+    description:
+      "Display an Excel-like spreadsheet with formulas and calculations.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Title for the spreadsheet" },
+        sheets: {
+          type: "array",
+          description:
+            "Sheets to render. Each has a name and 2D array of cells.",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              data: {
+                type: "array",
+                items: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      v: {
+                        oneOf: [{ type: "string" }, { type: "number" }],
+                        description:
+                          "Cell value or formula (string starting with '=')",
+                      },
+                      f: {
+                        type: "string",
+                        description:
+                          "Format code, e.g. '$#,##0.00', '#,##0', '0.00%', 'MM/DD/YYYY'",
+                      },
+                    },
+                    required: ["v"],
+                  },
+                },
+              },
+            },
+            required: ["name", "data"],
+          },
+        },
+      },
+      required: ["title", "sheets"],
+    },
+    endpoint: "/api/present-spreadsheet",
+  },
+  createMindMap: {
+    name: "createMindMap",
+    description:
+      "Create or update an interactive mind map to visualize ideas and their relationships.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: [
+            "create",
+            "add_node",
+            "delete_node",
+            "connect",
+            "update",
+            "rebalance",
+          ],
+          description:
+            "Action: create (new map), add_node, delete_node, connect (link two nodes), update, rebalance (recalculate layout)",
+        },
+        title: {
+          type: "string",
+          description: "Title of the mind map (required for create)",
+        },
+        centralIdea: {
+          type: "string",
+          description: "Central concept (required for create)",
+        },
+        ideas: {
+          type: "array",
+          items: { type: "string" },
+          description: "Initial branch ideas (for create)",
+        },
+        parentNodeId: {
+          type: "string",
+          description: "Parent node ID (for add_node)",
+        },
+        newIdea: {
+          type: "string",
+          description: "New idea text (for add_node)",
+        },
+        nodeIdToDelete: {
+          type: "string",
+          description: "Node ID to delete (for delete_node)",
+        },
+        fromNodeId: {
+          type: "string",
+          description: "Source node ID (for connect)",
+        },
+        toNodeId: {
+          type: "string",
+          description: "Target node ID (for connect)",
+        },
+        connectionLabel: {
+          type: "string",
+          description: "Optional connection label",
+        },
+        existingMap: {
+          type: "object",
+          description:
+            "Current mind map state (for update/add_node/connect/rebalance)",
+        },
+      },
+      required: ["action"],
+    },
+    endpoint: "/api/mindmap",
+  },
+  generateImage: {
+    name: "generateImage",
+    description:
+      "Generate an image based on the prompt and display it. Be descriptive and specify concrete details in the prompt. Each call generates one image.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: "A detailed prompt describing the image to generate",
+        },
+      },
+      required: ["prompt"],
+    },
+    endpoint: "/api/generate-image",
+  },
   switchRole: {
     name: "switchRole",
     description:

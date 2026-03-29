@@ -38,10 +38,16 @@ router.get("/sessions", async (_req: Request, res: Response) => {
           }
         }),
       )
-    ).filter(Boolean) as { id: string; roleId: string; startedAt: string; preview: string }[];
+    ).filter(Boolean) as {
+      id: string;
+      roleId: string;
+      startedAt: string;
+      preview: string;
+    }[];
 
     sessions.sort(
-      (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+      (a, b) =>
+        new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
     );
     res.json(sessions);
   } catch {

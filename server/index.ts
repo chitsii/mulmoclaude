@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import path from "path";
@@ -5,6 +6,8 @@ import { fileURLToPath } from "url";
 import agentRoutes from "./routes/agent.js";
 import todosRoutes from "./routes/todos.js";
 import sessionsRoutes from "./routes/sessions.js";
+import pluginsRoutes from "./routes/plugins.js";
+import imageRoutes from "./routes/image.js";
 import { initWorkspace } from "./workspace.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,12 +23,14 @@ app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
 app.get("/api/health", (_req: Request, res: Response) => {
-  res.json({ status: "OK" });
+  res.json({ status: "OK", geminiAvailable: !!process.env.GEMINI_API_KEY });
 });
 
 app.use("/api", agentRoutes);
 app.use("/api", todosRoutes);
 app.use("/api", sessionsRoutes);
+app.use("/api", pluginsRoutes);
+app.use("/api", imageRoutes);
 
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../client")));

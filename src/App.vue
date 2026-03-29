@@ -2,7 +2,9 @@
   <div class="flex h-screen bg-gray-900 text-white">
     <!-- Sidebar -->
     <div class="w-80 flex-shrink-0 border-r border-gray-700 flex flex-col">
-      <div class="p-4 border-b border-gray-700 flex items-center justify-between">
+      <div
+        class="p-4 border-b border-gray-700 flex items-center justify-between"
+      >
         <div>
           <h1 class="text-lg font-semibold">MulmoClaude</h1>
           <p class="text-sm text-gray-400">{{ currentRole.name }}</p>
@@ -39,9 +41,21 @@
         </select>
       </div>
 
+      <!-- Gemini API key warning -->
+      <div
+        v-if="!geminiAvailable && needsGemini(currentRoleId)"
+        class="mx-4 mb-2 rounded border border-yellow-600 bg-yellow-900/30 p-3 text-xs text-yellow-300"
+      >
+        <span class="material-icons text-xs align-middle mr-1">warning</span>
+        Image generation requires <code class="font-mono">GEMINI_API_KEY</code>.
+        Add it to <code class="font-mono">.env</code> and restart the app.
+      </div>
+
       <!-- Session history panel -->
       <div v-if="showHistory" class="flex-1 overflow-y-auto p-4 space-y-2">
-        <p v-if="sessions.length === 0" class="text-xs text-gray-500">No sessions yet.</p>
+        <p v-if="sessions.length === 0" class="text-xs text-gray-500">
+          No sessions yet.
+        </p>
         <div
           v-for="session in sessions"
           :key="session.id"
@@ -49,11 +63,15 @@
           @click="loadSession(session.id)"
         >
           <div class="flex items-center gap-1 text-xs text-gray-400 mb-1">
-            <span class="material-icons text-xs">{{ roleIcon(session.roleId) }}</span>
+            <span class="material-icons text-xs">{{
+              roleIcon(session.roleId)
+            }}</span>
             <span>{{ roleName(session.roleId) }}</span>
             <span class="ml-auto">{{ formatDate(session.startedAt) }}</span>
           </div>
-          <p class="text-gray-300 truncate">{{ session.preview || "(no messages)" }}</p>
+          <p class="text-gray-300 truncate">
+            {{ session.preview || "(no messages)" }}
+          </p>
         </div>
       </div>
 
@@ -86,12 +104,17 @@
             v-model="userInput"
             type="text"
             placeholder="Type a task..."
-            class="flex-1 bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm"
+            class="flex-1 bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="
+              isRunning || (!geminiAvailable && needsGemini(currentRoleId))
+            "
             @keydown.enter="sendMessage()"
           />
           <button
             class="bg-blue-600 hover:bg-blue-700 rounded px-3 py-2 text-sm"
-            :disabled="isRunning"
+            :disabled="
+              isRunning || (!geminiAvailable && needsGemini(currentRoleId))
+            "
             @click="sendMessage()"
           >
             <span class="material-icons text-base">send</span>
@@ -153,6 +176,7 @@ const selectedResultUuid = ref<string | null>(null);
 
 const showHistory = ref(false);
 const sessions = ref<SessionSummary[]>([]);
+const geminiAvailable = ref(true);
 
 const selectedResult = computed(
   () =>
@@ -169,8 +193,11 @@ function roleName(roleId: string): string {
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
-    " " + d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return (
+    d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+    " " +
+    d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+  );
 }
 
 function makeTextResult(
@@ -195,11 +222,27 @@ function handleUpdateResult(updatedResult: ToolResultComplete) {
   }
 }
 
+const GEMINI_PLUGINS = new Set(["generateImage", "presentDocument"]);
+const needsGemini = (roleId: string) =>
+  (ROLES.find((r) => r.id === roleId)?.availablePlugins ?? []).some((p) =>
+    GEMINI_PLUGINS.has(p),
+  );
+
 function onRoleChange() {
   toolResults.value = [];
   selectedResultUuid.value = null;
   statusMessage.value = "";
   chatSessionId.value = uuidv4();
+}
+
+async function fetchHealth() {
+  try {
+    const res = await fetch("/api/health");
+    const data = await res.json();
+    geminiAvailable.value = !!data.geminiAvailable;
+  } catch {
+    geminiAvailable.value = false;
+  }
 }
 
 async function fetchSessions() {
@@ -230,16 +273,22 @@ async function loadSession(id: string) {
     if (entry.source === "user" && entry.type === "text") {
       toolResults.value.push(makeTextResult(entry.message as string, "user"));
     } else if (entry.source === "assistant" && entry.type === "text") {
-      toolResults.value.push(makeTextResult(entry.message as string, "assistant"));
+      toolResults.value.push(
+        makeTextResult(entry.message as string, "assistant"),
+      );
     } else if (entry.source === "tool" && entry.type === "tool_result") {
       toolResults.value.push(entry.result as ToolResultComplete);
     }
   }
 
   // Select last non-text result, or last result
-  const lastTool = [...toolResults.value].reverse().find((r) => r.toolName !== "text-response");
+  const lastTool = [...toolResults.value]
+    .reverse()
+    .find((r) => r.toolName !== "text-response");
   selectedResultUuid.value =
-    lastTool?.uuid ?? toolResults.value[toolResults.value.length - 1]?.uuid ?? null;
+    lastTool?.uuid ??
+    toolResults.value[toolResults.value.length - 1]?.uuid ??
+    null;
 
   showHistory.value = false;
 }
@@ -266,15 +315,24 @@ async function sendMessage(text?: string) {
 
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
+    let sseBuffer = "";
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      const lines = decoder.decode(value).split("\n");
+      sseBuffer += decoder.decode(value, { stream: true });
+      const lines = sseBuffer.split("\n");
+      sseBuffer = lines.pop() ?? "";
+
       for (const line of lines) {
         if (!line.startsWith("data: ")) continue;
-        const data = JSON.parse(line.slice(6));
+        let data: Record<string, unknown>;
+        try {
+          data = JSON.parse(line.slice(6));
+        } catch {
+          continue;
+        }
 
         if (data.type === "status") {
           statusMessage.value = data.message;
@@ -305,5 +363,8 @@ async function sendMessage(text?: string) {
   }
 }
 
-onMounted(fetchSessions);
+onMounted(() => {
+  fetchHealth();
+  fetchSessions();
+});
 </script>

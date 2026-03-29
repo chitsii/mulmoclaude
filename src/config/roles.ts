@@ -16,14 +16,6 @@ export const ROLES: Role[] = [
     availablePlugins: ["manageTodoList", "switchRole"],
   },
   {
-    id: "organizer",
-    name: "Organizer",
-    icon: "check_circle",
-    prompt:
-      "You are a personal productivity assistant. Help the user manage their todos, calendar, and contacts stored in the workspace. Use the todo, calendar, and contacts tools to display and update data visually.",
-    availablePlugins: ["manageTodoList", "calendar", "contacts", "switchRole"],
-  },
-  {
     id: "office",
     name: "Office",
     icon: "business_center",
@@ -31,8 +23,7 @@ export const ROLES: Role[] = [
       "You are a professional office assistant. Create and edit documents, spreadsheets, and presentations. Read existing files in the workspace for context.",
     availablePlugins: [
       "presentDocument",
-      "spreadsheet",
-      "showPresentation",
+      "presentSpreadsheet",
       "generateImage",
       "switchRole",
     ],
@@ -45,8 +36,8 @@ export const ROLES: Role[] = [
       "You are a creative brainstorming facilitator. Help visualize and explore ideas using mind maps, images, and documents. Read workspace files for context when relevant.",
     availablePlugins: [
       "createMindMap",
-      "generateImage",
       "presentDocument",
+      "generateImage",
       "switchRole",
     ],
   },
