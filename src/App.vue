@@ -133,16 +133,18 @@
     </div>
 
     <!-- Canvas -->
-    <div class="flex-1 overflow-auto p-6 bg-white text-gray-900">
-      <div v-if="selectedResult">
-        <component
-          :is="getPlugin(selectedResult.toolName)?.viewComponent"
-          v-if="getPlugin(selectedResult.toolName)?.viewComponent"
-          :selected-result="selectedResult"
-          :send-text-message="sendMessage"
-          @update-result="handleUpdateResult"
-        />
-        <pre v-else class="text-sm text-gray-300 whitespace-pre-wrap">{{
+    <div class="flex-1 overflow-hidden bg-white text-gray-900">
+      <component
+        v-if="
+          selectedResult && getPlugin(selectedResult.toolName)?.viewComponent
+        "
+        :is="getPlugin(selectedResult.toolName)?.viewComponent"
+        :selected-result="selectedResult"
+        :send-text-message="sendMessage"
+        @update-result="handleUpdateResult"
+      />
+      <div v-else-if="selectedResult" class="h-full overflow-auto p-6">
+        <pre class="text-sm text-gray-300 whitespace-pre-wrap">{{
           JSON.stringify(selectedResult, null, 2)
         }}</pre>
       </div>
@@ -349,16 +351,18 @@ async function sendMessage(text?: string) {
         }
 
         if (data.type === "status") {
-          statusMessage.value = data.message;
+          statusMessage.value = data.message as string;
         } else if (data.type === "switch_role") {
           setTimeout(() => {
-            currentRoleId.value = data.roleId;
+            currentRoleId.value = data.roleId as string;
             onRoleChange();
           }, 0);
         } else if (data.type === "text") {
-          toolResults.value.push(makeTextResult(data.message, "assistant"));
+          toolResults.value.push(
+            makeTextResult(data.message as string, "assistant"),
+          );
         } else if (data.type === "tool_result") {
-          const result: ToolResultComplete = data.result;
+          const result: ToolResultComplete = data.result as ToolResultComplete;
           const existing = toolResults.value.findIndex(
             (r) => r.uuid === result.uuid,
           );
