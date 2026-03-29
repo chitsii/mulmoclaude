@@ -68,6 +68,7 @@
           v-if="getPlugin(selectedResult.toolName)?.viewComponent"
           :selected-result="selectedResult"
           :send-text-message="sendMessage"
+          @update-result="handleUpdateResult"
         />
         <pre v-else class="text-sm text-gray-300 whitespace-pre-wrap">{{ JSON.stringify(selectedResult, null, 2) }}</pre>
       </div>
@@ -107,6 +108,13 @@ function makeTextResult(text: string, role: "user" | "assistant"): ToolResultCom
     title: role === "user" ? "You" : "Assistant",
     data: { text, role, transportKind: "text-rest" },
   } as ToolResultComplete;
+}
+
+function handleUpdateResult(updatedResult: ToolResultComplete) {
+  const index = toolResults.value.findIndex(r => r.uuid === updatedResult.uuid);
+  if (index !== -1) {
+    Object.assign(toolResults.value[index], updatedResult);
+  }
 }
 
 function onRoleChange() {
