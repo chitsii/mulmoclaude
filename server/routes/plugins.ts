@@ -4,16 +4,61 @@ import { executeSpreadsheet } from "@gui-chat-plugin/spreadsheet";
 import { executeQuiz } from "@mulmochat-plugin/quiz";
 import { executeForm } from "@mulmochat-plugin/form";
 import { executeOpenCanvas } from "@gui-chat-plugin/canvas";
+import { GoogleGenAI } from "@google/genai";
 
 const router = Router();
 
-// presentDocument — just formats the markdown data; image generation not supported
-router.post("/present-document", (req: Request, res: Response) => {
+const IMAGE_PLACEHOLDER = /!\[([^\]]+)\]\(\/?__too_be_replaced_image_path__\)/g;
+
+async function generateInlineImage(prompt: string): Promise<string | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-image",
+      contents: [{ text: prompt }],
+    });
+    const parts = response.candidates?.[0]?.content?.parts ?? [];
+    for (const part of parts) {
+      if (part.inlineData?.data) {
+        return `data:image/png;base64,${part.inlineData.data}`;
+      }
+    }
+  } catch {
+    // leave placeholder if generation fails
+  }
+  return null;
+}
+
+async function fillImagePlaceholders(markdown: string): Promise<string> {
+  if (!process.env.GEMINI_API_KEY) return markdown;
+  const matches = [...markdown.matchAll(IMAGE_PLACEHOLDER)];
+  if (matches.length === 0) return markdown;
+
+  const results = await Promise.all(
+    matches.map(async (m) => ({
+      full: m[0],
+      prompt: m[1],
+      url: await generateInlineImage(m[1]),
+    })),
+  );
+
+  let filled = markdown;
+  for (const { full, prompt, url } of results) {
+    if (url) filled = filled.replace(full, `![${prompt}](${url})`);
+  }
+  return filled;
+}
+
+// presentDocument — fills image placeholders via Gemini if API key is available
+router.post("/present-document", async (req: Request, res: Response) => {
   const { title, markdown } = req.body as { title: string; markdown: string };
+  const filledMarkdown = await fillImagePlaceholders(markdown);
   res.json({
     message: `Document "${title}" is ready.`,
     title,
-    data: { markdown },
+    data: { markdown: filledMarkdown },
   });
 });
 
