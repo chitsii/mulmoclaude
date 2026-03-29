@@ -103,8 +103,26 @@
         </div>
       </div>
 
+      <!-- Sample queries -->
+      <div
+        v-if="showQueries"
+        class="px-4 pt-3 flex flex-wrap gap-2 border-t border-gray-200"
+      >
+        <button
+          v-for="query in currentRole.queries"
+          :key="query"
+          class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full px-3 py-1 border border-gray-300 transition-colors"
+          @click="sendMessage(query)"
+        >
+          {{ query }}
+        </button>
+      </div>
+
       <!-- Text input -->
-      <div class="p-4 border-t border-gray-200">
+      <div
+        class="p-4 border-t border-gray-200"
+        :class="{ 'border-t-0': showQueries }"
+      >
         <div class="flex gap-2">
           <input
             v-model="userInput"
@@ -189,6 +207,13 @@ const geminiAvailable = ref(true);
 const selectedResult = computed(
   () =>
     toolResults.value.find((r) => r.uuid === selectedResultUuid.value) ?? null,
+);
+
+const showQueries = computed(
+  () =>
+    !!currentRole.value.queries?.length &&
+    !isRunning.value &&
+    toolResults.value.length < 4,
 );
 
 function roleIcon(roleId: string): string {

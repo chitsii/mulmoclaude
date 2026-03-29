@@ -4,6 +4,7 @@ export interface Role {
   icon: string;
   prompt: string;
   availablePlugins: string[];
+  queries?: string[];
 }
 
 export const ROLES: Role[] = [
@@ -14,6 +15,11 @@ export const ROLES: Role[] = [
     prompt:
       "You are a helpful assistant with access to the user's workspace. Help with tasks, answer questions, and use available tools when appropriate.",
     availablePlugins: ["manageTodoList", "switchRole"],
+    queries: [
+      "Show my todo list",
+      "Add 'Add GEMINI_API_KEY in .env file' to the todo list",
+      "Remove completed items froom the todo list",
+    ],
   },
   {
     id: "office",
@@ -27,6 +33,7 @@ export const ROLES: Role[] = [
       "generateImage",
       "switchRole",
     ],
+    queries: [],
   },
   {
     id: "brainstorm",
@@ -40,6 +47,9 @@ export const ROLES: Role[] = [
       "generateImage",
       "browse",
       "switchRole",
+    ],
+    queries: [
+      "Create a mind map that explains the semiconductor production process.",
     ],
   },
   {
@@ -85,6 +95,7 @@ export const ROLES: Role[] = [
       "generateImage",
       "switchRole",
     ],
+    queries: ["Give me the recipe of omelette"],
   },
   {
     id: "artist",
@@ -98,6 +109,7 @@ export const ROLES: Role[] = [
       "openCanvas",
       "switchRole",
     ],
+    queries: ["Open canvas", "Turn this drawing into Ghibli style image"],
   },
   {
     id: "3dModeler",
@@ -109,6 +121,7 @@ export const ROLES: Role[] = [
       "When users request 3D visualizations, diagrams, models, or spatial representations, immediately use the present3d tool. Create clear, visually appealing 3D content that effectively communicates the concept. Explain your design choices and help users understand the 3D structure.\n\n" +
       "Remember: ShapeScript only accepts literal numbers, not expressions. Use for-loops for circular patterns, and write separate objects for different positions. Always strive for clarity and visual impact in your 3D creations.",
     availablePlugins: ["present3d", "switchRole"],
+    queries: [],
   },
   {
     id: "tourPlanner",
@@ -145,6 +158,7 @@ export const ROLES: Role[] = [
       "browse",
       "switchRole",
     ],
+    queries: ["I want to go to Paris"],
   },
   {
     id: "receptionist",
@@ -182,6 +196,7 @@ export const ROLES: Role[] = [
       "camera",
       "switchRole",
     ],
+    queries: ["Hi"],
   },
   {
     id: "dataAnalyzer",
@@ -190,6 +205,9 @@ export const ROLES: Role[] = [
     prompt:
       "You are a data analysis assistant. Collect data requirements from the user using presentForm, then analyze and present results as spreadsheets using presentSpreadsheet. Use formulas and formatting to make data clear and insightful.",
     availablePlugins: ["presentForm", "presentSpreadsheet", "switchRole"],
+    queries: [
+      "Show me the discount cash flow analysis of monthly income of $10,000 for two years. Make it possible to change the discount rate and monthly income.",
+    ],
   },
   {
     id: "tutor",
@@ -204,6 +222,7 @@ export const ROLES: Role[] = [
       "generateImage",
       "switchRole",
     ],
+    queries: ["I want to learn about Humpback whales"],
   },
 ];
 
