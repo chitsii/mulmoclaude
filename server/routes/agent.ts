@@ -1,4 +1,6 @@
 import { randomUUID } from "crypto";
+import { access, appendFile, mkdir, writeFile } from "fs/promises";
+import path from "path";
 import { Router, Request, Response } from "express";
 import { getRole } from "../../src/config/roles.js";
 import { runAgent } from "../agent.js";
@@ -9,17 +11,26 @@ const router = Router();
 const PORT = Number(process.env.PORT) || 3001;
 
 // Called by the MCP server to push a ToolResult into the active SSE stream
-router.post("/internal/tool-result", (req: Request, res: Response) => {
+router.post("/internal/tool-result", async (req: Request, res: Response) => {
   const { session } = req.query as { session: string };
-  const pushed = pushToSession(session, { type: "tool_result", result: req.body });
+  const pushed = await pushToSession(session, {
+    type: "tool_result",
+    result: req.body,
+  });
   res.json({ ok: pushed });
 });
 
 router.post("/agent", async (req: Request, res: Response) => {
-  const { message, roleId } = req.body as { message: string; roleId: string };
+  const { message, roleId, chatSessionId } = req.body as {
+    message: string;
+    roleId: string;
+    chatSessionId: string;
+  };
 
-  if (!message || !roleId) {
-    res.status(400).json({ error: "message and roleId are required" });
+  if (!message || !roleId || !chatSessionId) {
+    res
+      .status(400)
+      .json({ error: "message, roleId, and chatSessionId are required" });
     return;
   }
 
@@ -32,12 +43,50 @@ router.post("/agent", async (req: Request, res: Response) => {
   };
 
   const sessionId = randomUUID();
-  registerSession(sessionId, send);
+  const chatDir = path.join(workspacePath, "chat");
+  await mkdir(chatDir, { recursive: true });
+  const resultsFilePath = path.join(chatDir, `${chatSessionId}.jsonl`);
+
+  // Write metadata only on the first message of this session
+  try {
+    await access(resultsFilePath);
+  } catch {
+    const meta = {
+      type: "session_meta",
+      roleId,
+      startedAt: new Date().toISOString(),
+    };
+    await writeFile(resultsFilePath, JSON.stringify(meta) + "\n");
+  }
+
+  // Append user message for this turn
+  await appendFile(
+    resultsFilePath,
+    JSON.stringify({ source: "user", type: "text", message }) + "\n",
+  );
+
+  registerSession(sessionId, send, resultsFilePath);
   const role = getRole(roleId);
 
   try {
-    for await (const event of runAgent(message, role, workspacePath, sessionId, PORT)) {
+    for await (const event of runAgent(
+      message,
+      role,
+      workspacePath,
+      sessionId,
+      PORT,
+    )) {
       send(event);
+      if (event.type === "text") {
+        await appendFile(
+          resultsFilePath,
+          JSON.stringify({
+            source: "assistant",
+            type: "text",
+            message: event.message,
+          }) + "\n",
+        );
+      }
     }
     send({ type: "status", message: "Done" });
   } catch (err) {

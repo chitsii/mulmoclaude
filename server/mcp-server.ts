@@ -6,7 +6,9 @@
 
 const SESSION_ID = process.env.SESSION_ID ?? "";
 const PORT = process.env.PORT ?? "3001";
-const PLUGIN_NAMES = (process.env.PLUGIN_NAMES ?? "").split(",").filter(Boolean);
+const PLUGIN_NAMES = (process.env.PLUGIN_NAMES ?? "")
+  .split(",")
+  .filter(Boolean);
 const BASE_URL = `http://localhost:${PORT}`;
 
 interface ToolDef {
@@ -26,11 +28,25 @@ const ALL_TOOLS: Record<string, ToolDef> = {
       properties: {
         action: {
           type: "string",
-          enum: ["show", "add", "delete", "update", "check", "uncheck", "clear_completed"],
+          enum: [
+            "show",
+            "add",
+            "delete",
+            "update",
+            "check",
+            "uncheck",
+            "clear_completed",
+          ],
           description: "Action to perform.",
         },
-        text: { type: "string", description: "Item text or partial text to find." },
-        newText: { type: "string", description: "For 'update' only: replacement text." },
+        text: {
+          type: "string",
+          description: "Item text or partial text to find.",
+        },
+        newText: {
+          type: "string",
+          description: "For 'update' only: replacement text.",
+        },
       },
       required: ["action"],
     },
@@ -44,7 +60,10 @@ function respond(msg: unknown): void {
   process.stdout.write(JSON.stringify(msg) + "\n");
 }
 
-async function handleToolCall(name: string, args: Record<string, unknown>): Promise<string> {
+async function handleToolCall(
+  name: string,
+  args: Record<string, unknown>,
+): Promise<string> {
   const tool = tools.find((t) => t.name === name);
   if (!tool) throw new Error(`Unknown tool: ${name}`);
 
@@ -131,7 +150,10 @@ process.stdin.on("data", (chunk: Buffer) => {
           respond({
             jsonrpc: "2.0",
             id,
-            result: { content: [{ type: "text", text: String(err) }], isError: true },
+            result: {
+              content: [{ type: "text", text: String(err) }],
+              isError: true,
+            },
           });
         });
     } else if (method === "ping") {

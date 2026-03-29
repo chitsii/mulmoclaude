@@ -5,12 +5,7 @@ import path from "path";
 
 export const workspacePath = path.join(os.homedir(), "mulmoclaude");
 
-const SUBDIRS = [
-  ".chat",
-  "todos",
-  "calendar",
-  "contacts",
-];
+const SUBDIRS = ["chat", "todos", "calendar", "contacts"];
 
 export function initWorkspace(): string {
   // Create directory structure if needed
@@ -22,7 +17,10 @@ export function initWorkspace(): string {
   // Create memory.md if it doesn't exist
   const memoryFile = path.join(workspacePath, "memory.md");
   if (!fs.existsSync(memoryFile)) {
-    fs.writeFileSync(memoryFile, "# Memory\n\nDistilled facts about you and your work.\n");
+    fs.writeFileSync(
+      memoryFile,
+      "# Memory\n\nDistilled facts about you and your work.\n",
+    );
   }
 
   // Git init if not already a repo

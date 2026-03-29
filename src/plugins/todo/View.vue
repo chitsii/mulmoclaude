@@ -2,10 +2,15 @@
   <div class="h-full bg-white flex flex-col p-6">
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-lg font-semibold text-gray-800">Todo List</h2>
-      <span class="text-sm text-gray-500">{{ completedCount }}/{{ items.length }} completed</span>
+      <span class="text-sm text-gray-500"
+        >{{ completedCount }}/{{ items.length }} completed</span
+      >
     </div>
 
-    <div v-if="items.length === 0" class="flex-1 flex items-center justify-center text-gray-400">
+    <div
+      v-if="items.length === 0"
+      class="flex-1 flex items-center justify-center text-gray-400"
+    >
       No todo items yet
     </div>
 
@@ -23,12 +28,17 @@
         />
         <span
           class="flex-1 text-sm"
-          :class="item.completed ? 'line-through text-gray-400' : 'text-gray-800'"
-        >{{ item.text }}</span>
+          :class="
+            item.completed ? 'line-through text-gray-400' : 'text-gray-800'
+          "
+          >{{ item.text }}</span
+        >
         <button
           class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 text-xs px-1"
           @click="remove(item)"
-        >✕</button>
+        >
+          ✕
+        </button>
       </li>
     </ul>
 
@@ -50,8 +60,12 @@ import type { TodoData, TodoItem } from "./index";
 const props = defineProps<{ selectedResult: ToolResultComplete }>();
 const emit = defineEmits<{ updateResult: [result: ToolResultComplete] }>();
 
-const items = computed(() => (props.selectedResult.data as TodoData)?.items ?? []);
-const completedCount = computed(() => items.value.filter((i) => i.completed).length);
+const items = computed(
+  () => (props.selectedResult.data as TodoData)?.items ?? [],
+);
+const completedCount = computed(
+  () => items.value.filter((i) => i.completed).length,
+);
 const hasCompleted = computed(() => items.value.some((i) => i.completed));
 
 async function callApi(body: Record<string, unknown>) {
@@ -61,7 +75,11 @@ async function callApi(body: Record<string, unknown>) {
     body: JSON.stringify(body),
   });
   const result = await response.json();
-  emit("updateResult", { ...props.selectedResult, ...result, uuid: props.selectedResult.uuid });
+  emit("updateResult", {
+    ...props.selectedResult,
+    ...result,
+    uuid: props.selectedResult.uuid,
+  });
 }
 
 function toggle(item: TodoItem) {

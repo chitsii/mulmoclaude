@@ -79,11 +79,9 @@ The app uses a fixed workspace at `~/mulmoclaude`. On first launch, the server i
 
 ```
 workspace/
-  .chat/                        ← conversation history (role-scoped)
-    developer/
-      2026-03-29_session.md
-    office/
-      2026-03-29_session.md
+  chat/                        ← conversation history + tool results
+    2026-03-29T12-34-56Z.jsonl  ← ToolResults for one session (JSON Lines)
+    2026-03-29T13-00-00Z.jsonl  ← new file on each session start or role switch
   todos/
     inbox.md
     projects/
@@ -183,17 +181,25 @@ Cross-referencing is done via relative file paths in frontmatter — no foreign 
 
 ### Session Files
 
-Each conversation is saved continuously (after every exchange) to prevent data loss. Files are scoped by role:
+Each session gets a dedicated file created when the agent starts or the role switches. The file uses ISO timestamp naming for natural sort order:
 
 ```
-.chat/{role-id}/YYYY-MM-DD_HH-MM.md
+chat/YYYY-MM-DDTHH-MM-SSZ.jsonl
 ```
+
+The first line is a metadata entry identifying the session:
+
+```json
+{"type": "session_meta", "roleId": "organizer", "startedAt": "2026-03-29T12:34:56Z"}
+```
+
+Subsequent lines are JSON-serialized `ToolResult` objects (JSON Lines format), appended as results arrive. No role subfolder — all sessions are flat in `chat/`.
 
 ### Context Loading Strategy
 
 When starting a session in a role:
 1. Always load `memory.md` (distilled persistent facts)
-2. Load last N session files for this role
+2. Load last N session files from `chat/`
 3. Claude can search deeper history via grep when needed
 
 ### memory.md
@@ -227,8 +233,8 @@ These plugins render file-backed data visually and write changes back to files o
    - Decides which tools to call (native file tools and/or plugins)
    - Executes tools, streams results to canvas
 5. Visual output appears in canvas via gui-chat-protocol ViewComponents
-6. Session is saved to `.chat/{role}/` after each exchange
-7. On role switch: canvas clears, context resets, new role's history loads
+6. ToolResults are appended to `chat/{timestamp}.jsonl` as they arrive
+7. On role switch: canvas clears, context resets, a new session file is created
 
 ---
 

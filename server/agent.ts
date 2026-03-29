@@ -51,14 +51,26 @@ export async function* runAgent(
   }
 
   const mcpToolNames = activePlugins.map((p) => `mcp__mulmoclaude__${p}`);
-  const allowedTools = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", ...mcpToolNames];
+  const allowedTools = [
+    "Bash",
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep",
+    ...mcpToolNames,
+  ];
 
   const args = [
-    "-p", message,
-    "--output-format", "stream-json",
+    "-p",
+    message,
+    "--output-format",
+    "stream-json",
     "--verbose",
-    "--system-prompt", systemPrompt,
-    "--allowedTools", allowedTools.join(","),
+    "--system-prompt",
+    systemPrompt,
+    "--allowedTools",
+    allowedTools.join(","),
   ];
 
   if (hasMcp) {
@@ -97,11 +109,16 @@ export async function* runAgent(
     }
   }
 
-  const exitCode = await new Promise<number>((resolve) => proc.on("close", resolve));
+  const exitCode = await new Promise<number>((resolve) =>
+    proc.on("close", resolve),
+  );
 
   if (hasMcp) unlink(mcpConfigPath).catch(() => {});
 
   if (exitCode !== 0) {
-    yield { type: "error", message: stderrOutput || `claude exited with code ${exitCode}` };
+    yield {
+      type: "error",
+      message: stderrOutput || `claude exited with code ${exitCode}`,
+    };
   }
 }

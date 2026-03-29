@@ -24,7 +24,9 @@ import type { TodoData } from "./index";
 const props = defineProps<{ result: ToolResultComplete }>();
 
 const items = computed(() => (props.result.data as TodoData)?.items ?? []);
-const completedCount = computed(() => items.value.filter((i) => i.completed).length);
+const completedCount = computed(
+  () => items.value.filter((i) => i.completed).length,
+);
 const preview = computed(() => items.value.slice(0, 3));
 const more = computed(() => Math.max(0, items.value.length - 3));
 </script>

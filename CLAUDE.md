@@ -59,7 +59,7 @@ The app operates on a workspace directory set via `WORKSPACE_PATH` env var (defa
 
 ```
 workspace/
-  .chat/{role-id}/        ← conversation history (role-scoped)
+  chat/                   ← session ToolResults (one .jsonl per session)
   todos/                  ← todo items
   calendar/               ← calendar events
   contacts/               ← address book

@@ -26,7 +26,11 @@
           v-for="result in toolResults"
           :key="result.uuid"
           class="cursor-pointer rounded border p-2 text-sm"
-          :class="result.uuid === selectedResultUuid ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700 hover:border-gray-500'"
+          :class="
+            result.uuid === selectedResultUuid
+              ? 'border-blue-500 bg-blue-900/20'
+              : 'border-gray-700 hover:border-gray-500'
+          "
           @click="selectedResultUuid = result.uuid"
         >
           <component
@@ -56,7 +60,9 @@
             <span class="material-icons text-base">send</span>
           </button>
         </div>
-        <p v-if="statusMessage" class="mt-2 text-xs text-gray-400">{{ statusMessage }}</p>
+        <p v-if="statusMessage" class="mt-2 text-xs text-gray-400">
+          {{ statusMessage }}
+        </p>
       </div>
     </div>
 
@@ -70,7 +76,9 @@
           :send-text-message="sendMessage"
           @update-result="handleUpdateResult"
         />
-        <pre v-else class="text-sm text-gray-300 whitespace-pre-wrap">{{ JSON.stringify(selectedResult, null, 2) }}</pre>
+        <pre v-else class="text-sm text-gray-300 whitespace-pre-wrap">{{
+          JSON.stringify(selectedResult, null, 2)
+        }}</pre>
       </div>
       <div v-else class="flex items-center justify-center h-full text-gray-600">
         <p>Start a conversation</p>
@@ -88,7 +96,10 @@ import type { ToolResultComplete } from "gui-chat-protocol/vue";
 
 const roles = ROLES;
 const currentRoleId = ref(ROLES[0].id);
-const currentRole = computed(() => ROLES.find(r => r.id === currentRoleId.value) ?? ROLES[0]);
+const currentRole = computed(
+  () => ROLES.find((r) => r.id === currentRoleId.value) ?? ROLES[0],
+);
+const chatSessionId = ref(uuidv4());
 
 const userInput = ref("");
 const isRunning = ref(false);
@@ -96,11 +107,15 @@ const statusMessage = ref("");
 const toolResults = ref<ToolResultComplete[]>([]);
 const selectedResultUuid = ref<string | null>(null);
 
-const selectedResult = computed(() =>
-  toolResults.value.find(r => r.uuid === selectedResultUuid.value) ?? null
+const selectedResult = computed(
+  () =>
+    toolResults.value.find((r) => r.uuid === selectedResultUuid.value) ?? null,
 );
 
-function makeTextResult(text: string, role: "user" | "assistant"): ToolResultComplete {
+function makeTextResult(
+  text: string,
+  role: "user" | "assistant",
+): ToolResultComplete {
   return {
     uuid: uuidv4(),
     toolName: "text-response",
@@ -111,7 +126,9 @@ function makeTextResult(text: string, role: "user" | "assistant"): ToolResultCom
 }
 
 function handleUpdateResult(updatedResult: ToolResultComplete) {
-  const index = toolResults.value.findIndex(r => r.uuid === updatedResult.uuid);
+  const index = toolResults.value.findIndex(
+    (r) => r.uuid === updatedResult.uuid,
+  );
   if (index !== -1) {
     Object.assign(toolResults.value[index], updatedResult);
   }
@@ -121,6 +138,7 @@ function onRoleChange() {
   toolResults.value = [];
   selectedResultUuid.value = null;
   statusMessage.value = "";
+  chatSessionId.value = uuidv4();
 }
 
 async function sendMessage(text?: string) {
@@ -136,7 +154,11 @@ async function sendMessage(text?: string) {
     const response = await fetch("/api/agent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, roleId: currentRoleId.value }),
+      body: JSON.stringify({
+        message,
+        roleId: currentRoleId.value,
+        chatSessionId: chatSessionId.value,
+      }),
     });
 
     const reader = response.body!.getReader();
@@ -157,7 +179,9 @@ async function sendMessage(text?: string) {
           toolResults.value.push(makeTextResult(data.message, "assistant"));
         } else if (data.type === "tool_result") {
           const result: ToolResultComplete = data.result;
-          const existing = toolResults.value.findIndex(r => r.uuid === result.uuid);
+          const existing = toolResults.value.findIndex(
+            (r) => r.uuid === result.uuid,
+          );
           if (existing >= 0) {
             toolResults.value[existing] = result;
           } else {

@@ -42,11 +42,16 @@ router.post("/todos", (req: Request, res: Response) => {
   switch (action) {
     case "show":
       message = `Showing ${items.length} todo item(s)`;
-      jsonData = { items: items.map((i) => ({ text: i.text, completed: i.completed })) };
+      jsonData = {
+        items: items.map((i) => ({ text: i.text, completed: i.completed })),
+      };
       break;
 
     case "add": {
-      if (!text) { res.status(400).json({ error: "text required" }); return; }
+      if (!text) {
+        res.status(400).json({ error: "text required" });
+        return;
+      }
       const item: TodoItem = {
         id: `todo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
         text,
@@ -61,18 +66,31 @@ router.post("/todos", (req: Request, res: Response) => {
     }
 
     case "delete": {
-      if (!text) { res.status(400).json({ error: "text required" }); return; }
+      if (!text) {
+        res.status(400).json({ error: "text required" });
+        return;
+      }
       const before = items.length;
-      items = items.filter((i) => !i.text.toLowerCase().includes(text.toLowerCase()));
+      items = items.filter(
+        (i) => !i.text.toLowerCase().includes(text.toLowerCase()),
+      );
       saveTodos(items);
-      message = before !== items.length ? `Deleted: "${text}"` : `Item not found: "${text}"`;
+      message =
+        before !== items.length
+          ? `Deleted: "${text}"`
+          : `Item not found: "${text}"`;
       jsonData = { deleted: text };
       break;
     }
 
     case "update": {
-      if (!text || !newText) { res.status(400).json({ error: "text and newText required" }); return; }
-      const item = items.find((i) => i.text.toLowerCase().includes(text.toLowerCase()));
+      if (!text || !newText) {
+        res.status(400).json({ error: "text and newText required" });
+        return;
+      }
+      const item = items.find((i) =>
+        i.text.toLowerCase().includes(text.toLowerCase()),
+      );
       if (item) {
         const oldText = item.text;
         item.text = newText;
@@ -86,8 +104,13 @@ router.post("/todos", (req: Request, res: Response) => {
     }
 
     case "check": {
-      if (!text) { res.status(400).json({ error: "text required" }); return; }
-      const item = items.find((i) => i.text.toLowerCase().includes(text.toLowerCase()));
+      if (!text) {
+        res.status(400).json({ error: "text required" });
+        return;
+      }
+      const item = items.find((i) =>
+        i.text.toLowerCase().includes(text.toLowerCase()),
+      );
       if (item) {
         item.completed = true;
         saveTodos(items);
@@ -100,8 +123,13 @@ router.post("/todos", (req: Request, res: Response) => {
     }
 
     case "uncheck": {
-      if (!text) { res.status(400).json({ error: "text required" }); return; }
-      const item = items.find((i) => i.text.toLowerCase().includes(text.toLowerCase()));
+      if (!text) {
+        res.status(400).json({ error: "text required" });
+        return;
+      }
+      const item = items.find((i) =>
+        i.text.toLowerCase().includes(text.toLowerCase()),
+      );
       if (item) {
         item.completed = false;
         saveTodos(items);

@@ -24,7 +24,15 @@ const todoPlugin: ToolPlugin<TodoData> = {
       properties: {
         action: {
           type: "string",
-          enum: ["show", "add", "delete", "update", "check", "uncheck", "clear_completed"],
+          enum: [
+            "show",
+            "add",
+            "delete",
+            "update",
+            "check",
+            "uncheck",
+            "clear_completed",
+          ],
           description: "Action to perform on the todo list.",
         },
         text: {
