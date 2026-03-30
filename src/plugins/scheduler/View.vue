@@ -23,7 +23,13 @@
         <li
           v-for="item in items"
           :key="item.id"
-          class="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 group"
+          class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer group"
+          :class="
+            selectedId === item.id
+              ? 'border-blue-400 bg-blue-50'
+              : 'border-gray-200 hover:bg-gray-50'
+          "
+          @click="selectItem(item)"
         >
           <div class="flex-1 min-w-0">
             <div class="font-medium text-gray-800 text-sm">
@@ -45,12 +51,45 @@
           </div>
           <button
             class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 text-xs px-1 mt-0.5 shrink-0"
-            @click="remove(item)"
+            @click.stop="remove(item)"
           >
             ✕
           </button>
         </li>
       </ul>
+    </div>
+
+    <!-- Item YAML editor -->
+    <div v-if="selectedId" class="border-t border-blue-200 bg-blue-50 shrink-0">
+      <div
+        class="flex items-center justify-between px-4 py-2 text-sm font-medium text-blue-700"
+      >
+        <span>Edit item</span>
+        <button
+          class="text-blue-400 hover:text-blue-600 text-xs"
+          @click="selectedId = null"
+        >
+          ✕
+        </button>
+      </div>
+      <div class="px-3 pb-3">
+        <textarea
+          v-model="yamlText"
+          class="w-full h-32 p-3 font-mono text-xs bg-white border border-blue-300 rounded resize-y focus:outline-none focus:border-blue-500"
+          spellcheck="false"
+        />
+        <div class="flex items-center gap-2 mt-2">
+          <button
+            class="px-3 py-1.5 text-sm rounded bg-blue-500 text-white hover:bg-blue-600"
+            @click="applyItemEdit"
+          >
+            Update
+          </button>
+          <span v-if="yamlError" class="text-xs text-red-500">{{
+            yamlError
+          }}</span>
+        </div>
+      </div>
     </div>
 
     <!-- JSON source editor -->
@@ -95,21 +134,129 @@ const items = computed(
   () => (props.selectedResult.data as SchedulerData)?.items ?? [],
 );
 
+// ── YAML helpers ────────────────────────────────────────────────────────────
+
+function yamlStringValue(v: string): string {
+  // Quote if the value contains special characters or could be misread
+  const needsQuotes =
+    v === "" ||
+    /[:#\[\]{},&*?|<>=!%@`]/.test(v) ||
+    /^\s|\s$/.test(v) ||
+    /^(true|false|null|~)$/i.test(v) ||
+    /^\d/.test(v);
+  if (needsQuotes) {
+    return `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+  }
+  return v;
+}
+
+function serializeYaml(item: ScheduledItem): string {
+  const lines: string[] = [`title: ${yamlStringValue(item.title)}`];
+  for (const [k, v] of Object.entries(item.props)) {
+    if (v === null) continue;
+    if (typeof v === "string") {
+      lines.push(`${k}: ${yamlStringValue(v)}`);
+    } else {
+      lines.push(`${k}: ${v}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+function parseYamlValue(raw: string): string | number | boolean | null {
+  if (raw === "null" || raw === "~") return null;
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  if (raw.startsWith('"') && raw.endsWith('"')) {
+    return raw.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+  }
+  if (raw.startsWith("'") && raw.endsWith("'")) {
+    return raw.slice(1, -1);
+  }
+  const num = Number(raw);
+  if (raw !== "" && !isNaN(num)) return num;
+  return raw;
+}
+
+function parseYaml(
+  text: string,
+): {
+  title: string;
+  props: Record<string, string | number | boolean | null>;
+} | null {
+  const result: Record<string, string | number | boolean | null> = {};
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const colonIdx = line.indexOf(": ");
+    if (colonIdx === -1) continue;
+    const key = line.slice(0, colonIdx).trim();
+    const rawVal = line.slice(colonIdx + 2).trim();
+    result[key] = parseYamlValue(rawVal);
+  }
+  const title = result["title"];
+  if (typeof title !== "string" || !title) return null;
+  const itemProps = { ...result };
+  delete itemProps["title"];
+  return { title, props: itemProps };
+}
+
+// ── Item selection & YAML edit ───────────────────────────────────────────────
+
+const selectedId = ref<string | null>(null);
+const yamlText = ref("");
+const yamlError = ref("");
+
+function selectItem(item: ScheduledItem) {
+  if (selectedId.value === item.id) {
+    selectedId.value = null;
+    return;
+  }
+  selectedId.value = item.id;
+  yamlText.value = serializeYaml(item);
+  yamlError.value = "";
+}
+
+// Re-serialize if the underlying data changes while the editor is open
+watch(
+  () => props.selectedResult.data,
+  () => {
+    if (selectedId.value) {
+      const item = items.value.find((i) => i.id === selectedId.value);
+      if (item) {
+        yamlText.value = serializeYaml(item);
+      } else {
+        selectedId.value = null;
+      }
+    }
+    editorText.value = toJson(items.value);
+    parseError.value = "";
+  },
+);
+
+async function applyItemEdit() {
+  yamlError.value = "";
+  const parsed = parseYaml(yamlText.value);
+  if (!parsed) {
+    yamlError.value = "Could not parse YAML — ensure 'title' is present";
+    return;
+  }
+  await callApi({
+    action: "update",
+    id: selectedId.value,
+    title: parsed.title,
+    props: parsed.props,
+  });
+}
+
+// ── JSON source editor ───────────────────────────────────────────────────────
+
 function toJson(its: ScheduledItem[]) {
   return JSON.stringify(its, null, 2);
 }
 
 const editorText = ref(toJson(items.value));
 const parseError = ref("");
-
-watch(
-  () => props.selectedResult.data,
-  () => {
-    editorText.value = toJson(items.value);
-    parseError.value = "";
-  },
-);
-
 const isModified = computed(() => editorText.value !== toJson(items.value));
 
 async function callApi(body: Record<string, unknown>) {
@@ -127,6 +274,7 @@ async function callApi(body: Record<string, unknown>) {
 }
 
 function remove(item: ScheduledItem) {
+  if (selectedId.value === item.id) selectedId.value = null;
   callApi({ action: "delete", id: item.id });
 }
 
