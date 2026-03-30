@@ -425,11 +425,13 @@ const ALL_TOOLS: Record<string, ToolDef> = {
         },
         playerNames: {
           type: "object",
-          description: "Player names for B and W sides.",
+          description:
+            "Player assignments (required for 'move' and 'pass' actions).",
           properties: {
-            B: { type: "string" },
-            W: { type: "string" },
+            B: { type: "string", enum: ["user", "computer"] },
+            W: { type: "string", enum: ["user", "computer"] },
           },
+          required: ["B", "W"],
         },
         firstPlayer: {
           type: "string",
@@ -501,7 +503,8 @@ async function handleToolCall(
     body: JSON.stringify(toolResult),
   });
 
-  return result.message ?? "Done";
+  const parts = [result.message, result.instructions].filter(Boolean);
+  return parts.length > 0 ? parts.join("\n") : "Done";
 }
 
 let buffer = "";
