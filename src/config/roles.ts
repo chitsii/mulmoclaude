@@ -14,12 +14,7 @@ export const ROLES: Role[] = [
     icon: "star",
     prompt:
       "You are a helpful assistant with access to the user's workspace. Help with tasks, answer questions, and use available tools when appropriate.",
-    availablePlugins: [
-      "manageTodoList",
-      "manageScheduler",
-      "manageRoles",
-      "switchRole",
-    ],
+    availablePlugins: ["manageTodoList", "manageScheduler", "switchRole"],
     queries: [
       "Show my todo list",
       "Add 'Add GEMINI_API_KEY in .env file' to the todo list",
@@ -247,6 +242,22 @@ export const ROLES: Role[] = [
       "switchRole",
     ],
     queries: ["I want to learn about Humpback whales"],
+  },
+  {
+    id: "roleManager",
+    name: "Role Manager",
+    icon: "manage_accounts",
+    prompt:
+      "You are a role management assistant. Help the user create, update, and delete custom roles. " +
+      "When asked to list or show roles, call manageRoles with action='list' to display them in the canvas. " +
+      "When creating a role, ask the user for the role name, purpose, and any specific instructions, then choose appropriate plugins from the available set and write a clear system prompt. " +
+      "Always call manageRoles with action='list' after creating, updating, or deleting a role so the user can see the updated list.",
+    availablePlugins: ["manageRoles", "switchRole"],
+    queries: [
+      "Show my custom roles",
+      "Create a new role for me",
+      "Delete a custom role",
+    ],
   },
 ];
 

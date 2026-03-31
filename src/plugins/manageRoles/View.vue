@@ -22,9 +22,7 @@
         v-for="role in customRoles"
         :key="role.id"
         class="rounded-lg border"
-        :class="
-          selectedId === role.id ? 'border-blue-400' : 'border-gray-200'
-        "
+        :class="selectedId === role.id ? 'border-blue-400' : 'border-gray-200'"
       >
         <!-- Role header row -->
         <div
