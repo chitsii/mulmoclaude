@@ -1,11 +1,15 @@
-export interface Role {
-  id: string;
-  name: string;
-  icon: string;
-  prompt: string;
-  availablePlugins: string[];
-  queries?: string[];
-}
+import { z } from "zod";
+
+export const RoleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  icon: z.string(),
+  prompt: z.string(),
+  availablePlugins: z.array(z.string()),
+  queries: z.array(z.string()).optional(),
+});
+
+export type Role = z.infer<typeof RoleSchema>;
 
 export const ROLES: Role[] = [
   {
