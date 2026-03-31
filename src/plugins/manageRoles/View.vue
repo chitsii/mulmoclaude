@@ -95,15 +95,24 @@
 
           <!-- Plugins -->
           <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">
-              Plugins
-              <span class="text-gray-400 font-normal">(comma-separated)</span>
-            </label>
-            <input
-              v-model="editForm.pluginsText"
-              type="text"
-              class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded font-mono focus:outline-none focus:border-blue-400"
-            />
+            <label class="block text-xs font-medium text-gray-600 mb-2"
+              >Plugins</label
+            >
+            <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+              <label
+                v-for="plugin in availablePlugins"
+                :key="plugin"
+                class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  :value="plugin"
+                  v-model="editForm.selectedPlugins"
+                  class="cursor-pointer"
+                />
+                {{ plugin }}
+              </label>
+            </div>
           </div>
 
           <!-- Starter queries -->
@@ -157,6 +166,11 @@
 import { computed, ref } from "vue";
 import type { ToolResultComplete } from "gui-chat-protocol/vue";
 import type { CustomRole, ManageRolesData } from "./index";
+import { getAllPluginNames } from "../../tools/index";
+
+// Plugins the user can assign — exclude internal/auto-managed ones
+const EXCLUDED = new Set(["text-response", "switchRole"]);
+const availablePlugins = getAllPluginNames().filter((p) => !EXCLUDED.has(p));
 
 const props = defineProps<{ selectedResult: ToolResultComplete }>();
 const emit = defineEmits<{ updateResult: [result: ToolResultComplete] }>();
@@ -175,7 +189,7 @@ interface EditForm {
   name: string;
   icon: string;
   prompt: string;
-  pluginsText: string;
+  selectedPlugins: string[];
   queriesText: string;
 }
 
@@ -183,7 +197,7 @@ const editForm = ref<EditForm>({
   name: "",
   icon: "",
   prompt: "",
-  pluginsText: "",
+  selectedPlugins: [],
   queriesText: "",
 });
 
@@ -198,7 +212,7 @@ function selectRole(role: CustomRole) {
     name: role.name,
     icon: role.icon,
     prompt: role.prompt,
-    pluginsText: role.availablePlugins.join(", "),
+    selectedPlugins: role.availablePlugins.filter((p) => p !== "switchRole"),
     queriesText: (role.queries ?? []).join("\n"),
   };
 }
@@ -235,10 +249,7 @@ async function saveEdit(id: string) {
     name: editForm.value.name.trim(),
     icon: editForm.value.icon.trim(),
     prompt: editForm.value.prompt,
-    availablePlugins: editForm.value.pluginsText
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean),
+    availablePlugins: editForm.value.selectedPlugins,
     queries: editForm.value.queriesText
       .split("\n")
       .map((s) => s.trim())
