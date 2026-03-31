@@ -190,8 +190,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { v4 as uuidv4 } from "uuid";
-import { ROLES } from "./config/roles";
-import type { Role } from "./config/roles";
+import { ROLES, type Role } from "./config/roles";
 import { getPlugin } from "./tools";
 import type { ToolResultComplete } from "gui-chat-protocol/vue";
 import RightSidebar from "./components/RightSidebar.vue";

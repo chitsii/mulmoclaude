@@ -82,18 +82,17 @@ export async function executeManageRoles(
     };
   }
 
-  // Ensure switchRole is in availablePlugins
-  const availablePlugins =
-    (role.availablePlugins as string[] | undefined) ?? [];
-  if (!availablePlugins.includes("switchRole")) {
-    availablePlugins.push("switchRole");
-    role.availablePlugins = availablePlugins;
-  }
+  // Strip switchRole before saving — it is injected at load time by server/roles.ts
+  const pluginsToSave = (role.availablePlugins as string[] | undefined) ?? [];
+  const roleToSave = {
+    ...role,
+    availablePlugins: pluginsToSave.filter((p) => p !== "switchRole"),
+  };
 
   fs.mkdirSync(rolesDir, { recursive: true });
   fs.writeFileSync(
     path.join(rolesDir, `${roleId2}.json`),
-    JSON.stringify(role, null, 2),
+    JSON.stringify(roleToSave, null, 2),
   );
   notifyRolesUpdated(sessionId);
   return {

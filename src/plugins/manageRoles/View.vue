@@ -217,13 +217,24 @@ function selectRole(role: CustomRole) {
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
-async function callManage(body: Record<string, unknown>) {
-  const res = await fetch("/api/roles/manage", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return res.json();
+async function callManage(
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  try {
+    const res = await fetch("/api/roles/manage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok)
+      return { success: false, error: `Server error: ${res.status}` };
+    return res.json();
+  } catch (e) {
+    return {
+      success: false,
+      error: e instanceof Error ? e.message : "Network error",
+    };
+  }
 }
 
 async function refreshList() {
@@ -258,7 +269,7 @@ async function saveEdit(id: string) {
     selectedId.value = null;
     await refreshList();
   } else {
-    saveError.value = result.error ?? "Save failed";
+    saveError.value = (result.error as string) ?? "Save failed";
   }
   saving.value = false;
 }
@@ -271,7 +282,7 @@ async function deleteRole(id: string) {
     selectedId.value = null;
     await refreshList();
   } else {
-    saveError.value = result.error ?? "Delete failed";
+    saveError.value = (result.error as string) ?? "Delete failed";
   }
   saving.value = false;
 }

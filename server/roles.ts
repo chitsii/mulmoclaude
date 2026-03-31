@@ -1,10 +1,17 @@
 import path from "path";
 import fs from "fs";
 import os from "os";
-import { BUILTIN_ROLES } from "../src/config/roles.js";
-import type { Role } from "../src/config/roles.js";
+import { BUILTIN_ROLES, type Role } from "../src/config/roles.js";
 
 const rolesDir = path.join(os.homedir(), "mulmoclaude", "roles");
+
+function withSwitchRole(role: Role): Role {
+  if (role.availablePlugins.includes("switchRole")) return role;
+  return {
+    ...role,
+    availablePlugins: [...role.availablePlugins, "switchRole"],
+  };
+}
 
 export function loadCustomRoles(): Role[] {
   if (!fs.existsSync(rolesDir)) return [];
@@ -14,7 +21,7 @@ export function loadCustomRoles(): Role[] {
     .flatMap((f) => {
       try {
         const raw = fs.readFileSync(path.join(rolesDir, f), "utf-8");
-        return [JSON.parse(raw) as Role];
+        return [withSwitchRole(JSON.parse(raw) as Role)];
       } catch {
         return [];
       }
