@@ -28,6 +28,11 @@ interface ClaudeMessage {
   content?: ClaudeContentBlock[];
 }
 
+type ClaudeStreamEvent =
+  | { type: "assistant"; message: ClaudeMessage }
+  | { type: "user"; message: ClaudeMessage }
+  | { type: "result"; result: string; session_id?: string };
+
 // Plugin names that have a corresponding MCP tool definition in mcp-server.ts
 const MCP_PLUGINS = new Set([
   "manageTodoList",
@@ -140,7 +145,7 @@ export async function* runAgent(
 
     for (const line of lines) {
       if (!line.trim()) continue;
-      let event: Record<string, unknown>;
+      let event: ClaudeStreamEvent;
       try {
         event = JSON.parse(line);
       } catch {
@@ -148,8 +153,7 @@ export async function* runAgent(
       }
       if (event.type === "assistant") {
         yield { type: "status", message: "Thinking..." };
-        const msg = event.message as ClaudeMessage | undefined;
-        const content = msg?.content;
+        const content = event.message.content;
         if (Array.isArray(content)) {
           for (const block of content) {
             if (block.type === "tool_use" && block.id && block.name) {
@@ -163,8 +167,7 @@ export async function* runAgent(
           }
         }
       } else if (event.type === "user") {
-        const msg = event.message as ClaudeMessage | undefined;
-        const content = msg?.content;
+        const content = event.message.content;
         if (Array.isArray(content)) {
           for (const block of content) {
             if (block.type === "tool_result" && block.tool_use_id) {
@@ -179,9 +182,9 @@ export async function* runAgent(
             }
           }
         }
-      } else if (event.type === "result" && typeof event.result === "string") {
+      } else if (event.type === "result") {
         yield { type: "text", message: event.result };
-        if (typeof event.session_id === "string") {
+        if (event.session_id) {
           yield { type: "claude_session_id", id: event.session_id };
         }
       }
