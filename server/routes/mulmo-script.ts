@@ -7,6 +7,10 @@ import {
   initializeContextFromFiles,
   generateBeatImage,
   getBeatPngImagePath,
+  images,
+  audio,
+  movie,
+  movieFilePath,
   setGraphAILogger,
   type MulmoScript,
 } from "mulmocast";
@@ -162,5 +166,83 @@ router.post(
     }
   },
 );
+
+router.post(
+  "/mulmo-script/generate-movie",
+  async (req: Request<object, object, { filePath: string }>, res: Response) => {
+    const { filePath } = req.body;
+
+    if (!filePath) {
+      res.status(400).json({ error: "filePath is required" });
+      return;
+    }
+
+    const storiesDir = path.resolve(workspacePath, "stories");
+    const absoluteFilePath = path.resolve(workspacePath, filePath);
+    if (!absoluteFilePath.startsWith(storiesDir + path.sep)) {
+      res.status(400).json({ error: "Invalid filePath" });
+      return;
+    }
+    if (!fs.existsSync(absoluteFilePath)) {
+      res.status(404).json({ error: `File not found: ${filePath}` });
+      return;
+    }
+
+    try {
+      setGraphAILogger(false);
+
+      const files = getFileObject({
+        file: absoluteFilePath,
+        basedir: path.dirname(absoluteFilePath),
+        grouped: true,
+      });
+
+      const context = await initializeContextFromFiles(files, true);
+      if (!context) {
+        res.status(500).json({ error: "Failed to initialize mulmo context" });
+        return;
+      }
+
+      const imagesContext = await images(context);
+      const audioContext = await audio(imagesContext);
+      await movie(audioContext);
+
+      const outputPath = movieFilePath(audioContext);
+      if (!fs.existsSync(outputPath)) {
+        res.status(500).json({ error: "Movie was not generated" });
+        return;
+      }
+
+      // Return path relative to workspace for the download endpoint
+      const relPath = path.relative(workspacePath, outputPath);
+      res.json({ moviePath: relPath });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: message });
+    }
+  },
+);
+
+router.get("/mulmo-script/download-movie", (req: Request, res: Response) => {
+  const { moviePath } = req.query as { moviePath?: string };
+
+  if (!moviePath) {
+    res.status(400).json({ error: "moviePath is required" });
+    return;
+  }
+
+  const storiesDir = path.resolve(workspacePath, "stories");
+  const absolutePath = path.resolve(workspacePath, moviePath);
+  if (!absolutePath.startsWith(storiesDir + path.sep)) {
+    res.status(400).json({ error: "Invalid moviePath" });
+    return;
+  }
+  if (!fs.existsSync(absolutePath)) {
+    res.status(404).json({ error: "Movie file not found" });
+    return;
+  }
+
+  res.download(absolutePath);
+});
 
 export default router;
