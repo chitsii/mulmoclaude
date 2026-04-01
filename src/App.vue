@@ -398,7 +398,12 @@ async function sendMessage(text?: string) {
       }),
     });
 
-    const reader = response.body!.getReader();
+    if (!response.body) {
+      statusMessage.value = "No response body received from server.";
+      return;
+    }
+
+    const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let sseBuffer = "";
 
