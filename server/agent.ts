@@ -15,6 +15,24 @@ export type AgentEvent =
   | { type: "tool_call_result"; toolUseId: string; content: string }
   | { type: "claude_session_id"; id: string };
 
+interface ClaudeContentBlock {
+  type: string;
+  id?: string;
+  name?: string;
+  input?: unknown;
+  tool_use_id?: string;
+  content?: unknown;
+}
+
+interface ClaudeMessage {
+  content?: ClaudeContentBlock[];
+}
+
+type ClaudeStreamEvent =
+  | { type: "assistant"; message: ClaudeMessage }
+  | { type: "user"; message: ClaudeMessage }
+  | { type: "result"; result: string; session_id?: string };
+
 // Plugin names that have a corresponding MCP tool definition in mcp-server.ts
 const MCP_PLUGINS = new Set([
   "manageTodoList",
@@ -127,7 +145,7 @@ export async function* runAgent(
 
     for (const line of lines) {
       if (!line.trim()) continue;
-      let event: Record<string, unknown>;
+      let event: ClaudeStreamEvent;
       try {
         event = JSON.parse(line);
       } catch {
@@ -135,40 +153,38 @@ export async function* runAgent(
       }
       if (event.type === "assistant") {
         yield { type: "status", message: "Thinking..." };
-        const content = (event.message as { content?: unknown[] })?.content;
+        const content = event.message.content;
         if (Array.isArray(content)) {
           for (const block of content) {
-            const b = block as Record<string, unknown>;
-            if (b.type === "tool_use") {
+            if (block.type === "tool_use" && block.id && block.name) {
               yield {
                 type: "tool_call",
-                toolUseId: b.id as string,
-                toolName: b.name as string,
-                args: b.input,
+                toolUseId: block.id,
+                toolName: block.name,
+                args: block.input,
               };
             }
           }
         }
       } else if (event.type === "user") {
-        const content = (event.message as { content?: unknown[] })?.content;
+        const content = event.message.content;
         if (Array.isArray(content)) {
           for (const block of content) {
-            const b = block as Record<string, unknown>;
-            if (b.type === "tool_result") {
-              const raw = b.content;
+            if (block.type === "tool_result" && block.tool_use_id) {
+              const raw = block.content;
               const contentStr =
                 typeof raw === "string" ? raw : JSON.stringify(raw);
               yield {
                 type: "tool_call_result",
-                toolUseId: b.tool_use_id as string,
+                toolUseId: block.tool_use_id,
                 content: contentStr,
               };
             }
           }
         }
-      } else if (event.type === "result" && typeof event.result === "string") {
+      } else if (event.type === "result") {
         yield { type: "text", message: event.result };
-        if (typeof event.session_id === "string") {
+        if (event.session_id) {
           yield { type: "claude_session_id", id: event.session_id };
         }
       }

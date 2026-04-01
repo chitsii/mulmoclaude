@@ -42,7 +42,7 @@ function fromPackage(def: ToolDefinition, endpoint: string): ToolDef {
   return {
     name: def.name,
     description: def.description,
-    inputSchema: def.parameters as object,
+    inputSchema: def.parameters ?? {},
     endpoint,
   };
 }
@@ -87,14 +87,9 @@ const ALL_TOOLS: Record<string, ToolDef> = {
       Present3DDef,
       OthelloDef,
       MusicDef,
+      ManageRolesDef,
     ].map((def) => [def.name, fromPackage(def, TOOL_ENDPOINTS[def.name])]),
   ),
-  [ManageRolesDef.name]: {
-    name: ManageRolesDef.name,
-    description: ManageRolesDef.description,
-    inputSchema: ManageRolesDef.inputSchema,
-    endpoint: TOOL_ENDPOINTS[ManageRolesDef.name],
-  },
   switchRole: {
     name: "switchRole",
     description:
@@ -204,11 +199,9 @@ process.stdin.on("data", (chunk: Buffer) => {
       continue;
     }
 
-    const { id, method, params } = msg as {
-      id?: unknown;
-      method: string;
-      params?: Record<string, unknown>;
-    };
+    const id = msg.id;
+    const method = String(msg.method ?? "");
+    const params = msg.params as Record<string, unknown> | undefined;
 
     if (method === "initialize") {
       respond({
@@ -233,10 +226,8 @@ process.stdin.on("data", (chunk: Buffer) => {
         },
       });
     } else if (method === "tools/call") {
-      const { name, arguments: toolArgs } = (params ?? {}) as {
-        name: string;
-        arguments: Record<string, unknown>;
-      };
+      const name = String(params?.name ?? "");
+      const toolArgs = (params?.arguments ?? {}) as Record<string, unknown>;
       handleToolCall(name, toolArgs ?? {})
         .then((text) => {
           respond({
