@@ -154,6 +154,7 @@
 import { computed, onMounted, reactive } from "vue";
 import type { ToolResultComplete } from "gui-chat-protocol/vue";
 import type { MulmoScriptData } from "./index";
+import { mulmoBeatSchema } from "@mulmocast/types";
 
 interface Beat {
   speaker?: string;
@@ -204,9 +205,7 @@ function toggleSource(index: number) {
 function isValidBeat(index: number): boolean {
   try {
     const parsed = JSON.parse(sourceText[index] ?? "");
-    return (
-      typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
-    );
+    return mulmoBeatSchema.safeParse(parsed).success;
   } catch {
     return false;
   }
