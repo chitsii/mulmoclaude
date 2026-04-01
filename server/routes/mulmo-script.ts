@@ -33,6 +33,12 @@ interface RenderBeatBody {
   beatIndex: number;
 }
 
+interface UpdateBeatBody {
+  filePath: string;
+  beatIndex: number;
+  beat: unknown;
+}
+
 router.post(
   "/mulmo-script",
   (req: Request<object, object, SaveMulmoScriptBody>, res: Response) => {
@@ -58,6 +64,40 @@ router.post(
       message: `Saved MulmoScript to stories/${fname}`,
       instructions: "Display the storyboard to the user.",
     });
+  },
+);
+
+router.post(
+  "/mulmo-script/update-beat",
+  (req: Request<object, object, UpdateBeatBody>, res: Response) => {
+    const { filePath, beatIndex, beat } = req.body;
+
+    if (!filePath || beatIndex === undefined || !beat) {
+      res
+        .status(400)
+        .json({ error: "filePath, beatIndex, and beat are required" });
+      return;
+    }
+
+    const absoluteFilePath = path.join(workspacePath, filePath);
+    if (!fs.existsSync(absoluteFilePath)) {
+      res.status(404).json({ error: `File not found: ${filePath}` });
+      return;
+    }
+
+    const script: MulmoScript = JSON.parse(
+      fs.readFileSync(absoluteFilePath, "utf-8"),
+    );
+
+    if (!Array.isArray(script.beats) || beatIndex >= script.beats.length) {
+      res.status(400).json({ error: "Invalid beatIndex" });
+      return;
+    }
+
+    script.beats[beatIndex] = beat as MulmoScript["beats"][number];
+    fs.writeFileSync(absoluteFilePath, JSON.stringify(script, null, 2));
+
+    res.json({ ok: true });
   },
 );
 

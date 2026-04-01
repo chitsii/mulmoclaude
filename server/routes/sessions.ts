@@ -60,17 +60,48 @@ router.get("/sessions/:id", async (req: Request, res: Response) => {
   const filePath = path.join(workspacePath, "chat", `${id}.jsonl`);
   try {
     const content = await readFile(filePath, "utf-8");
-    const entries = content
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => {
-        try {
-          return JSON.parse(line);
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean);
+    const entries = (
+      await Promise.all(
+        content
+          .split("\n")
+          .filter(Boolean)
+          .map(async (line) => {
+            try {
+              const entry = JSON.parse(line);
+              // For presentMulmoScript results, re-read the script from disk
+              if (
+                entry.source === "tool" &&
+                entry.type === "tool_result" &&
+                entry.result?.toolName === "presentMulmoScript" &&
+                entry.result?.data?.filePath
+              ) {
+                try {
+                  const scriptPath = path.join(
+                    workspacePath,
+                    entry.result.data.filePath,
+                  );
+                  const scriptJson = await readFile(scriptPath, "utf-8");
+                  return {
+                    ...entry,
+                    result: {
+                      ...entry.result,
+                      data: {
+                        ...entry.result.data,
+                        script: JSON.parse(scriptJson),
+                      },
+                    },
+                  };
+                } catch {
+                  // file missing — return original entry
+                }
+              }
+              return entry;
+            } catch {
+              return null;
+            }
+          }),
+      )
+    ).filter(Boolean);
     res.json(entries);
   } catch {
     res.status(404).json({ error: "Session not found" });
