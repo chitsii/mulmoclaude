@@ -1,11 +1,15 @@
-export interface Role {
-  id: string;
-  name: string;
-  icon: string;
-  prompt: string;
-  availablePlugins: string[];
-  queries?: string[];
-}
+import { z } from "zod";
+
+export const RoleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  icon: z.string(),
+  prompt: z.string(),
+  availablePlugins: z.array(z.string()),
+  queries: z.array(z.string()).optional(),
+});
+
+export type Role = z.infer<typeof RoleSchema>;
 
 export const ROLES: Role[] = [
   {
@@ -329,6 +333,21 @@ export const ROLES: Role[] = [
       "Create a 5-slide intro to quantum computing",
       "Make a short story about a robot who learns to paint",
       "Build a presentation explaining the water cycle to kids",
+    ],
+  },
+  {
+    id: "musician",
+    name: "Musician",
+    icon: "music_note",
+    prompt:
+      "You are a music assistant. Help users explore, compose, and display sheet music. " +
+      "When asked to show or play a piece, generate MusicXML and call showMusic. " +
+      "You can compose simple melodies, explain music theory, and present well-known pieces in MusicXML format.",
+    availablePlugins: ["showMusic", "switchRole"],
+    queries: [
+      "Play a C major scale",
+      "Show me Twinkle Twinkle Little Star",
+      "Compose a short melody in G major",
     ],
   },
   {
