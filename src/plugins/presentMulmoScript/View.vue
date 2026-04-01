@@ -38,7 +38,7 @@
         class="rounded-lg border border-gray-200 overflow-hidden"
       >
         <!-- Beat body: thumbnail + narration side by side -->
-        <div class="flex gap-3 items-start">
+        <div class="flex gap-3 items-stretch">
           <!-- Thumbnail -->
           <div class="shrink-0 w-[45%] overflow-hidden bg-gray-50">
             <img
@@ -89,10 +89,41 @@
           <!-- Narration text -->
           <div
             v-if="beat.text"
-            class="flex-1 min-w-0 text-sm text-gray-800 leading-relaxed px-2 py-1.5"
+            class="flex flex-col flex-1 min-w-0 px-2 py-1.5"
           >
-            {{ beat.text }}
+            <span class="text-sm text-gray-800 leading-relaxed">{{
+              beat.text
+            }}</span>
+            <div class="flex justify-end mt-auto pt-1">
+              <button
+                class="text-gray-400 hover:text-gray-600"
+                :title="sourceOpen[index] ? 'Hide source' : 'Show source'"
+                @click="sourceOpen[index] = !sourceOpen[index]"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-3.5 h-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
+                </svg>
+              </button>
+            </div>
           </div>
+        </div>
+
+        <!-- Source view -->
+        <div v-if="sourceOpen[index]" class="border-t border-gray-100">
+          <pre
+            class="text-xs text-gray-600 bg-gray-50 p-2 overflow-x-auto whitespace-pre-wrap break-all"
+            >{{ JSON.stringify(beat, null, 2) }}</pre
+          >
         </div>
       </div>
 
@@ -142,6 +173,7 @@ type RenderState = "idle" | "rendering" | "done" | "error";
 const renderState = reactive<Record<number, RenderState>>({});
 const renderedImages = reactive<Record<number, string>>({});
 const renderErrors = reactive<Record<number, string>>({});
+const sourceOpen = reactive<Record<number, boolean>>({});
 
 async function renderBeat(index: number) {
   renderState[index] = "rendering";
