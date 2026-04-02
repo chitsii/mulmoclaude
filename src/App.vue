@@ -154,6 +154,7 @@
       >
         <div class="flex gap-2">
           <textarea
+            ref="textareaRef"
             v-model="userInput"
             placeholder="Type a task..."
             rows="2"
@@ -318,6 +319,7 @@ const sessions = ref<SessionSummary[]>([]);
 const geminiAvailable = ref(true);
 
 const chatListRef = ref<HTMLDivElement | null>(null);
+const textareaRef = ref<HTMLTextAreaElement | null>(null);
 
 function scrollChatToBottom() {
   nextTick(() => {
@@ -329,7 +331,11 @@ function scrollChatToBottom() {
 
 watch(() => toolResults.value.length, scrollChatToBottom);
 watch(isRunning, (running) => {
-  if (running) scrollChatToBottom();
+  if (running) {
+    scrollChatToBottom();
+  } else {
+    nextTick(() => textareaRef.value?.focus());
+  }
 });
 
 const showRightSidebar = ref(
