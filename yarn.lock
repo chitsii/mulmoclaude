@@ -473,7 +473,7 @@
   dependencies:
     gui-chat-protocol "^0.0.3"
 
-"@gui-chat-plugin/generate-html@0.1.2":
+"@gui-chat-plugin/generate-html@^0.1.2":
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/@gui-chat-plugin/generate-html/-/generate-html-0.1.2.tgz#195b0eef51abbffa3922bf0b03ed7d33ea668dff"
   integrity sha512-Cpy+xpIsVaNF0aAY1zUas3LN8r/olFPqA1hiURxvFB9qld7Ec0g+ReZgTirI2ymGk0DO4W2bkg68t9wdf0zUXA==
@@ -486,7 +486,7 @@
     gui-chat-protocol "^0.0.4"
     marked "^17.0.5"
 
-"@gui-chat-plugin/mindmap@0.3.1":
+"@gui-chat-plugin/mindmap@^0.3.1":
   version "0.3.1"
   resolved "https://registry.yarnpkg.com/@gui-chat-plugin/mindmap/-/mindmap-0.3.1.tgz#68bf59e93f4e8940cc1062deab7eb38a3c5b3b3a"
   integrity sha512-9vSVNxu62AzavAhbZIF8o1czYYySsoEuAytJX8ilP2QlHzn8XeBFvoA75BDkEnYLaHlagm4vtQSHSx02n+dk4Q==
@@ -494,7 +494,7 @@
     gui-chat-protocol "^0.0.3"
     jspdf "^4.0.0"
 
-"@gui-chat-plugin/music@0.0.3":
+"@gui-chat-plugin/music@^0.0.3":
   version "0.0.3"
   resolved "https://registry.yarnpkg.com/@gui-chat-plugin/music/-/music-0.0.3.tgz#1ea9e8ad07d83f5202c9cc54376308a585cdb188"
   integrity sha512-x5s0XVqUMHPkvrM4xGLIe2UaVvtspVteCwbhzYUnu8/AJzYSv0CNfU9BL1d8AMGd6rSFtm5pDKTMgVmBwzLdjg==
