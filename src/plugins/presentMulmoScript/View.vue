@@ -244,7 +244,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import type { ToolResultComplete } from "gui-chat-protocol/vue";
 import type { MulmoScriptData } from "./index";
 import { mulmoBeatSchema } from "@mulmocast/types";
@@ -364,15 +364,25 @@ async function loadExistingBeatImage(index: number) {
   }
 }
 
-onMounted(async () => {
+async function initializeScript() {
+  // Reset per-script state
+  Object.keys(renderState).forEach((k) => delete renderState[+k]);
+  Object.keys(renderedImages).forEach((k) => delete renderedImages[+k]);
+  Object.keys(renderErrors).forEach((k) => delete renderErrors[+k]);
+  Object.keys(sourceOpen).forEach((k) => delete sourceOpen[+k]);
+  Object.keys(sourceText).forEach((k) => delete sourceText[+k]);
+  Object.keys(localOverrides).forEach((k) => delete localOverrides[+k]);
+  moviePath.value = null;
+  scriptSourceOpen.value = false;
+
+  const AUTO_RENDER_TYPES = [
+    "textSlide",
+    "markdown",
+    "chart",
+    "mermaid",
+    "html_tailwind",
+  ];
   beats.value.forEach((beat, index) => {
-    const AUTO_RENDER_TYPES = [
-      "textSlide",
-      "markdown",
-      "chart",
-      "mermaid",
-      "html_tailwind",
-    ];
     if (beat.image?.type && AUTO_RENDER_TYPES.includes(beat.image.type)) {
       renderBeat(index);
     } else if (beat.imagePrompt) {
@@ -380,7 +390,6 @@ onMounted(async () => {
     }
   });
 
-  // Check if a up-to-date movie already exists on disk
   if (filePath.value) {
     try {
       const params = new URLSearchParams({ filePath: filePath.value });
@@ -391,7 +400,10 @@ onMounted(async () => {
       // ignore
     }
   }
-});
+}
+
+onMounted(initializeScript);
+watch(() => props.selectedResult, initializeScript);
 
 async function generateMovie() {
   movieGenerating.value = true;
