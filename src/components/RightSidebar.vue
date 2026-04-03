@@ -48,7 +48,7 @@
             </button>
             <div
               v-if="toolDescriptions[tool] && expandedTools.has(tool)"
-              class="text-gray-500 mt-0.5 pl-1 leading-snug"
+              class="text-gray-500 mt-0.5 pl-1 leading-snug whitespace-pre-wrap"
             >
               {{ toolDescriptions[tool] }}
             </div>
