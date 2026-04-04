@@ -160,6 +160,13 @@
                 >{{ characterPrompt(key) }}</span
               >
             </template>
+            <!-- Permanent drop hint -->
+            <div
+              v-if="!charDragOver[key]"
+              class="absolute bottom-0 inset-x-0 text-center text-xs text-gray-400 bg-white/70 py-0.5 pointer-events-none"
+            >
+              or drop image
+            </div>
             <!-- Drop overlay -->
             <div
               v-if="charDragOver[key]"
