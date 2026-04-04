@@ -157,15 +157,7 @@ router.get(
     }
 
     try {
-      setGraphAILogger(false);
-
-      const files = getFileObject({
-        file: absoluteFilePath,
-        basedir: path.dirname(absoluteFilePath),
-        grouped: true,
-      });
-
-      const context = await initializeContextFromFiles(files, true);
+      const context = await buildContext(absoluteFilePath);
       if (!context) {
         res.status(500).json({ error: "Failed to initialize mulmo context" });
         return;
@@ -212,15 +204,7 @@ router.get(
     }
 
     try {
-      setGraphAILogger(false);
-
-      const files = getFileObject({
-        file: absoluteFilePath,
-        basedir: path.dirname(absoluteFilePath),
-        grouped: true,
-      });
-
-      const context = await initializeContextFromFiles(files, true);
+      const context = await buildContext(absoluteFilePath);
       if (!context) {
         res.json({ moviePath: null });
         return;
@@ -399,15 +383,7 @@ router.post(
     }
 
     try {
-      setGraphAILogger(false);
-
-      const files = getFileObject({
-        file: absoluteFilePath,
-        basedir: path.dirname(absoluteFilePath),
-        grouped: true,
-      });
-
-      const context = await initializeContextFromFiles(files, true);
+      const context = await buildContext(absoluteFilePath, force);
       if (!context) {
         res.status(500).json({ error: "Failed to initialize mulmo context" });
         return;
@@ -465,15 +441,7 @@ router.post(
       res.write(`data: ${JSON.stringify(data)}\n\n`);
 
     try {
-      setGraphAILogger(false);
-
-      const files = getFileObject({
-        file: absoluteFilePath,
-        basedir: path.dirname(absoluteFilePath),
-        grouped: true,
-      });
-
-      const context = await initializeContextFromFiles(files, true);
+      const context = await buildContext(absoluteFilePath);
       if (!context) {
         send({ type: "error", message: "Failed to initialize mulmo context" });
         res.end();
@@ -500,11 +468,7 @@ router.post(
         ) {
           const beatIndex = idToIndex.get(event.id);
           if (beatIndex !== undefined) {
-            if (event.sessionType === "image") {
-              send({ type: "beat_image_done", beatIndex });
-            } else if (event.sessionType === "audio") {
-              send({ type: "beat_audio_done", beatIndex });
-            }
+            send({ type: `beat_${event.sessionType}_done`, beatIndex });
           }
         }
       };

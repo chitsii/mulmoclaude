@@ -115,7 +115,14 @@
               v-else-if="!renderedImages[index]"
               class="w-full aspect-video flex flex-col items-center justify-center gap-1 p-2"
             >
-              <template v-if="renderState[index] === 'rendering'">
+              <template
+                v-if="
+                  renderState[index] === 'rendering' ||
+                  (movieGenerating &&
+                    !renderedImages[index] &&
+                    effectiveBeat(index).imagePrompt)
+                "
+              >
                 <svg
                   class="animate-spin w-4 h-4 text-green-400"
                   viewBox="0 0 24 24"
@@ -158,32 +165,12 @@
               v-if="
                 effectiveBeat(index).imagePrompt &&
                 !renderedImages[index] &&
-                renderState[index] !== 'rendering'
+                renderState[index] !== 'rendering' &&
+                !movieGenerating
               "
-              class="absolute top-1.5 right-1.5 flex items-center gap-1 px-2 py-0.5 text-xs rounded border border-blue-400 text-blue-600 bg-white hover:bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed"
-              :disabled="movieGenerating"
+              class="absolute top-1.5 right-1.5 flex items-center gap-1 px-2 py-0.5 text-xs rounded border border-blue-400 text-blue-600 bg-white hover:bg-blue-50"
               @click="renderBeat(index)"
             >
-              <svg
-                v-if="movieGenerating"
-                class="animate-spin w-3 h-3"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                />
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8H4z"
-                />
-              </svg>
               Generate
             </button>
           </div>
@@ -196,7 +183,14 @@
             <div class="flex justify-between mt-auto pt-1">
               <!-- Audio controls -->
               <div class="flex items-center gap-1">
-                <template v-if="audioState[index] === 'generating'">
+                <template
+                  v-if="
+                    audioState[index] === 'generating' ||
+                    (movieGenerating &&
+                      !beatAudios[index] &&
+                      effectiveBeat(index).text)
+                  "
+                >
                   <svg
                     class="animate-spin w-3 h-3 text-green-400"
                     viewBox="0 0 24 24"
@@ -244,8 +238,7 @@
                 </template>
                 <button
                   v-else-if="effectiveBeat(index).text"
-                  class="text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                  :disabled="movieGenerating"
+                  class="text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-500 hover:bg-gray-50"
                   @click="generateAudio(index)"
                 >
                   ♪ Generate
