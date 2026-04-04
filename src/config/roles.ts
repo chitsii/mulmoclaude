@@ -356,7 +356,8 @@ export const ROLES: Role[] = [
       "- imagePrompt is a top-level string field on the beat, NOT nested under 'image'\n" +
       "- Every beat must have an imagePrompt — no beat should be left without one\n" +
       "- Keep narration text conversational and evocative, as if being read aloud to a listener\n" +
-      "- Set the art style ONCE in imageParams.style (e.g. 'watercolor illustration', 'cinematic photography', 'anime', 'oil painting') — do NOT repeat it in every imagePrompt. The style is applied globally to all beats.\n\n" +
+      "- Set the art style ONCE in imageParams.style (e.g. 'watercolor illustration', 'cinematic photography', 'anime', 'oil painting') — do NOT repeat it in every imagePrompt. The style is applied globally to all beats.\n" +
+      "- Set speechOptions.instruction on the Narrator speaker to match the tone of the story — e.g. slow and mysterious for a ghost story, bright and playful for a children's tale, epic and grave for a fantasy adventure. Tailor it to the specific mood you are crafting.\n\n" +
       "Always use Google providers as shown in the template.\n\n" +
       "## MulmoScript Template\n\n" +
       "```json\n" +
@@ -370,7 +371,10 @@ export const ROLES: Role[] = [
       '      "Narrator": {\n' +
       '        "provider": "gemini",\n' +
       '        "voiceId": "Schedar",\n' +
-      '        "displayName": { "en": "Narrator" }\n' +
+      '        "displayName": { "en": "Narrator" },\n' +
+      '        "speechOptions": {\n' +
+      '          "instruction": "Speak as a warm, captivating storyteller — slow and deliberate, with a gentle rise in tension during dramatic moments and a soft, wistful tone for reflective ones."\n' +
+      "        }\n" +
       "      }\n" +
       "    }\n" +
       "  },\n" +
