@@ -193,7 +193,59 @@
             <span class="text-sm text-gray-800 leading-relaxed">{{
               effectiveBeat(index).text
             }}</span>
-            <div class="flex justify-end mt-auto pt-1">
+            <div class="flex justify-between mt-auto pt-1">
+              <!-- Audio controls -->
+              <div class="flex items-center gap-1">
+                <template v-if="audioState[index] === 'generating'">
+                  <svg
+                    class="animate-spin w-3 h-3 text-green-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    />
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8H4z"
+                    />
+                  </svg>
+                </template>
+                <button
+                  v-else-if="beatAudios[index]"
+                  class="text-xs px-2 py-0.5 rounded border border-green-400 text-green-600 hover:bg-green-50"
+                  @click="playAudio(index)"
+                >
+                  ▶ Play
+                </button>
+                <template v-else-if="audioErrors[index]">
+                  <span class="text-xs text-red-400" :title="audioErrors[index]"
+                    >⚠ Error</span
+                  >
+                  <button
+                    v-if="effectiveBeat(index).text"
+                    class="text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                    :disabled="movieGenerating"
+                    @click="generateAudio(index)"
+                  >
+                    ↺
+                  </button>
+                </template>
+                <button
+                  v-else-if="effectiveBeat(index).text"
+                  class="text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  :disabled="movieGenerating"
+                  @click="generateAudio(index)"
+                >
+                  ♪ Generate
+                </button>
+              </div>
               <button
                 class="text-gray-400 hover:text-gray-600"
                 :title="sourceOpen[index] ? 'Hide source' : 'Show source'"
@@ -329,6 +381,11 @@ const sourceText = reactive<Record<number, string>>({});
 const localOverrides = reactive<Record<number, Beat>>({});
 const movieGenerating = ref(false);
 const moviePath = ref<string | null>(null);
+const beatAudios = reactive<Record<number, string>>({});
+const audioState = reactive<Record<number, "generating" | "done" | "error">>(
+  {},
+);
+const audioErrors = reactive<Record<number, string>>({});
 const lightbox = ref<{ src: string; text?: string; index: number } | null>(
   null,
 );
@@ -472,6 +529,49 @@ async function loadExistingBeatImage(index: number) {
   }
 }
 
+async function loadExistingBeatAudio(index: number) {
+  try {
+    const params = new URLSearchParams({
+      filePath: filePath.value,
+      beatIndex: String(index),
+    });
+    const res = await fetch(`/api/mulmo-script/beat-audio?${params}`);
+    const json = await res.json();
+    if (json.audio) {
+      beatAudios[index] = json.audio;
+      audioState[index] = "done";
+    }
+  } catch {
+    // silently ignore
+  }
+}
+
+async function generateAudio(index: number) {
+  audioState[index] = "generating";
+  delete audioErrors[index];
+  try {
+    const res = await fetch("/api/mulmo-script/generate-beat-audio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filePath: filePath.value, beatIndex: index }),
+    });
+    const json = await res.json();
+    if (!res.ok || json.error)
+      throw new Error(json.error ?? "Audio generation failed");
+    beatAudios[index] = json.audio;
+    audioState[index] = "done";
+  } catch (err) {
+    audioErrors[index] = err instanceof Error ? err.message : String(err);
+    audioState[index] = "error";
+  }
+}
+
+function playAudio(index: number) {
+  const src = beatAudios[index];
+  if (!src) return;
+  new Audio(src).play();
+}
+
 async function initializeScript() {
   // Reset per-script state
   Object.keys(renderState).forEach((k) => delete renderState[+k]);
@@ -480,6 +580,9 @@ async function initializeScript() {
   Object.keys(sourceOpen).forEach((k) => delete sourceOpen[+k]);
   Object.keys(sourceText).forEach((k) => delete sourceText[+k]);
   Object.keys(localOverrides).forEach((k) => delete localOverrides[+k]);
+  Object.keys(beatAudios).forEach((k) => delete beatAudios[+k]);
+  Object.keys(audioState).forEach((k) => delete audioState[+k]);
+  Object.keys(audioErrors).forEach((k) => delete audioErrors[+k]);
   moviePath.value = null;
   scriptSourceOpen.value = false;
 
@@ -496,6 +599,7 @@ async function initializeScript() {
     } else if (beat.imagePrompt) {
       loadExistingBeatImage(index);
     }
+    if (beat.text) loadExistingBeatAudio(index);
   });
 
   if (filePath.value) {
@@ -538,6 +642,8 @@ async function generateMovie() {
         const event = JSON.parse(line.slice(6));
         if (event.type === "beat_image_done") {
           loadExistingBeatImage(event.beatIndex);
+        } else if (event.type === "beat_audio_done") {
+          loadExistingBeatAudio(event.beatIndex);
         } else if (event.type === "done") {
           moviePath.value = event.moviePath;
         } else if (event.type === "error") {

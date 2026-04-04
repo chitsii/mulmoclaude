@@ -7,6 +7,8 @@ import {
   initializeContextFromFiles,
   generateBeatImage,
   getBeatPngImagePath,
+  generateBeatAudio,
+  getBeatAudioPathOrUrl,
   images,
   audio,
   movie,
@@ -228,6 +230,132 @@ router.get(
   },
 );
 
+// Helper: resolve and validate a stories filePath, returns absoluteFilePath or null
+function resolveStoryPath(filePath: string, res: Response): string | null {
+  const storiesDir = path.resolve(workspacePath, "stories");
+  const absoluteFilePath = path.resolve(workspacePath, filePath);
+  if (!absoluteFilePath.startsWith(storiesDir + path.sep)) {
+    res.status(400).json({ error: "Invalid filePath" });
+    return null;
+  }
+  if (!fs.existsSync(absoluteFilePath)) {
+    res.status(404).json({ error: `File not found: ${filePath}` });
+    return null;
+  }
+  return absoluteFilePath;
+}
+
+// Helper: build mulmo context for a story file
+async function buildContext(absoluteFilePath: string, force = false) {
+  setGraphAILogger(false);
+  const files = getFileObject({
+    file: absoluteFilePath,
+    basedir: path.dirname(absoluteFilePath),
+    grouped: true,
+  });
+  return initializeContextFromFiles(files, true, force);
+}
+
+router.get("/mulmo-script/beat-audio", async (req: Request, res: Response) => {
+  const filePath =
+    typeof req.query.filePath === "string" ? req.query.filePath : undefined;
+  const beatIndex =
+    typeof req.query.beatIndex === "string"
+      ? parseInt(req.query.beatIndex, 10)
+      : undefined;
+
+  if (!filePath || beatIndex === undefined || isNaN(beatIndex)) {
+    res.status(400).json({ error: "filePath and beatIndex are required" });
+    return;
+  }
+
+  const absoluteFilePath = resolveStoryPath(filePath, res);
+  if (!absoluteFilePath) return;
+
+  try {
+    const context = await buildContext(absoluteFilePath);
+    if (!context) {
+      res.json({ audio: null });
+      return;
+    }
+
+    const beat = context.studio.script.beats[beatIndex];
+    const audioPath = getBeatAudioPathOrUrl(
+      beat.text ?? "",
+      context,
+      beat,
+      context.lang,
+    );
+    if (!audioPath || !fs.existsSync(audioPath)) {
+      res.json({ audio: null });
+      return;
+    }
+
+    const audioData = fs.readFileSync(audioPath);
+    const base64 = audioData.toString("base64");
+    res.json({ audio: `data:audio/mpeg;base64,${base64}` });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: message });
+  }
+});
+
+router.post(
+  "/mulmo-script/generate-beat-audio",
+  async (
+    req: Request<
+      object,
+      object,
+      { filePath: string; beatIndex: number; force?: boolean }
+    >,
+    res: Response,
+  ) => {
+    const { filePath, beatIndex, force } = req.body;
+
+    if (!filePath || beatIndex === undefined) {
+      res.status(400).json({ error: "filePath and beatIndex are required" });
+      return;
+    }
+
+    const absoluteFilePath = resolveStoryPath(filePath, res);
+    if (!absoluteFilePath) return;
+
+    try {
+      const context = await buildContext(absoluteFilePath, force);
+      if (!context) {
+        res.status(500).json({ error: "Failed to initialize mulmo context" });
+        return;
+      }
+
+      await generateBeatAudio(beatIndex, context, { settings: process.env });
+
+      const beat = context.studio.script.beats[beatIndex];
+      const audioPath =
+        context.studio.beats[beatIndex]?.audioFile ??
+        getBeatAudioPathOrUrl(beat.text ?? "", context, beat, context.lang);
+
+      if (!audioPath || !fs.existsSync(audioPath)) {
+        console.error(
+          `[generate-beat-audio] failed: beatIndex=${beatIndex} audioPath=${audioPath} exists=${audioPath ? fs.existsSync(audioPath) : false}`,
+        );
+        console.error(
+          `[generate-beat-audio] beat.text=${JSON.stringify(beat.text)} audioFile=${context.studio.beats[beatIndex]?.audioFile}`,
+        );
+        res.status(500).json({ error: "Audio was not generated" });
+        return;
+      }
+
+      const audioData = fs.readFileSync(audioPath);
+      const base64 = audioData.toString("base64");
+      res.json({ audio: `data:audio/mpeg;base64,${base64}` });
+    } catch (err) {
+      console.error("[generate-beat-audio] error:", err);
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: message });
+    }
+  },
+);
+
 router.post(
   "/mulmo-script/render-beat",
   async (req: Request<object, object, RenderBeatBody>, res: Response) => {
@@ -347,13 +475,16 @@ router.post(
       }) => {
         if (
           event.kind === "beat" &&
-          event.sessionType === "image" &&
           !event.inSession &&
           event.id !== undefined
         ) {
           const beatIndex = idToIndex.get(event.id);
           if (beatIndex !== undefined) {
-            send({ type: "beat_image_done", beatIndex });
+            if (event.sessionType === "image") {
+              send({ type: "beat_image_done", beatIndex });
+            } else if (event.sessionType === "audio") {
+              send({ type: "beat_audio_done", beatIndex });
+            }
           }
         }
       };
