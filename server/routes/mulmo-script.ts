@@ -468,11 +468,7 @@ router.post(
         ) {
           const beatIndex = idToIndex.get(event.id);
           if (beatIndex !== undefined) {
-            if (event.sessionType === "image") {
-              send({ type: "beat_image_done", beatIndex });
-            } else if (event.sessionType === "audio") {
-              send({ type: "beat_audio_done", beatIndex });
-            }
+            send({ type: `beat_${event.sessionType}_done`, beatIndex });
           }
         }
       };
