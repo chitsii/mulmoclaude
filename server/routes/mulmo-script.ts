@@ -56,6 +56,15 @@ type BeatAudioResponse = { audio: string | null } | ErrorResponse;
 type MovieStatusResponse = { moviePath: string | null } | ErrorResponse;
 type GenerateBeatAudioResponse = { audio: string } | ErrorResponse;
 
+interface BeatQuery {
+  filePath?: string;
+  beatIndex?: string;
+}
+
+interface FilePathQuery {
+  filePath?: string;
+}
+
 router.post(
   "/mulmo-script",
   (req: Request<object, object, SaveMulmoScriptBody>, res: Response) => {
@@ -125,13 +134,13 @@ router.post(
 
 router.get(
   "/mulmo-script/beat-image",
-  async (req: Request, res: Response<BeatImageResponse>) => {
-    const filePath =
-      typeof req.query.filePath === "string" ? req.query.filePath : undefined;
+  async (
+    req: Request<object, BeatImageResponse, object, BeatQuery>,
+    res: Response<BeatImageResponse>,
+  ) => {
+    const { filePath, beatIndex: beatIndexStr } = req.query;
     const beatIndex =
-      typeof req.query.beatIndex === "string"
-        ? parseInt(req.query.beatIndex, 10)
-        : undefined;
+      beatIndexStr !== undefined ? parseInt(beatIndexStr, 10) : undefined;
 
     if (!filePath || beatIndex === undefined || isNaN(beatIndex)) {
       res.status(400).json({ error: "filePath and beatIndex are required" });
@@ -183,9 +192,11 @@ router.get(
 
 router.get(
   "/mulmo-script/movie-status",
-  async (req: Request, res: Response<MovieStatusResponse>) => {
-    const filePath =
-      typeof req.query.filePath === "string" ? req.query.filePath : undefined;
+  async (
+    req: Request<object, MovieStatusResponse, object, FilePathQuery>,
+    res: Response<MovieStatusResponse>,
+  ) => {
+    const { filePath } = req.query;
 
     if (!filePath) {
       res.status(400).json({ error: "filePath is required" });
@@ -268,13 +279,13 @@ async function buildContext(absoluteFilePath: string, force = false) {
 
 router.get(
   "/mulmo-script/beat-audio",
-  async (req: Request, res: Response<BeatAudioResponse>) => {
-    const filePath =
-      typeof req.query.filePath === "string" ? req.query.filePath : undefined;
+  async (
+    req: Request<object, BeatAudioResponse, object, BeatQuery>,
+    res: Response<BeatAudioResponse>,
+  ) => {
+    const { filePath, beatIndex: beatIndexStr } = req.query;
     const beatIndex =
-      typeof req.query.beatIndex === "string"
-        ? parseInt(req.query.beatIndex, 10)
-        : undefined;
+      beatIndexStr !== undefined ? parseInt(beatIndexStr, 10) : undefined;
 
     if (!filePath || beatIndex === undefined || isNaN(beatIndex)) {
       res.status(400).json({ error: "filePath and beatIndex are required" });
