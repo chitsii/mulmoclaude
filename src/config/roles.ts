@@ -498,9 +498,9 @@ export const ROLES: Role[] = [
       "```",
     availablePlugins: ["presentMulmoScript", "switchRole"],
     queries: [
-      "Tell a story about two siblings — a bold older sister and a shy younger brother — who get lost in an enchanted forest",
-      "Create a story with three characters: a grumpy wizard, his loyal cat, and a young apprentice who must work together to break a curse",
-      "Tell a pirate adventure featuring a daring captain and her first mate across three islands",
+      "Tell a story about two siblings — a bold older sister and a shy younger brother — who get lost in an enchanted forest. Use a Studio Ghibli anime style.",
+      "Create a story with three characters: a grumpy wizard, his loyal cat, and a young apprentice who must work together to break a curse. Use a dark fantasy oil painting style.",
+      "Tell a pirate adventure featuring a daring captain and her first mate across three islands. Use a cinematic photography style.",
     ],
   },
   {
