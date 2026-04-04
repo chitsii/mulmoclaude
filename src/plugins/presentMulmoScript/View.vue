@@ -326,12 +326,26 @@
             :src="lightbox.src"
             class="max-w-[80vw] max-h-[80vh] object-contain rounded shadow-2xl"
           />
-          <p
-            v-if="lightbox.text"
-            class="max-w-[80vw] text-center text-white text-2xl leading-relaxed"
-          >
-            {{ lightbox.text }}
-          </p>
+          <div class="flex items-center gap-4">
+            <p
+              v-if="lightbox.text"
+              class="max-w-[80vw] text-center text-white text-2xl leading-relaxed"
+            >
+              {{ lightbox.text }}
+            </p>
+            <button
+              v-if="beatAudios[lightbox.index]"
+              class="shrink-0 text-sm px-3 py-1 rounded border"
+              :class="
+                playingAudio?.index === lightbox.index
+                  ? 'border-red-400 text-red-400 hover:bg-red-400/20'
+                  : 'border-white/60 text-white/60 hover:bg-white/20'
+              "
+              @click="playAudio(lightbox.index)"
+            >
+              {{ playingAudio?.index === lightbox.index ? "■ Stop" : "▶ Play" }}
+            </button>
+          </div>
         </div>
         <button
           class="text-white/60 hover:text-white disabled:opacity-20 text-4xl leading-none"
@@ -399,6 +413,10 @@ const lightbox = ref<{ src: string; text?: string; index: number } | null>(
 );
 
 function openLightbox(index: number) {
+  if (playingAudio.value) {
+    playingAudio.value.audio.pause();
+    playingAudio.value = null;
+  }
   lightbox.value = {
     src: renderedImages[index],
     text: effectiveBeat(index).text,
