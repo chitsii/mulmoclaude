@@ -37,6 +37,8 @@ See [Wiki](helps/wiki.md) for details on how it works.
 ## Help Pages
 
 - [Wiki](helps/wiki.md) — how the personal knowledge wiki works, its folder layout, page format, and operations
+- [MulmoScript](helps/mulmoscript.md) — format reference for authoring multimedia stories: beats, image types, speech, audio, and a minimal example
+- [Business Presentation Template](helps/business.md) — MulmoScript template and rules for business presentations in the Office role
 
 ## Workspace Layout
 

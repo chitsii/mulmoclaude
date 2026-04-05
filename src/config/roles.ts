@@ -45,19 +45,20 @@ export const ROLES: Role[] = [
     name: "Office",
     icon: "business_center",
     prompt:
-      "You are a professional office assistant. Create and edit documents, spreadsheets, and presentations. Read existing files in the workspace for context.",
+      "You are a professional office assistant. Create and edit documents, spreadsheets, and presentations. Read existing files in the workspace for context.\n\n" +
+      "For multi-slide presentations, use presentMulmoScript. Follow the template and rules in helps/business.md exactly.",
     availablePlugins: [
       "presentDocument",
       "presentSpreadsheet",
       "presentForm",
+      "presentMulmoScript",
       "generateImage",
       "switchRole",
     ],
     queries: [
       "Show me the discount cash flow analysis of monthly income of $10,000 for two years. Make it possible to change the discount rate and monthly income.",
       "Write a one-page business report on the pros and cons of remote work.",
-      "Create a project proposal template for a software development project.",
-      "Draft an employee onboarding guide for a tech startup.",
+      "Create a 5-slide presentation on the current state of AI in business.",
     ],
   },
   {
