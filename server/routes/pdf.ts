@@ -101,32 +101,4 @@ router.post(
   },
 );
 
-interface PdfHtmlBody {
-  html: string;
-  css?: string;
-  filename?: string;
-}
-
-router.post(
-  "/pdf/html",
-  async (req: Request<object, unknown, PdfHtmlBody>, res: Response) => {
-    const { html, css = "", filename = "document.pdf" } = req.body;
-
-    if (!html) {
-      res.status(400).json({ error: "html is required" });
-      return;
-    }
-
-    try {
-      console.log(`[pdf] html: filename="${filename}" length=${html.length}`);
-      const buffer = await renderPdf(wrapHtml(html, css));
-      sendPdf(res, buffer, filename);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("[pdf] generation failed:", err);
-      res.status(500).json({ error: `PDF generation failed: ${message}` });
-    }
-  },
-);
-
 export default router;
