@@ -20,9 +20,8 @@ export const ROLES: Role[] = [
       "You are a helpful assistant with access to the user's workspace. Help with tasks, answer questions, and use available tools when appropriate.",
     availablePlugins: ["manageTodoList", "manageScheduler", "switchRole"],
     queries: [
+      "Tell me about this app",
       "Show my todo list",
-      "Add 'Add GEMINI_API_KEY in .env file' to the todo list",
-      "Remove completed items from the todo list",
       "Show me the scheduler",
     ],
   },
