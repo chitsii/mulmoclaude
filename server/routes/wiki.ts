@@ -24,17 +24,65 @@ export interface WikiPageEntry {
   description: string;
 }
 
-// Parse entries from index.md bullet list format:
-// - [Title](pages/slug.md) — description
+// Parse entries from index.md — supports three formats:
+// 1. Table: | `slug` | Title | Summary | Date |
+// 2. Bullet link: - [Title](pages/slug.md) — description
+// 3. Wiki link: - [[Title]] — description
 function parseIndexEntries(content: string): WikiPageEntry[] {
   const entries: WikiPageEntry[] = [];
+  let inTable = false;
+
   for (const line of content.split("\n")) {
-    const match = line.match(
-      /^\s*[-*]\s+\[([^\]]+)\]\([^)]*\)(?:\s*[—–-]\s*(.*))?/,
+    const trimmed = line.trim();
+
+    // Table rows: | cell | cell | ... |
+    if (trimmed.startsWith("|")) {
+      // Skip header separator rows like |---|---|
+      if (/^\|[\s|:-]+\|$/.test(trimmed)) {
+        inTable = true;
+        continue;
+      }
+      if (!inTable) {
+        inTable = true;
+        continue; // skip header row
+      }
+      const cols = trimmed
+        .split("|")
+        .slice(1, -1)
+        .map((c) => c.trim().replace(/^`|`$/g, ""));
+      if (cols.length >= 2) {
+        const slug = cols[0];
+        const title = cols[1] || slug;
+        const desc = cols[2] ?? "";
+        if (slug && title) entries.push({ title, slug, description: desc });
+      }
+      continue;
+    }
+
+    inTable = false;
+
+    // Bullet with markdown link: - [Title](path) — desc
+    const linkMatch = trimmed.match(
+      /^[-*]\s+\[([^\]]+)\]\([^)]*\)(?:\s*[—–-]\s*(.*))?/,
     );
-    if (match) {
-      const title = match[1].trim();
-      const desc = match[2]?.trim() ?? "";
+    if (linkMatch) {
+      const title = linkMatch[1].trim();
+      const desc = linkMatch[2]?.trim() ?? "";
+      const slug = title
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "");
+      entries.push({ title, slug, description: desc });
+      continue;
+    }
+
+    // Bullet with wiki link: - [[Title]] — desc
+    const wikiMatch = trimmed.match(
+      /^[-*]\s+\[\[([^\]]+)\]\](?:\s*[—–-]\s*(.*))?/,
+    );
+    if (wikiMatch) {
+      const title = wikiMatch[1].trim();
+      const desc = wikiMatch[2]?.trim() ?? "";
       const slug = title
         .toLowerCase()
         .replace(/\s+/g, "-")
