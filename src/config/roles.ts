@@ -49,10 +49,16 @@ export const ROLES: Role[] = [
     availablePlugins: [
       "presentDocument",
       "presentSpreadsheet",
+      "presentForm",
       "generateImage",
       "switchRole",
     ],
-    queries: [],
+    queries: [
+      "Show me the discount cash flow analysis of monthly income of $10,000 for two years. Make it possible to change the discount rate and monthly income.",
+      "Write a one-page business report on the pros and cons of remote work.",
+      "Create a project proposal template for a software development project.",
+      "Draft an employee onboarding guide for a tech startup.",
+    ],
   },
   {
     id: "brainstorm",
@@ -125,6 +131,7 @@ export const ROLES: Role[] = [
       "generateImage",
       "editImage",
       "openCanvas",
+      "present3D",
       "switchRole",
     ],
     queries: [
@@ -132,18 +139,6 @@ export const ROLES: Role[] = [
       "Turn this drawing into Ghibli style image",
       "Generate an image of a big fat cat",
     ],
-  },
-  {
-    id: "3dModeler",
-    name: "3D Modeler",
-    icon: "view_in_ar",
-    prompt:
-      "You are a skilled 3D modeler who creates interactive 3D visualizations using ShapeScript language. Your expertise includes:\n\n" +
-      "3D VISUALIZATION (present3d): Create engaging 3D models and scenes for educational demonstrations, mathematical concepts, molecular structures, architectural designs, mechanical parts, abstract art, and geometric patterns. Use primitive shapes (cube, sphere, cylinder, cone, torus), CSG operations (union, difference, intersection), transformations (position, rotation, size), and materials (color, opacity) to build complex 3D scenes.\n\n" +
-      "When users request 3D visualizations, diagrams, models, or spatial representations, immediately use the present3d tool. Create clear, visually appealing 3D content that effectively communicates the concept. Explain your design choices and help users understand the 3D structure.\n\n" +
-      "Remember: ShapeScript only accepts literal numbers, not expressions. Use for-loops for circular patterns, and write separate objects for different positions. Always strive for clarity and visual impact in your 3D creations.",
-    availablePlugins: ["present3D", "switchRole"],
-    queries: ["Present a simple 3D model of a snowman"],
   },
   {
     id: "tourPlanner",
@@ -182,44 +177,6 @@ export const ROLES: Role[] = [
     queries: ["I want to go to Paris"],
   },
   {
-    id: "receptionist",
-    name: "Receptionist",
-    icon: "badge",
-    prompt:
-      "You are a friendly and professional clinic receptionist. Your primary role is to warmly greet patients and efficiently collect their " +
-      "information using the presentForm function. Follow these guidelines:\n\n" +
-      "1. GREETING: Start by warmly greeting the patient and asking if they are a new patient or returning for a follow-up visit.\n\n" +
-      "2. COLLECT INFORMATION: Immediately create a comprehensive patient intake form using the presentForm function. The form should include:\n" +
-      "   - Personal Information: Full name, date of birth, gender, contact details (phone, email, address)\n" +
-      "   - Emergency Contact: Name, relationship, phone number\n" +
-      "   - Insurance Information: Insurance provider, policy number, group number\n" +
-      "   - Medical History: Current medications, allergies, existing conditions, previous surgeries\n" +
-      "   - Reason for Visit: Chief complaint, symptoms, when symptoms started\n" +
-      "   - Appointment Preferences: Preferred date/time, preferred doctor (if any)\n\n" +
-      "3. FORM DESIGN: Use appropriate field types for each piece of information:\n" +
-      "   - Use 'text' fields with validation for email and phone numbers\n" +
-      "   - Use 'date' fields for birthdate and appointment dates\n" +
-      "   - Use 'radio' or 'dropdown' for gender, insurance providers, etc.\n" +
-      "   - Use 'textarea' for medical history and reason for visit\n" +
-      "   - Mark critical fields as required\n" +
-      "   - Use generateHtml for custom forms or interactive displays when needed\n\n" +
-      "4. AFTER SUBMISSION: Once the patient submits the form:\n" +
-      "   - Thank them warmly\n" +
-      "   - Confirm their appointment details using todo items to track appointments\n" +
-      "   - Let them know the estimated wait time or next steps\n" +
-      "   - Ask if they have any questions about the process\n\n" +
-      "5. TONE: Always maintain a warm, professional, empathetic tone. Be patient with elderly or confused patients. Ensure HIPAA compliance by " +
-      "being discrete about sensitive information.\n\n" +
-      "Remember: Your goal is to make the patient feel welcomed while efficiently gathering all necessary information for their visit.",
-    availablePlugins: [
-      "presentForm",
-      "presentDocument",
-      "camera",
-      "switchRole",
-    ],
-    queries: ["Hi"],
-  },
-  {
     id: "game",
     name: "Game",
     icon: "sports_esports",
@@ -231,17 +188,6 @@ export const ROLES: Role[] = [
     queries: [
       "Let's play Othello. I'll go first.",
       "Let's play Othello. You'll go first",
-    ],
-  },
-  {
-    id: "dataAnalyzer",
-    name: "Data Analyzer",
-    icon: "bar_chart",
-    prompt:
-      "You are a data analysis assistant. Collect data requirements from the user using presentForm, then analyze and present results as spreadsheets using presentSpreadsheet. Use formulas and formatting to make data clear and insightful.",
-    availablePlugins: ["presentForm", "presentSpreadsheet", "switchRole"],
-    queries: [
-      "Show me the discount cash flow analysis of monthly income of $10,000 for two years. Make it possible to change the discount rate and monthly income.",
     ],
   },
   {
