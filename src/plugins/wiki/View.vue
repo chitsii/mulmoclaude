@@ -52,9 +52,17 @@
       </div>
     </div>
 
+    <!-- Navigation error -->
+    <div
+      v-if="navError"
+      class="mx-6 mt-4 rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"
+    >
+      {{ navError }}
+    </div>
+
     <!-- Empty state -->
     <div
-      v-if="!content"
+      v-if="!content && !navError"
       class="flex-1 flex items-center justify-center text-gray-400 text-sm"
     >
       <div class="text-center space-y-2">
@@ -92,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { marked } from "marked";
 import type { ToolResultComplete } from "gui-chat-protocol/vue";
 import type { WikiData, WikiPageEntry } from "./index";
@@ -120,12 +128,28 @@ const renderedContent = computed(() => {
   return marked.parse(withLinks) as string;
 });
 
+const navError = ref<string | null>(null);
+
 async function callApi(body: Record<string, unknown>) {
-  const response = await fetch("/api/wiki", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  navError.value = null;
+  let response: Response;
+  try {
+    response = await fetch("/api/wiki", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    navError.value = err instanceof Error ? err.message : String(err);
+    return;
+  }
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    navError.value = `Wiki API error ${response.status}: ${text}`;
+    return;
+  }
+
   const result = await response.json();
   emit("updateResult", {
     ...props.selectedResult,
