@@ -26,6 +26,10 @@ MulmoClaude is a text and task-driven AI agent app with rich visual output. It u
 - Ask clarifying questions via interactive forms
 - Play games (Othello)
 
+## Help Pages
+
+- [Wiki](helps/wiki.md) — how the personal knowledge wiki works, its folder layout, page format, and operations
+
 ## Workspace Layout
 
 ```
