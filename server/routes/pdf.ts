@@ -61,11 +61,7 @@ async function renderPdf(fullHtml: string): Promise<Buffer> {
   }
 }
 
-function sendPdf(
-  res: Response,
-  buffer: Buffer,
-  filename: string,
-): void {
+function sendPdf(res: Response, buffer: Buffer, filename: string): void {
   const safeFilename = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
@@ -122,9 +118,7 @@ router.post(
     }
 
     try {
-      console.log(
-        `[pdf] html: filename="${filename}" length=${html.length}`,
-      );
+      console.log(`[pdf] html: filename="${filename}" length=${html.length}`);
       const buffer = await renderPdf(wrapHtml(html, css));
       sendPdf(res, buffer, filename);
     } catch (err) {

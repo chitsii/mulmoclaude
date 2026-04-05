@@ -18,11 +18,32 @@
       <div class="flex gap-1 items-center">
         <template v-if="action === 'page' && content">
           <button
-            class="px-3 py-1 text-xs rounded-full border transition-colors border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40"
+            class="px-3 py-1 text-xs rounded-full border transition-colors border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 w-16 flex items-center justify-center gap-1"
             :disabled="pdfDownloading"
             @click="downloadPdf"
           >
-            {{ pdfDownloading ? "…" : "↓ PDF" }}
+            <svg
+              v-if="pdfDownloading"
+              class="animate-spin w-3 h-3 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              />
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v8H4z"
+              />
+            </svg>
+            <span v-else>↓ PDF</span>
+            <span v-if="pdfDownloading">PDF</span>
           </button>
           <span v-if="pdfError" class="text-xs text-red-500" :title="pdfError"
             >⚠ PDF failed</span
