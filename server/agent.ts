@@ -53,6 +53,7 @@ const MCP_PLUGINS = new Set([
   "manageRoles",
   "presentMulmoScript",
   "showMusic",
+  "manageWiki",
 ]);
 
 export async function* runAgent(

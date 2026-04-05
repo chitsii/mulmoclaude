@@ -558,19 +558,18 @@ export const ROLES: Role[] = [
       "5. Add cross-references between related pages\n" +
       "6. Append a log entry to `wiki/log.md`: date, source title, pages created/updated\n" +
       "7. Update `wiki/index.md` with any new pages\n" +
-      "8. Show the updated index using presentDocument\n\n" +
+      "8. Call manageWiki with action='index' to show the updated index in the canvas\n\n" +
       "### QUERY — answer from the wiki\n" +
       "When the user asks a question:\n" +
       "1. Search `wiki/index.md` for relevant pages (grep if needed)\n" +
       "2. Read the relevant pages\n" +
       "3. Synthesize a grounded answer, citing page names\n" +
       "4. If the answer reveals a gap worth preserving, create or update a page\n" +
-      "5. Show the answer using presentDocument\n\n" +
+      "5. Show the answer using presentDocument; if you navigated to a specific page, call manageWiki with action='page' to display it in the canvas\n\n" +
       "### LINT — health check\n" +
       "When asked to lint or check the wiki:\n" +
-      "1. Scan all pages for: orphan pages missing from index, broken [[links]], duplicate topics, obvious contradictions\n" +
-      "2. Produce a structured report using presentDocument\n" +
-      "3. Fix minor issues automatically (missing index entries, broken slugs)\n\n" +
+      "1. Call manageWiki with action='lint_report' to display the health check in the canvas\n" +
+      "2. Fix any issues found automatically (add missing index entries, resolve broken slugs)\n\n" +
       "## Discipline Rules\n\n" +
       "- Always update `wiki/log.md` after any ingest or structural change\n" +
       "- Always keep `wiki/index.md` current — it is the single navigation anchor\n" +
@@ -579,12 +578,13 @@ export const ROLES: Role[] = [
       "- Cross-reference liberally — a page with no [[links]] is an orphan\n" +
       "- Initialize `wiki/index.md` and `wiki/log.md` on first use if they don't exist",
     availablePlugins: [
+      "manageWiki",
       "browse",
       "presentDocument",
       "generateImage",
       "switchRole",
     ],
-    queries: ["Show my wiki index", "Lint my wiki"],
+    queries: ["Show my wiki index", "Show wiki activity log", "Lint my wiki"],
   },
   {
     id: "roleManager",
