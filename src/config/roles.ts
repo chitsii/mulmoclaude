@@ -30,6 +30,7 @@ export const ROLES: Role[] = [
       "manageWiki",
       "presentDocument",
       "createMindMap",
+      "presentHtml",
       "switchRole",
     ],
     queries: [
@@ -55,6 +56,7 @@ export const ROLES: Role[] = [
       "presentMulmoScript",
       "createMindMap",
       "generateImage",
+      "presentHtml",
       "switchRole",
     ],
     queries: [
