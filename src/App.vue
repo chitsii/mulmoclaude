@@ -38,10 +38,11 @@
       </div>
 
       <!-- Role selector -->
-      <div class="p-4 border-b border-gray-200">
+      <div class="p-4 border-b border-gray-200 flex items-center gap-2">
+        <span class="text-sm text-gray-500 shrink-0">Role</span>
         <select
           v-model="currentRoleId"
-          class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-900"
+          class="flex-1 bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-900"
           @change="onRoleChange"
         >
           <option v-for="role in roles" :key="role.id" :value="role.id">
@@ -565,6 +566,7 @@ async function sendMessage(text?: string) {
   statusMessage.value = "Thinking...";
 
   toolResults.value.push(makeTextResult(message, "user"));
+  const runStartIndex = toolResults.value.length;
   localStorage.setItem("lastSessionId", chatSessionId.value);
 
   try {
@@ -576,6 +578,14 @@ async function sendMessage(text?: string) {
         roleId: currentRoleId.value,
         chatSessionId: chatSessionId.value,
         selectedImageData: extractImageData(selectedResult.value ?? undefined),
+        pluginPrompts: Object.fromEntries(
+          currentRole.value.availablePlugins
+            .map((name) => [name, getPlugin(name)?.systemPrompt])
+            .filter(
+              (entry): entry is [string, string] =>
+                typeof entry[1] === "string",
+            ),
+        ),
       }),
     });
 
@@ -635,7 +645,14 @@ async function sendMessage(text?: string) {
         } else if (data.type === "roles_updated") {
           await refreshRoles();
         } else if (data.type === "text") {
-          toolResults.value.push(makeTextResult(data.message, "assistant"));
+          const textResult = makeTextResult(data.message, "assistant");
+          toolResults.value.push(textResult);
+          const hasPluginResult = toolResults.value
+            .slice(runStartIndex)
+            .some((r) => r.toolName !== "text-response");
+          if (!hasPluginResult) {
+            selectedResultUuid.value = textResult.uuid;
+          }
         } else if (data.type === "tool_result") {
           const { result } = data;
           const existing = toolResults.value.findIndex(

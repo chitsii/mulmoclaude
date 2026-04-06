@@ -2,6 +2,10 @@ import { execSync } from "child_process";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const TEMPLATES_DIR = path.join(__dirname, "helps");
 
 export const workspacePath = path.join(os.homedir(), "mulmoclaude");
 
@@ -28,6 +32,16 @@ export function initWorkspace(): string {
     fs.writeFileSync(
       memoryFile,
       "# Memory\n\nDistilled facts about you and your work.\n",
+    );
+  }
+
+  // Always sync all files from server/helps/ into workspace/helps/
+  const helpsDestDir = path.join(workspacePath, "helps");
+  fs.mkdirSync(helpsDestDir, { recursive: true });
+  for (const file of fs.readdirSync(TEMPLATES_DIR)) {
+    fs.copyFileSync(
+      path.join(TEMPLATES_DIR, file),
+      path.join(helpsDestDir, file),
     );
   }
 
