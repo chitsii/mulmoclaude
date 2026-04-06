@@ -117,8 +117,9 @@ export async function* runAgent(
   const memoryContext = buildMemoryContext(workspacePath);
   const wikiContext = buildWikiContext(workspacePath);
 
-  const pluginPromptSections = Object.entries(pluginPrompts ?? {})
-    .map(([name, prompt]) => `### ${name}\n\n${prompt}`);
+  const pluginPromptSections = Object.entries(pluginPrompts ?? {}).map(
+    ([name, prompt]) => `### ${name}\n\n${prompt}`,
+  );
 
   const systemPrompt = [
     role.prompt,

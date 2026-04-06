@@ -581,7 +581,10 @@ async function sendMessage(text?: string) {
         pluginPrompts: Object.fromEntries(
           currentRole.value.availablePlugins
             .map((name) => [name, getPlugin(name)?.systemPrompt])
-            .filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+            .filter(
+              (entry): entry is [string, string] =>
+                typeof entry[1] === "string",
+            ),
         ),
       }),
     });

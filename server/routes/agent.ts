@@ -69,7 +69,8 @@ router.post(
     req: Request<object, unknown, AgentBody>,
     res: Response<ErrorResponse>,
   ) => {
-    const { message, roleId, chatSessionId, selectedImageData, pluginPrompts } = req.body;
+    const { message, roleId, chatSessionId, selectedImageData, pluginPrompts } =
+      req.body;
 
     if (!message || !roleId || !chatSessionId) {
       res
