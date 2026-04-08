@@ -105,7 +105,10 @@ function isPortFree(port: number): Promise<boolean> {
         );
       }
     } catch (err) {
-      console.error("[sandbox] Failed to set up sandbox, running unrestricted:", err);
+      console.error(
+        "[sandbox] Failed to set up sandbox, running unrestricted:",
+        err,
+      );
       sandboxEnabled = false;
     }
   }

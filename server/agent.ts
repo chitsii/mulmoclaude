@@ -69,7 +69,6 @@ export async function* runAgent(
     mcpConfigPath: hasMcp ? mcpConfigArgPath : undefined,
   });
 
-  const projectRoot = process.cwd();
   const toDockerPath = (p: string) => p.replace(/\\/g, "/");
   const extraHosts: string[] =
     process.platform === "linux"
