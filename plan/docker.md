@@ -147,7 +147,6 @@ const proc = spawn("docker", [
   "run", "--rm",
   "-v", `${workspacePath}:/workspace`,
   "-v", `${homedir()}/.claude:/root/.claude`,  // Claude auth + settings
-  "-e", `ANTHROPIC_API_KEY=${process.env.ANTHROPIC_API_KEY ?? ""}`,
   "--add-host", "host.docker.internal:host-gateway",  // Linux compat
   "mulmoclaude-sandbox",
   "claude", ...args,

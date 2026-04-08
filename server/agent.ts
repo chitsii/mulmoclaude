@@ -88,8 +88,6 @@ export async function* runAgent(
           `${toDockerPath(workspacePath)}:/workspace`,
           "-v",
           `${toDockerPath(homedir())}/.claude:/root/.claude`,
-          "-e",
-          `ANTHROPIC_API_KEY=${process.env.ANTHROPIC_API_KEY ?? ""}`,
           ...extraHosts,
           "mulmoclaude-sandbox",
           "claude",
