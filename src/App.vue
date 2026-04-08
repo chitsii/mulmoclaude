@@ -370,7 +370,7 @@ const activePane = ref<"sidebar" | "main">("sidebar");
 const showHistory = ref(false);
 const sessions = ref<SessionSummary[]>([]);
 const geminiAvailable = ref(true);
-const sandboxEnabled = ref(true);
+const sandboxEnabled = ref(false);
 const sandboxWarningDismissed = ref(false);
 
 const chatListRef = ref<HTMLDivElement | null>(null);
