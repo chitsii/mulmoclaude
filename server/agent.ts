@@ -75,6 +75,7 @@ export async function* runAgent(
       ? ["--add-host", "host.docker.internal:host-gateway"]
       : [];
 
+  const projectRoot = process.cwd();
   const proc = useDocker
     ? spawn(
         "docker",
@@ -82,9 +83,15 @@ export async function* runAgent(
           "run",
           "--rm",
           "-v",
+          `${toDockerPath(projectRoot)}/node_modules:/app/node_modules:ro`,
+          "-v",
+          `${toDockerPath(projectRoot)}/server:/app/server:ro`,
+          "-v",
+          `${toDockerPath(projectRoot)}/src:/app/src:ro`,
+          "-v",
           `${toDockerPath(workspacePath)}:/workspace`,
           "-v",
-          `${toDockerPath(homedir())}/.claude:/home/claude/.claude`,
+          `${toDockerPath(homedir())}/.claude:/root/.claude`,
           ...extraHosts,
           "mulmoclaude-sandbox",
           "claude",
