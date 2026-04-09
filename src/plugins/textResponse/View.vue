@@ -67,12 +67,15 @@ const isAssistant = computed(
 );
 
 function openLinksInNewTab(event: MouseEvent) {
+  if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
   const target = event.target as HTMLElement;
   const anchor = target.closest("a");
-  if (anchor && anchor.href) {
-    event.preventDefault();
-    window.open(anchor.href, "_blank", "noopener,noreferrer");
-  }
+  if (!anchor) return;
+  const url = anchor.href;
+  if (!url.startsWith("http://") && !url.startsWith("https://")) return;
+  if (new URL(url).origin === window.location.origin) return;
+  event.preventDefault();
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 const pdfDownloading = ref(false);
