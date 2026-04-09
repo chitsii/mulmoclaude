@@ -2,10 +2,11 @@
   <div class="flex fixed inset-0 bg-gray-900 text-white">
     <!-- Sidebar -->
     <div
-      class="w-80 flex-shrink-0 border-r border-gray-200 flex flex-col bg-white text-gray-900"
+      class="w-80 flex-shrink-0 border-r border-gray-200 flex flex-col bg-white text-gray-900 relative"
     >
       <div
-        class="p-4 border-b border-gray-200 flex items-center justify-between relative"
+        ref="headerRef"
+        class="p-4 border-b border-gray-200 flex items-center justify-between"
       >
         <div>
           <h1 class="text-lg font-semibold">MulmoClaude</h1>
@@ -36,32 +37,33 @@
             <span class="material-icons">build</span>
           </button>
         </div>
-        <!-- History popup -->
-        <div
-          v-if="showHistory"
-          class="absolute left-0 right-0 top-full mt-0 bg-white border-b border-x border-gray-200 shadow-lg z-50"
-        >
-          <div class="max-h-80 overflow-y-auto p-2 space-y-1">
-            <p v-if="sessions.length === 0" class="text-xs text-gray-400 p-2">
-              No sessions yet.
-            </p>
-            <div
-              v-for="session in sessions"
-              :key="session.id"
-              class="cursor-pointer rounded border border-gray-200 p-2 text-sm hover:bg-gray-50 transition-colors"
-              @click="loadSession(session.id)"
-            >
-              <div class="flex items-center gap-1 text-xs text-gray-500 mb-1">
-                <span class="material-icons text-xs">{{
-                  roleIcon(session.roleId)
-                }}</span>
-                <span>{{ roleName(session.roleId) }}</span>
-                <span class="ml-auto">{{ formatDate(session.startedAt) }}</span>
-              </div>
-              <p class="text-gray-700 truncate">
-                {{ session.preview || "(no messages)" }}
-              </p>
+      </div>
+      <!-- History popup -->
+      <div
+        v-if="showHistory"
+        class="absolute left-0 right-0 bottom-0 bg-white border-b border-gray-200 shadow-lg z-50 overflow-y-auto"
+        :style="{ top: headerRef ? headerRef.offsetHeight + 'px' : '4rem' }"
+      >
+        <div class="p-2 space-y-1">
+          <p v-if="sessions.length === 0" class="text-xs text-gray-400 p-2">
+            No sessions yet.
+          </p>
+          <div
+            v-for="session in sessions"
+            :key="session.id"
+            class="cursor-pointer rounded border border-gray-200 p-2 text-sm hover:bg-gray-50 transition-colors"
+            @click="loadSession(session.id)"
+          >
+            <div class="flex items-center gap-1 text-xs text-gray-500 mb-1">
+              <span class="material-icons text-xs">{{
+                roleIcon(session.roleId)
+              }}</span>
+              <span>{{ roleName(session.roleId) }}</span>
+              <span class="ml-auto">{{ formatDate(session.startedAt) }}</span>
             </div>
+            <p class="text-gray-700 truncate">
+              {{ session.preview || "(no messages)" }}
+            </p>
           </div>
         </div>
       </div>
@@ -378,6 +380,7 @@ const chatListRef = ref<HTMLDivElement | null>(null);
 const canvasRef = ref<HTMLDivElement | null>(null);
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const historyButtonRef = ref<HTMLButtonElement | null>(null);
+const headerRef = ref<HTMLDivElement | null>(null);
 
 function scrollChatToBottom() {
   nextTick(() => {
@@ -801,10 +804,7 @@ async function sendMessage(text?: string) {
 function handleClickOutsideHistory(e: MouseEvent) {
   if (!showHistory.value) return;
   const target = e.target as Node;
-  if (
-    historyButtonRef.value &&
-    !historyButtonRef.value.closest("div")!.contains(target)
-  ) {
+  if (historyButtonRef.value && !historyButtonRef.value.contains(target)) {
     showHistory.value = false;
   }
 }
