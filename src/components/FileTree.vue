@@ -68,7 +68,10 @@ const emit = defineEmits<{
   select: [path: string];
 }>();
 
-const expanded = ref(true);
+// Only the root node defaults to expanded; nested directories start
+// collapsed so opening Files mode doesn't render the entire workspace
+// tree at once.
+const expanded = ref(props.node.path === "");
 
 const isRecent = computed(() => props.recentPaths.has(props.node.path));
 </script>

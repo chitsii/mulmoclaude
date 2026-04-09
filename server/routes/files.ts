@@ -5,7 +5,8 @@ import { workspacePath } from "../workspace.js";
 
 const router = Router();
 
-const MAX_PREVIEW_BYTES = 1024 * 1024; // 1 MB
+const MAX_PREVIEW_BYTES = 1024 * 1024; // 1 MB — text content embedded in JSON
+const MAX_RAW_BYTES = 50 * 1024 * 1024; // 50 MB — cap for binary streaming
 const HIDDEN_DIRS = new Set([".git"]);
 
 const TEXT_EXTENSIONS = new Set([
@@ -113,6 +114,15 @@ function resolveSafe(relPath: string): string | null {
   ) {
     return null;
   }
+  // Reject paths that traverse a hidden directory (e.g. `.git/config`).
+  // buildTree already hides these from the listing, but the URL endpoints
+  // are reachable directly so they need their own check.
+  const relativeFromWorkspace = path.relative(workspaceReal, resolvedReal);
+  if (relativeFromWorkspace) {
+    for (const seg of relativeFromWorkspace.split(path.sep)) {
+      if (HIDDEN_DIRS.has(seg)) return null;
+    }
+  }
   return resolvedReal;
 }
 
@@ -169,7 +179,10 @@ function buildTree(absPath: string, relPath: string): TreeNode {
 
 router.get(
   "/files/tree",
-  (_req: Request, res: Response<TreeNode | ErrorResponse>) => {
+  (
+    _req: Request<object, unknown, unknown, object>,
+    res: Response<TreeNode | ErrorResponse>,
+  ) => {
     try {
       const tree = buildTree(workspaceReal, "");
       res.json(tree);
@@ -216,6 +229,18 @@ router.get(
       modifiedMs: stat.mtimeMs,
     };
 
+    // Anything past the binary stream cap is "too-large" regardless of
+    // type — even images/PDFs, since the client would have to fetch
+    // them via /files/raw which enforces the same limit.
+    if (stat.size > MAX_RAW_BYTES) {
+      res.json({
+        kind: "too-large",
+        ...meta,
+        message: `File too large to preview (${stat.size} bytes)`,
+      });
+      return;
+    }
+
     const kind = classify(absPath);
     if (kind === "image" || kind === "pdf") {
       res.json({ kind, ...meta });
@@ -233,7 +258,7 @@ router.get(
       res.json({
         kind: "too-large",
         ...meta,
-        message: `File too large to preview (${stat.size} bytes)`,
+        message: `Text file too large to preview (${stat.size} bytes)`,
       });
       return;
     }
@@ -272,6 +297,12 @@ router.get(
     }
     if (!stat.isFile()) {
       res.status(400).json({ error: "Not a file" });
+      return;
+    }
+    if (stat.size > MAX_RAW_BYTES) {
+      res.status(413).json({
+        error: `File too large to stream (${stat.size} bytes, limit ${MAX_RAW_BYTES})`,
+      });
       return;
     }
     const ext = path.extname(absPath).toLowerCase();

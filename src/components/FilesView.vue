@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import FileTree, { type TreeNode } from "./FileTree.vue";
 
 const STORAGE_KEY = "files_selected_path";
@@ -163,23 +163,40 @@ async function loadTree(): Promise<void> {
   }
 }
 
+// Tracks the currently in-flight content fetch so a stale response from
+// a previously-clicked file can't overwrite the latest selection.
+let contentAbort: AbortController | null = null;
+
 async function loadContent(filePath: string): Promise<void> {
+  contentAbort?.abort();
+  const controller = new AbortController();
+  contentAbort = controller;
+
   contentLoading.value = true;
   contentError.value = null;
   content.value = null;
   try {
     const res = await fetch(
       `/api/files/content?path=${encodeURIComponent(filePath)}`,
+      { signal: controller.signal },
     );
+    if (controller.signal.aborted) return;
     if (!res.ok) {
       const errBody: { error?: string } = await res.json().catch(() => ({}));
       throw new Error(errBody.error ?? `HTTP ${res.status}`);
     }
-    content.value = await res.json();
+    const body: FileContent = await res.json();
+    if (controller.signal.aborted) return;
+    content.value = body;
   } catch (err) {
+    if (controller.signal.aborted) return;
+    if (err instanceof DOMException && err.name === "AbortError") return;
     contentError.value = err instanceof Error ? err.message : String(err);
   } finally {
-    contentLoading.value = false;
+    if (contentAbort === controller) {
+      contentLoading.value = false;
+      contentAbort = null;
+    }
   }
 }
 
@@ -201,5 +218,9 @@ onMounted(async () => {
   await loadTree();
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) selectFile(saved);
+});
+
+onUnmounted(() => {
+  contentAbort?.abort();
 });
 </script>
