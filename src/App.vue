@@ -489,6 +489,7 @@ import {
 } from "./utils/role";
 import { formatDate } from "./utils/format";
 import { findScrollableChild } from "./utils/dom";
+import { usePendingCalls } from "./composables/usePendingCalls";
 
 // --- Per-session state ---
 const sessionMap = reactive(new Map<string, ActiveSession>());
@@ -606,35 +607,9 @@ const availableTools = computed(() =>
   ),
 );
 
-const PENDING_MIN_MS = 500;
-const displayTick = ref(0);
-let tickInterval: ReturnType<typeof setInterval> | null = null;
-
-watch(isRunning, (running) => {
-  if (running) {
-    tickInterval = setInterval(() => {
-      displayTick.value++;
-    }, 50);
-  } else {
-    if (tickInterval !== null) {
-      clearInterval(tickInterval);
-      tickInterval = null;
-      // One final tick so the computed clears after the minimum duration
-      setTimeout(() => {
-        displayTick.value++;
-      }, PENDING_MIN_MS);
-    }
-  }
-});
-
-const pendingCalls = computed(() => {
-  void displayTick.value; // reactive dependency on tick
-  const now = Date.now();
-  return toolCallHistory.value.filter(
-    (c) =>
-      (c.result === undefined && c.error === undefined) ||
-      now < c.timestamp + PENDING_MIN_MS,
-  );
+const { pendingCalls, teardown: teardownPendingCalls } = usePendingCalls({
+  isRunning,
+  toolCallHistory,
 });
 
 const toolDescriptions = computed(() => {
@@ -1184,6 +1159,6 @@ onUnmounted(() => {
   window.removeEventListener("mousedown", handleClickOutsideLock);
   window.removeEventListener("mousedown", handleClickOutsideRoleDropdown);
   window.removeEventListener("keydown", handleViewModeShortcut);
-  if (tickInterval !== null) clearInterval(tickInterval);
+  teardownPendingCalls();
 });
 </script>
