@@ -459,15 +459,12 @@ import {
   markRaw,
 } from "vue";
 import { v4 as uuidv4 } from "uuid";
-import { ROLES, type Role } from "./config/roles";
 import { SYSTEM_PROMPT } from "./config/system-prompt";
 import { getPlugin } from "./tools";
 import type { ToolResultComplete } from "gui-chat-protocol/vue";
 import RightSidebar from "./components/RightSidebar.vue";
 import type { ToolCallHistoryItem } from "./components/RightSidebar.vue";
-import CanvasViewToggle, {
-  type CanvasViewMode,
-} from "./components/CanvasViewToggle.vue";
+import CanvasViewToggle from "./components/CanvasViewToggle.vue";
 import StackView from "./components/StackView.vue";
 import FilesView from "./components/FilesView.vue";
 import type { SseEvent } from "./types/sse";
@@ -493,6 +490,7 @@ import { usePendingCalls } from "./composables/usePendingCalls";
 import { useClickOutside } from "./composables/useClickOutside";
 import { useCanvasViewMode } from "./composables/useCanvasViewMode";
 import { useMcpTools } from "./composables/useMcpTools";
+import { useRoles } from "./composables/useRoles";
 
 // --- Per-session state ---
 const sessionMap = reactive(new Map<string, ActiveSession>());
@@ -521,11 +519,7 @@ const unreadCount = computed(
 );
 
 // --- Global state ---
-const roles = ref<Role[]>(ROLES);
-const currentRoleId = ref(ROLES[0].id);
-const currentRole = computed(
-  () => roles.value.find((r) => r.id === currentRoleId.value) ?? roles.value[0],
-);
+const { roles, currentRoleId, currentRole, refreshRoles } = useRoles();
 
 const userInput = ref("");
 const activePane = ref<"sidebar" | "main">("sidebar");
@@ -786,20 +780,6 @@ function createNewSession(roleId?: string): ActiveSession {
 
 function onRoleChange() {
   createNewSession(currentRoleId.value);
-}
-
-async function refreshRoles() {
-  try {
-    const res = await fetch("/api/roles");
-    const customRoles: Role[] = await res.json();
-    const customIds = new Set(customRoles.map((r) => r.id));
-    roles.value = [
-      ...ROLES.filter((r) => !customIds.has(r.id)),
-      ...customRoles,
-    ];
-  } catch {
-    // keep current roles on error
-  }
 }
 
 async function fetchHealth() {

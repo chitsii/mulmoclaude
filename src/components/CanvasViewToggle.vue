@@ -19,9 +19,6 @@
 </template>
 
 <script setup lang="ts">
-// Re-export the canonical type from utils so existing imports
-// from `./CanvasViewToggle.vue` keep working after the move.
-export type { CanvasViewMode } from "../utils/canvasViewMode";
 import type { CanvasViewMode } from "../utils/canvasViewMode";
 
 interface ModeOption {
