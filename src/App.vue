@@ -460,6 +460,7 @@ import {
 } from "vue";
 import { v4 as uuidv4 } from "uuid";
 import { ROLES, type Role } from "./config/roles";
+import { SYSTEM_PROMPT } from "./config/system-prompt";
 import { getPlugin } from "./tools";
 import type { ToolResultComplete } from "gui-chat-protocol/vue";
 import RightSidebar from "./components/RightSidebar.vue";
@@ -1137,6 +1138,7 @@ async function sendMessage(text?: string) {
         roleId: session.roleId,
         chatSessionId: session.id,
         selectedImageData: extractImageData(selectedRes),
+        systemPrompt: SYSTEM_PROMPT,
         pluginPrompts: Object.fromEntries(
           sessionRole.availablePlugins
             .map((name) => [name, getPlugin(name)?.systemPrompt])
