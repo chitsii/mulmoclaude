@@ -491,6 +491,7 @@ import { formatDate } from "./utils/format";
 import { findScrollableChild } from "./utils/dom";
 import { usePendingCalls } from "./composables/usePendingCalls";
 import { useClickOutside } from "./composables/useClickOutside";
+import { useCanvasViewMode } from "./composables/useCanvasViewMode";
 
 // --- Per-session state ---
 const sessionMap = reactive(new Map<string, ActiveSession>());
@@ -574,29 +575,12 @@ const showRightSidebar = ref(
   localStorage.getItem("right_sidebar_visible") === "true",
 );
 
-const VIEW_MODE_STORAGE_KEY = "canvas_view_mode";
-function loadStoredViewMode(): CanvasViewMode {
-  const stored = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
-  if (stored === "single" || stored === "stack" || stored === "files") {
-    return stored;
-  }
-  return "single";
-}
-const canvasViewMode = ref<CanvasViewMode>(loadStoredViewMode());
-const filesRefreshToken = ref(0);
-
-function setCanvasViewMode(mode: CanvasViewMode): void {
-  canvasViewMode.value = mode;
-  localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
-}
-
-// Refresh the file tree after each agent run completes, so newly written
-// files appear without a manual reload.
-watch(isRunning, (running, prev) => {
-  if (prev && !running) {
-    filesRefreshToken.value++;
-  }
-});
+const {
+  canvasViewMode,
+  setCanvasViewMode,
+  filesRefreshToken,
+  handleViewModeShortcut,
+} = useCanvasViewMode({ isRunning });
 const rightSidebarRef = ref<InstanceType<typeof RightSidebar> | null>(null);
 
 const disabledMcpTools = ref(new Set<string>());
@@ -684,21 +668,6 @@ function handleCanvasKeydown(e: KeyboardEvent) {
   e.preventDefault();
   const delta = e.key === "ArrowDown" ? SCROLL_AMOUNT : -SCROLL_AMOUNT;
   scrollable.scrollBy({ top: delta, behavior: "smooth" });
-}
-
-function handleViewModeShortcut(e: KeyboardEvent) {
-  if (!(e.metaKey || e.ctrlKey)) return;
-  if (e.altKey || e.shiftKey) return;
-  if (e.key === "1") {
-    setCanvasViewMode("single");
-    e.preventDefault();
-  } else if (e.key === "2") {
-    setCanvasViewMode("stack");
-    e.preventDefault();
-  } else if (e.key === "3") {
-    setCanvasViewMode("files");
-    e.preventDefault();
-  }
 }
 
 function handleKeyNavigation(e: KeyboardEvent) {
