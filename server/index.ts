@@ -210,9 +210,29 @@ function registerDebugTasks(taskManager: ITaskManager, pubsub: IPubSub) {
       pubsub.publish("debug.beat", { count, last });
       if (last) {
         taskManager.removeTask("debug.counter");
+        registerDebugCounter2(taskManager, pubsub);
       }
     },
   });
 
   console.log("[debug] Debug mode active — registered debug tasks");
+}
+
+function registerDebugCounter2(taskManager: ITaskManager, pubsub: IPubSub) {
+  let count = 0;
+
+  taskManager.registerTask({
+    id: "debug.counter2",
+    description: "Debug counter 2 — fires debug.beat every 2 seconds, 10 times",
+    schedule: { type: "interval", intervalMs: 2_000 },
+    run: async () => {
+      count++;
+      const last = count === 10;
+      console.log(`[task-manager] debug.counter2: ${count}`);
+      pubsub.publish("debug.beat", { count, last });
+      if (last) {
+        taskManager.removeTask("debug.counter2");
+      }
+    },
+  });
 }

@@ -28,21 +28,19 @@ const debug = process.argv.includes("--debug");
 
 When `--debug` is active:
 1. **Tick interval is 1 second** instead of 60 seconds.
-2. A **counter test task** is registered automatically:
-   - ID: `debug.counter`
-   - Schedule: `{ type: "interval", intervalMs: 1_000 }` (every 1 second)
-   - Maintains an internal counter, increments on each run, logs `[task-manager] debug.counter: N` to the console.
-   - After 10 runs, unregisters itself via `removeTask("debug.counter")`.
-   - This exercises the full task lifecycle: register, tick, execute, self-unregister.
+2. Two **counter test tasks** run in sequence:
+   - **`debug.counter`** — every 1 second, 10 runs. On its last run, it registers the second task.
+   - **`debug.counter2`** — every 2 seconds, 10 runs.
+   - Both publish to the `"debug.beat"` channel and self-unregister after 10 runs.
 
 ### Pub/Sub
 
-The counter test task also acts as a publisher. On each run, it publishes to the `"debug.beat"` channel:
+Both counter tasks publish to `"debug.beat"` on each run:
 ```ts
 pubsub.publish("debug.beat", { count: N, last: N === 10 });
 ```
 
-This exercises the full stack end-to-end: task manager tick → task execution → pub/sub publish → WebSocket delivery → client UI update.
+This exercises the full stack end-to-end: task manager tick → task execution → pub/sub publish → WebSocket delivery → client UI update. The two-task sequence also tests dynamic task registration (registering a new task from within a running task's callback).
 
 ### Client
 
