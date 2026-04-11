@@ -8,6 +8,7 @@ import agentRoutes from "./routes/agent.js";
 import todosRoutes from "./routes/todos.js";
 import schedulerRoutes from "./routes/scheduler.js";
 import sessionsRoutes from "./routes/sessions.js";
+import chatIndexRoutes from "./routes/chat-index.js";
 import pluginsRoutes from "./routes/plugins.js";
 import imageRoutes from "./routes/image.js";
 import presentHtmlRoutes from "./routes/presentHtml.js";
@@ -26,6 +27,7 @@ import fs from "fs";
 import os from "os";
 import { isDockerAvailable, ensureSandboxImage } from "./docker.js";
 import { maybeRunJournal } from "./journal/index.js";
+import { backfillAllSessions } from "./chat-index/index.js";
 import { createPubSub } from "./pub-sub/index.js";
 import { createTaskManager } from "./task-manager/index.js";
 import type { ITaskManager } from "./task-manager/index.js";
@@ -59,6 +61,7 @@ app.use("/api", agentRoutes);
 app.use("/api", todosRoutes);
 app.use("/api", schedulerRoutes);
 app.use("/api", sessionsRoutes);
+app.use("/api", chatIndexRoutes);
 app.use("/api", pluginsRoutes);
 app.use("/api", imageRoutes);
 app.use("/api", presentHtmlRoutes);
@@ -167,6 +170,36 @@ function logMcpStatus(): void {
   }
 }
 
+function maybeForceJournalRun(): void {
+  // Debug switch: set JOURNAL_FORCE_RUN_ON_STARTUP=1 to run a full
+  // journal pass immediately without waiting for a session end or
+  // the hourly interval. Fire-and-forget — journal errors never
+  // propagate out of maybeRunJournal.
+  if (process.env.JOURNAL_FORCE_RUN_ON_STARTUP !== "1") return;
+  console.log("[journal] JOURNAL_FORCE_RUN_ON_STARTUP=1 — running now");
+  maybeRunJournal({ force: true }).catch((err) => {
+    console.warn("[journal] forced startup run failed:", err);
+  });
+}
+
+function maybeForceChatIndexBackfill(): void {
+  // Companion switch for the chat indexer: force-rebuild every
+  // session's title summary on startup. Useful the first time the
+  // feature is rolled out over an existing workspace, or when
+  // debugging the indexer itself.
+  if (process.env.CHAT_INDEX_FORCE_RUN_ON_STARTUP !== "1") return;
+  console.log("[chat-index] CHAT_INDEX_FORCE_RUN_ON_STARTUP=1 — running now");
+  backfillAllSessions()
+    .then((result) => {
+      console.log(
+        `[chat-index] startup backfill complete: ${result.indexed}/${result.total} indexed, ${result.skipped} skipped`,
+      );
+    })
+    .catch((err) => {
+      console.warn("[chat-index] forced startup backfill failed:", err);
+    });
+}
+
 function startRuntimeServices(httpServer: ReturnType<typeof app.listen>): void {
   console.log(`Server running on port ${PORT}`);
 
@@ -184,16 +217,8 @@ function startRuntimeServices(httpServer: ReturnType<typeof app.listen>): void {
 
   taskManager.start();
 
-  // Debug switch: set JOURNAL_FORCE_RUN_ON_STARTUP=1 to run a full
-  // journal pass immediately without waiting for a session end or
-  // the hourly interval. Fire-and-forget — journal errors never
-  // propagate out of maybeRunJournal.
-  if (process.env.JOURNAL_FORCE_RUN_ON_STARTUP === "1") {
-    console.log("[journal] JOURNAL_FORCE_RUN_ON_STARTUP=1 — running now");
-    maybeRunJournal({ force: true }).catch((err) => {
-      console.warn("[journal] forced startup run failed:", err);
-    });
-  }
+  maybeForceJournalRun();
+  maybeForceChatIndexBackfill();
 }
 
 (async () => {
