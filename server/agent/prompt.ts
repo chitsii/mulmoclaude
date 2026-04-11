@@ -84,7 +84,7 @@ export function buildWikiContext(workspacePath: string): string | null {
     );
   } else {
     parts.push(
-      "A personal knowledge wiki is available in the workspace. Layout: wiki/index.md (page catalog), wiki/pages/<slug>.md (individual pages), wiki/log.md (activity log). Read wiki/index.md first, then read the relevant page from wiki/pages/ when the user's request may benefit from prior accumulated research.",
+      "A personal knowledge wiki is available in the workspace. Layout: wiki/index.md (page catalog), wiki/pages/<slug>.md (individual pages), wiki/log.md (activity log). When the user asks to see wiki content, always use the manageWiki tool to display it in the canvas (action='index' for the catalog, action='page' for a specific page, action='log' for the activity log). Only read wiki files directly with the Read tool when you need to silently look up information to answer a question — never as a way to show content to the user.",
     );
   }
 
