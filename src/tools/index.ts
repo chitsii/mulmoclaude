@@ -7,7 +7,7 @@ import MindMapPlugin from "@gui-chat-plugin/mindmap/vue";
 import GenerateImagePlugin from "@mulmochat-plugin/generate-image/vue";
 import QuizPlugin from "@mulmochat-plugin/quiz/vue";
 import FormPlugin from "@mulmochat-plugin/form/vue";
-import CanvasPlugin from "@gui-chat-plugin/canvas/vue";
+import canvasPlugin from "../plugins/canvas/index";
 import editImagePlugin from "../plugins/editImage/index";
 import MusicPlugin from "@gui-chat-plugin/music/vue";
 import PianoPlugin from "@gui-chat-plugin/piano/vue";
@@ -36,7 +36,7 @@ const plugins: Record<string, PluginEntry> = {
   generateImage: GenerateImagePlugin.plugin,
   putQuestions: QuizPlugin.plugin,
   presentForm: FormPlugin.plugin,
-  openCanvas: CanvasPlugin.plugin,
+  openCanvas: canvasPlugin,
   presentHtml: presentHtmlPlugin,
   editImage: editImagePlugin,
   showMusic: MusicPlugin.plugin,

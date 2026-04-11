@@ -464,13 +464,6 @@
   resolved "https://registry.yarnpkg.com/@gui-chat-plugin/camera/-/camera-0.3.0.tgz#071e6e47d9995441285621707798108e2dfef594"
   integrity sha512-4l2T0e02/hHM6uJvTC9Yd+I7wdxSCNJEjDfl1IGPAGlR7Wij6R5jR0Pey0KirUuIy8N637+nC0Jt9Lh58w2JDA==
 
-"@gui-chat-plugin/canvas@0.3.4":
-  version "0.3.4"
-  resolved "https://registry.yarnpkg.com/@gui-chat-plugin/canvas/-/canvas-0.3.4.tgz#244608144fea697117fc75107b9bf5c98ada5b11"
-  integrity sha512-VFbAz/l6JIvqifEwhnE8UVVQkixgSaOZ7KY7bJ71B8fAvGbKVTlR3lVnlV4ecrWNQuKo8NXFuxMuk4+2ZgFcvw==
-  dependencies:
-    vue-drawing-canvas "^1.0.14"
-
 "@gui-chat-plugin/mindmap@^0.3.1":
   version "0.3.1"
   resolved "https://registry.yarnpkg.com/@gui-chat-plugin/mindmap/-/mindmap-0.3.1.tgz#68bf59e93f4e8940cc1062deab7eb38a3c5b3b3a"

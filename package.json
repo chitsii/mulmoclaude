@@ -28,7 +28,6 @@
     "@google/genai": "^1.49.0",
     "@gui-chat-plugin/browse": "^0.1.1",
     "@gui-chat-plugin/camera": "^0.3.0",
-    "@gui-chat-plugin/canvas": "0.3.4",
     "@gui-chat-plugin/mindmap": "^0.3.1",
     "@gui-chat-plugin/music": "^1.0.0",
     "@gui-chat-plugin/othello": "^0.2.2",
@@ -52,6 +51,7 @@
     "puppeteer": "^24.40.0",
     "uuid": "^13.0.0",
     "vue": "^3.5.32",
+    "vue-drawing-canvas": "^1.0.14",
     "vue-router": "^5.0.3",
     "zod": "^4.3.6"
   },

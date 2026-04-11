@@ -3,7 +3,7 @@ import { executeMindMap } from "@gui-chat-plugin/mindmap";
 import { executeSpreadsheet } from "@gui-chat-plugin/spreadsheet";
 import { executeQuiz } from "@mulmochat-plugin/quiz";
 import { executeForm } from "@mulmochat-plugin/form";
-import { executeOpenCanvas } from "@gui-chat-plugin/canvas";
+import { executeOpenCanvas } from "../../src/plugins/canvas/definition.js";
 import { executePresent3D } from "@gui-chat-plugin/present3d";
 import { showMusic } from "@gui-chat-plugin/music";
 import { getGeminiClient, isGeminiAvailable } from "../utils/gemini.js";
@@ -146,7 +146,7 @@ router.post(
   "/canvas",
   async (_req: Request, res: Response<PluginErrorResponse>) => {
     try {
-      const result = await executeOpenCanvas(null as never, _req.body);
+      const result = await executeOpenCanvas();
       res.json(result);
     } catch (err) {
       res.status(500).json({ message: String(err) });
