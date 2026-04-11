@@ -327,7 +327,7 @@
       <div v-if="showQueries" class="border-t border-gray-200">
         <div
           v-if="queriesExpanded"
-          class="px-4 pt-2 max-h-40 overflow-y-auto flex flex-col gap-1"
+          class="px-4 pt-2 max-h-64 overflow-y-auto flex flex-col gap-1"
         >
           <button
             v-for="query in currentRole.queries"
@@ -342,7 +342,7 @@
           </button>
         </div>
         <button
-          class="w-full flex items-center justify-between px-4 py-2 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+          class="w-full flex items-center justify-between px-4 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
           @click="queriesExpanded = !queriesExpanded"
         >
           <span class="flex items-center gap-1">
