@@ -177,7 +177,13 @@ function isDue(now: Date, schedule: TaskSchedule, tickMs: number): boolean {
 
   if (schedule.type === "daily") {
     const [hh, mm] = schedule.time.split(":").map(Number);
-    return now.getUTCHours() === hh && now.getUTCMinutes() === mm;
+    const targetMs = hh * 3600000 + mm * 60000;
+    const msSinceMidnight =
+      now.getUTCHours() * 3600000 +
+      now.getUTCMinutes() * 60000 +
+      now.getUTCSeconds() * 1000;
+    const rounded = Math.floor(msSinceMidnight / tickMs) * tickMs;
+    return rounded === targetMs;
   }
 
   return false;
