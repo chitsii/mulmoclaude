@@ -4,9 +4,12 @@ import {
   dispatchTodos,
   findTodoByText,
   handleAdd,
+  handleAddLabel,
   handleCheck,
   handleClearCompleted,
   handleDelete,
+  handleListLabels,
+  handleRemoveLabel,
   handleShow,
   handleUncheck,
   handleUpdate,
@@ -51,7 +54,7 @@ describe("handleShow", () => {
       makeTodo({ id: "a", text: "x", completed: true }),
       makeTodo({ id: "b", text: "y", completed: false }),
     ];
-    const result = handleShow(items);
+    const result = handleShow(items, {});
     assert.equal(result.kind, "success");
     if (result.kind !== "success") return;
     assert.equal(result.message, "Showing 2 todo item(s)");
@@ -62,10 +65,52 @@ describe("handleShow", () => {
   });
 
   it("handles an empty list", () => {
-    const result = handleShow([]);
+    const result = handleShow([], {});
     assert.equal(result.kind, "success");
     if (result.kind !== "success") return;
     assert.equal(result.message, "Showing 0 todo item(s)");
+  });
+
+  it("includes labels in jsonData when present", () => {
+    const items = [
+      makeTodo({ id: "a", text: "x", labels: ["work", "urgent"] }),
+      makeTodo({ id: "b", text: "y" }),
+    ];
+    const result = handleShow(items, {});
+    assert.equal(result.kind, "success");
+    if (result.kind !== "success") return;
+    const jsonItems = result.jsonData.items as Array<{
+      text: string;
+      labels?: string[];
+    }>;
+    assert.deepEqual(jsonItems[0]?.labels, ["work", "urgent"]);
+    assert.equal(jsonItems[1]?.labels, undefined);
+  });
+
+  it("returns the filtered subset when filterLabels is non-empty", () => {
+    const items = [
+      makeTodo({ id: "a", text: "x", labels: ["work"] }),
+      makeTodo({ id: "b", text: "y", labels: ["personal"] }),
+      makeTodo({ id: "c", text: "z" }),
+    ];
+    const result = handleShow(items, { filterLabels: ["work"] });
+    assert.equal(result.kind, "success");
+    if (result.kind !== "success") return;
+    assert.equal(result.items.length, 1);
+    assert.equal(result.items[0]?.id, "a");
+    assert.match(result.message, /Showing 1 of 3/);
+    assert.match(result.message, /work/);
+  });
+
+  it("treats an empty filterLabels as no filter", () => {
+    const items = [
+      makeTodo({ id: "a", labels: ["work"] }),
+      makeTodo({ id: "b" }),
+    ];
+    const result = handleShow(items, { filterLabels: [] });
+    assert.equal(result.kind, "success");
+    if (result.kind !== "success") return;
+    assert.equal(result.items.length, 2);
   });
 });
 
@@ -281,6 +326,149 @@ describe("handleClearCompleted", () => {
   });
 });
 
+describe("handleAdd labels", () => {
+  it("normalizes and stores provided labels", () => {
+    const result = handleAdd([], { text: "Buy milk", labels: ["  Work  "] });
+    assert.equal(result.kind, "success");
+    if (result.kind !== "success") return;
+    assert.deepEqual(result.items[0]?.labels, ["Work"]);
+    assert.match(result.message, /\[Work\]/);
+  });
+
+  it("dedupes labels case-insensitively", () => {
+    const result = handleAdd([], {
+      text: "x",
+      labels: ["work", "Work", "WORK"],
+    });
+    assert.equal(result.kind, "success");
+    if (result.kind !== "success") return;
+    assert.equal(result.items[0]?.labels?.length, 1);
+  });
+
+  it("omits the labels field entirely when none provided", () => {
+    const result = handleAdd([], { text: "x" });
+    assert.equal(result.kind, "success");
+    if (result.kind !== "success") return;
+    assert.equal(result.items[0]?.labels, undefined);
+  });
+});
+
+describe("handleAddLabel", () => {
+  it("returns 400 when text or labels missing", () => {
+    assert.equal(handleAddLabel([], { text: "x" }).kind, "error");
+    assert.equal(handleAddLabel([], { labels: ["a"] }).kind, "error");
+    assert.equal(handleAddLabel([], { text: "x", labels: [] }).kind, "error");
+  });
+
+  it("merges new labels into the matched item", () => {
+    const a = makeTodo({ id: "a", text: "thing", labels: ["work"] });
+    const result = handleAddLabel([a], {
+      text: "thing",
+      labels: ["urgent"],
+    });
+    assert.equal(result.kind, "success");
+    if (result.kind !== "success") return;
+    assert.deepEqual(result.items[0]?.labels, ["work", "urgent"]);
+  });
+
+  it("dedupes when adding an existing label", () => {
+    const a = makeTodo({ id: "a", text: "x", labels: ["work"] });
+    const result = handleAddLabel([a], { text: "x", labels: ["WORK"] });
+    assert.equal(result.kind, "success");
+    if (result.kind !== "success") return;
+    assert.equal(result.items[0]?.labels?.length, 1);
+  });
+
+  it("reports not found without mutating", () => {
+    const a = makeTodo({ id: "a", text: "thing", labels: ["work"] });
+    const result = handleAddLabel([a], {
+      text: "missing",
+      labels: ["urgent"],
+    });
+    assert.equal(result.kind, "success");
+    if (result.kind !== "success") return;
+    assert.match(result.message, /not found/);
+    assert.deepEqual(result.items[0]?.labels, ["work"]);
+  });
+
+  it("does not mutate the input item", () => {
+    const a = makeTodo({ id: "a", text: "thing", labels: ["work"] });
+    handleAddLabel([a], { text: "thing", labels: ["urgent"] });
+    assert.deepEqual(a.labels, ["work"]);
+  });
+});
+
+describe("handleRemoveLabel", () => {
+  it("returns 400 when text or labels missing", () => {
+    assert.equal(handleRemoveLabel([], { text: "x" }).kind, "error");
+    assert.equal(handleRemoveLabel([], { labels: ["a"] }).kind, "error");
+  });
+
+  it("removes the matching labels case-insensitively", () => {
+    const a = makeTodo({
+      id: "a",
+      text: "thing",
+      labels: ["Work", "Urgent"],
+    });
+    const result = handleRemoveLabel([a], {
+      text: "thing",
+      labels: ["work"],
+    });
+    assert.equal(result.kind, "success");
+    if (result.kind !== "success") return;
+    assert.deepEqual(result.items[0]?.labels, ["Urgent"]);
+  });
+
+  it("deletes the labels field when removing the last one", () => {
+    const a = makeTodo({ id: "a", text: "x", labels: ["work"] });
+    const result = handleRemoveLabel([a], {
+      text: "x",
+      labels: ["work"],
+    });
+    assert.equal(result.kind, "success");
+    if (result.kind !== "success") return;
+    assert.equal(result.items[0]?.labels, undefined);
+    assert.match(result.message, /no labels/);
+  });
+
+  it("is a no-op when removing a label that isn't present", () => {
+    const a = makeTodo({ id: "a", text: "x", labels: ["work"] });
+    const result = handleRemoveLabel([a], {
+      text: "x",
+      labels: ["personal"],
+    });
+    assert.equal(result.kind, "success");
+    if (result.kind !== "success") return;
+    assert.deepEqual(result.items[0]?.labels, ["work"]);
+  });
+});
+
+describe("handleListLabels", () => {
+  it("returns no labels message for empty list", () => {
+    const result = handleListLabels([]);
+    assert.equal(result.kind, "success");
+    if (result.kind !== "success") return;
+    assert.match(result.message, /No labels in use/);
+  });
+
+  it("counts each distinct label across items", () => {
+    const items = [
+      makeTodo({ id: "a", labels: ["work", "urgent"] }),
+      makeTodo({ id: "b", labels: ["work"] }),
+      makeTodo({ id: "c", labels: ["personal"] }),
+    ];
+    const result = handleListLabels(items);
+    assert.equal(result.kind, "success");
+    if (result.kind !== "success") return;
+    const inventory = result.jsonData.labels as Array<{
+      label: string;
+      count: number;
+    }>;
+    const work = inventory.find((l) => l.label.toLowerCase() === "work");
+    assert.equal(work?.count, 2);
+  });
+});
+
 describe("dispatchTodos", () => {
   it("returns 400 for unknown action", () => {
     const result = dispatchTodos("nope", [], {});
@@ -290,7 +478,9 @@ describe("dispatchTodos", () => {
   });
 
   it("dispatches each known action", () => {
-    const items = [makeTodo({ id: "a", text: "thing", completed: false })];
+    const items = [
+      makeTodo({ id: "a", text: "thing", completed: false, labels: ["work"] }),
+    ];
     assert.equal(dispatchTodos("show", items, {}).kind, "success");
     assert.equal(dispatchTodos("add", items, { text: "x" }).kind, "success");
     assert.equal(
@@ -310,5 +500,16 @@ describe("dispatchTodos", () => {
       "success",
     );
     assert.equal(dispatchTodos("clear_completed", items, {}).kind, "success");
+    assert.equal(
+      dispatchTodos("add_label", items, { text: "thing", labels: ["urgent"] })
+        .kind,
+      "success",
+    );
+    assert.equal(
+      dispatchTodos("remove_label", items, { text: "thing", labels: ["work"] })
+        .kind,
+      "success",
+    );
+    assert.equal(dispatchTodos("list_labels", items, {}).kind, "success");
   });
 });

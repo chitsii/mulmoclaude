@@ -2,10 +2,7 @@ import { Router, Request, Response } from "express";
 import path from "path";
 import { workspacePath } from "../workspace.js";
 import { loadJsonFile, saveJsonFile } from "../utils/file.js";
-import {
-  dispatchTodos,
-  type TodosActionInput,
-} from "./todosHandlers.js";
+import { dispatchTodos, type TodosActionInput } from "./todosHandlers.js";
 
 const router = Router();
 
