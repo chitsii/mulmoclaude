@@ -1,14 +1,14 @@
 import type { PluginEntry } from "./types";
 import TextResponsePlugin from "@gui-chat-plugin/text-response/vue";
 import TextResponseView from "../plugins/textResponse/View.vue";
-import MarkdownPlugin from "@gui-chat-plugin/markdown/vue";
-import SpreadsheetPlugin from "@gui-chat-plugin/spreadsheet/vue";
+import markdownPlugin from "../plugins/markdown/index";
+import spreadsheetPlugin from "../plugins/spreadsheet/index";
 import MindMapPlugin from "@gui-chat-plugin/mindmap/vue";
-import GenerateImagePlugin from "@mulmochat-plugin/generate-image/vue";
+import generateImagePlugin from "../plugins/generateImage/index";
 import QuizPlugin from "@mulmochat-plugin/quiz/vue";
 import FormPlugin from "@mulmochat-plugin/form/vue";
-import CanvasPlugin from "@gui-chat-plugin/canvas/vue";
-import EditImagePlugin from "@gui-chat-plugin/edit-image/vue";
+import canvasPlugin from "../plugins/canvas/index";
+import editImagePlugin from "../plugins/editImage/index";
 import MusicPlugin from "@gui-chat-plugin/music/vue";
 import PianoPlugin from "@gui-chat-plugin/piano/vue";
 import Present3DPlugin from "@gui-chat-plugin/present3d/vue";
@@ -30,15 +30,15 @@ const plugins: Record<string, PluginEntry> = {
   manageRoles: manageRolesPlugin,
   manageWiki: wikiPlugin,
   presentMulmoScript: presentMulmoScriptPlugin,
-  presentDocument: MarkdownPlugin.plugin,
-  presentSpreadsheet: SpreadsheetPlugin.plugin,
+  presentDocument: markdownPlugin,
+  presentSpreadsheet: spreadsheetPlugin,
   createMindMap: MindMapPlugin.plugin,
-  generateImage: GenerateImagePlugin.plugin,
+  generateImage: generateImagePlugin,
   putQuestions: QuizPlugin.plugin,
   presentForm: FormPlugin.plugin,
-  openCanvas: CanvasPlugin.plugin,
+  openCanvas: canvasPlugin,
   presentHtml: presentHtmlPlugin,
-  editImage: EditImagePlugin.plugin,
+  editImage: editImagePlugin,
   showMusic: MusicPlugin.plugin,
   piano: PianoPlugin.plugin,
   present3D: Present3DPlugin.plugin,

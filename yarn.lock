@@ -464,28 +464,6 @@
   resolved "https://registry.yarnpkg.com/@gui-chat-plugin/camera/-/camera-0.3.0.tgz#071e6e47d9995441285621707798108e2dfef594"
   integrity sha512-4l2T0e02/hHM6uJvTC9Yd+I7wdxSCNJEjDfl1IGPAGlR7Wij6R5jR0Pey0KirUuIy8N637+nC0Jt9Lh58w2JDA==
 
-"@gui-chat-plugin/canvas@0.3.4":
-  version "0.3.4"
-  resolved "https://registry.yarnpkg.com/@gui-chat-plugin/canvas/-/canvas-0.3.4.tgz#244608144fea697117fc75107b9bf5c98ada5b11"
-  integrity sha512-VFbAz/l6JIvqifEwhnE8UVVQkixgSaOZ7KY7bJ71B8fAvGbKVTlR3lVnlV4ecrWNQuKo8NXFuxMuk4+2ZgFcvw==
-  dependencies:
-    vue-drawing-canvas "^1.0.14"
-
-"@gui-chat-plugin/edit-image@^0.3.0":
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/@gui-chat-plugin/edit-image/-/edit-image-0.3.0.tgz#89045471e0cab9536b8652fc29604c24008e5053"
-  integrity sha512-/8ckzhqpOYAasMnHHcpaGwEIUf/78Em3TxAKHuIeDVIN3IBcdleMoIVmMv3/Nlj0eASTGs3/vid69+Z+JH5OgA==
-  dependencies:
-    gui-chat-protocol "^0.0.3"
-
-"@gui-chat-plugin/markdown@0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@gui-chat-plugin/markdown/-/markdown-0.1.0.tgz#23e129168ab25e20922cc1fd4a02000d18e41fd3"
-  integrity sha512-pHgx2Hj9oij+nPLtrVbmdcP0XnyHKKS8+7ww18RZYHbQDW3Slg7MHIAPzHC0KtO3Z4dO90hT+NNkuZGzVWWhTw==
-  dependencies:
-    gui-chat-protocol "^0.0.4"
-    marked "^17.0.5"
-
 "@gui-chat-plugin/mindmap@^0.3.1":
   version "0.3.1"
   resolved "https://registry.yarnpkg.com/@gui-chat-plugin/mindmap/-/mindmap-0.3.1.tgz#68bf59e93f4e8940cc1062deab7eb38a3c5b3b3a"
@@ -526,13 +504,6 @@
     three "^0.182.0"
     three-bvh-csg "^0.0.17"
     three-mesh-bvh "^0.9.7"
-
-"@gui-chat-plugin/spreadsheet@0.2.2":
-  version "0.2.2"
-  resolved "https://registry.yarnpkg.com/@gui-chat-plugin/spreadsheet/-/spreadsheet-0.2.2.tgz#7ef519002edfc183b8bc0874c2d876a7e2a8e0a9"
-  integrity sha512-saoGHsGqdrp8EN+6RF6b5emK6K0oTf9mzqmtsY3IBIGDkKPjq+/EOymTMOApwSS1U13pGpX7clnINcRsyA/9Fg==
-  dependencies:
-    xlsx "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
 
 "@gui-chat-plugin/text-response@0.1.2":
   version "0.1.2"
@@ -766,13 +737,6 @@
   version "0.3.2"
   resolved "https://registry.yarnpkg.com/@mulmochat-plugin/form/-/form-0.3.2.tgz#fa2c81d1a2e72d1d96228e6fefdd3d149a384e32"
   integrity sha512-o+4cl85JvJz3YshLxiM85vPyRgWQTna6K6ojWb7xrVqwiSKXnFMEIqTef7qdTf6HFKLcJxdJ6i3jo4hi4CaDrA==
-  dependencies:
-    gui-chat-protocol "^0.0.4"
-
-"@mulmochat-plugin/generate-image@0.3.3":
-  version "0.3.3"
-  resolved "https://registry.yarnpkg.com/@mulmochat-plugin/generate-image/-/generate-image-0.3.3.tgz#db8b35989e86e639e5c8ee35fcab052b86963e0a"
-  integrity sha512-Ww8V6sZXSgYQ+BOlruS6Z7w3OGDw8aMYV5Xdl8l7nnHZHd4BxXVgE1bH7emAI6iNx8+rhgs8VfWWBmFx5FdEQw==
   dependencies:
     gui-chat-protocol "^0.0.4"
 
@@ -1284,6 +1248,13 @@
   version "1.2.42"
   resolved "https://registry.yarnpkg.com/@types/vexflow/-/vexflow-1.2.42.tgz#76883be5ba41b5a88e226d3089162b4bb1e90cd0"
   integrity sha512-bj3If1sm1FYJN0tJMV2BJNrwoeQ6xfrTt+rbmFvUytyxUhklLlW79MR4uwQ+upzrNJLVy012TnC7oZqSpEglSw==
+
+"@types/ws@^8.18.1":
+  version "8.18.1"
+  resolved "https://registry.yarnpkg.com/@types/ws/-/ws-8.18.1.tgz#48464e4bf2ddfd17db13d845467f6070ffea4aa9"
+  integrity sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==
+  dependencies:
+    "@types/node" "*"
 
 "@types/yauzl@^2.9.1":
   version "2.10.3"
@@ -6949,7 +6920,7 @@ wrappy@1:
   resolved "https://registry.yarnpkg.com/wrappy/-/wrappy-1.0.2.tgz#b5243d8f3ec1aa35f1364605bc0d1036e30ab69f"
   integrity sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==
 
-ws@^8.18.0, ws@^8.19.0:
+ws@^8.18.0, ws@^8.19.0, ws@^8.20.0:
   version "8.20.0"
   resolved "https://registry.yarnpkg.com/ws/-/ws-8.20.0.tgz#4cd9532358eba60bc863aad1623dfb045a4d4af8"
   integrity sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==

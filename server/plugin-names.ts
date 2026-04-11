@@ -10,14 +10,14 @@ import PresentMulmoScriptDef from "../src/plugins/presentMulmoScript/definition.
 import ManageRolesDef from "../src/plugins/manageRoles/definition.js";
 import WikiDef from "../src/plugins/wiki/definition.js";
 import PresentHtmlDef from "../src/plugins/presentHtml/definition.js";
-import { TOOL_DEFINITION as MarkdownDef } from "@gui-chat-plugin/markdown";
-import { TOOL_DEFINITION as SpreadsheetDef } from "@gui-chat-plugin/spreadsheet";
+import MarkdownDef from "../src/plugins/markdown/definition.js";
+import SpreadsheetDef from "../src/plugins/spreadsheet/definition.js";
 import { TOOL_DEFINITION as MindMapDef } from "@gui-chat-plugin/mindmap";
-import { TOOL_DEFINITION as GenerateImageDef } from "@mulmochat-plugin/generate-image";
+import GenerateImageDef from "../src/plugins/generateImage/definition.js";
 import { TOOL_DEFINITION as QuizDef } from "@mulmochat-plugin/quiz";
 import { TOOL_DEFINITION as FormDef } from "@mulmochat-plugin/form";
-import { TOOL_DEFINITION as CanvasDef } from "@gui-chat-plugin/canvas";
-import { TOOL_DEFINITION as EditImageDef } from "@gui-chat-plugin/edit-image";
+import CanvasDef from "../src/plugins/canvas/definition.js";
+import EditImageDef from "../src/plugins/editImage/definition.js";
 import { TOOL_DEFINITION as Present3DDef } from "@gui-chat-plugin/present3d";
 import { TOOL_DEFINITION as MusicDef } from "@gui-chat-plugin/music";
 
