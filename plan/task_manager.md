@@ -23,9 +23,8 @@ Create a **simple task scheduling service** (Task Manager) built around a single
 2. **Simple registration API** — `registerTask()` / `removeTask()`.
 3. **Two schedule types** — time-of-day or fixed interval.
 4. **Fire-and-forget execution** — tasks run asynchronously; errors are logged, never propagated.
-5. **Operational visibility** — last run time, error state per task.
-6. **Safe startup/shutdown** — `start()` / `stop()` lifecycle.
-7. **Testability** — injectable clock function.
+5. **Safe startup/shutdown** — `start()` / `stop()` lifecycle.
+6. **Testability** — injectable clock function.
 
 ### Non-Goals
 1. Cron expressions or cron library dependency.
@@ -56,7 +55,7 @@ Every tick (1 minute or 1 second):
 2. For each enabled task in the registry:
    - Compute whether it is due based on its schedule type.
    - If due, call `task.run()` asynchronously (no await — fire-and-forget).
-   - On completion, update `lastRunAt` / `lastError`.
+   - On completion, update internal `lastRunAt`. Log errors.
 3. That's it.
 
 ### Schedule Types
@@ -84,23 +83,14 @@ export interface TaskDefinition {
   run: (ctx: TaskRunContext) => Promise<void>;
 }
 
-export interface TaskRuntimeState {
-  id: string;
-  description?: string;
-  enabled: boolean;
-  running: boolean;
-
-  lastRunAt?: Date;
-  lastError?: { message: string; at: Date };
-
-  runCount: number;
-  errorCount: number;
-}
-
 export interface TaskRunContext {
   taskId: string;
   now: Date;                     // the tick time that triggered this run
 }
+
+// Internal per-task state (not exported):
+// - lastRunAt?: Date  — used by isDue() to avoid double-firing within the same slot
+
 ```
 
 ---
@@ -115,10 +105,7 @@ interface ITaskManager {
   start(): void;                 // start the tick timer
   stop(): void;                  // stop the tick timer
 
-  runNow(taskId: string): void;  // fire a task immediately (async)
-
-  getState(taskId: string): TaskRuntimeState | undefined;
-  listStates(): TaskRuntimeState[];
+  listTasks(): Array<{ id: string; description?: string; schedule: TaskSchedule }>;
 }
 ```
 
@@ -173,19 +160,11 @@ function onTick(now: Date) {
     if (!task.enabled) continue;
 
     if (isDue(task, now)) {
-      task.state.running = true;
-      task.state.runCount++;
+      task.lastRunAt = now;
 
       task.def.run({ taskId: task.def.id, now })
-        .then(() => {
-          task.state.lastRunAt = now;
-        })
         .catch((err) => {
-          task.state.errorCount++;
-          task.state.lastError = { message: String(err), at: new Date() };
-        })
-        .finally(() => {
-          task.state.running = false;
+          console.error(`[task-manager] ${task.def.id} failed:`, err);
         });
     }
   }
@@ -202,7 +181,7 @@ function getSlot(time: Date, intervalMs: number): number {
 
 function isDue(task: TaskEntry, now: Date): boolean {
   const { schedule } = task.def;
-  const { lastRunAt } = task.state;
+  const { lastRunAt } = task;
 
   if (schedule.type === "interval") {
     const currentSlot = getSlot(now, schedule.intervalMs);
@@ -241,23 +220,13 @@ function isDue(task: TaskEntry, now: Date): boolean {
 
 ## 8) Error Handling
 
-- All `run()` errors are caught in the `.catch()` of the fire-and-forget promise.
-- Errors are logged and stored in `lastError` on the task's runtime state.
+- All `run()` errors are caught in `.catch()` and logged via `console.error`.
 - A failing task never affects other tasks or the tick timer.
 - No retry — if a task fails, it will be attempted again at its next scheduled time.
 
 ---
 
-## 9) Observability
-
-Log events via `console.log` with `[task-manager]` prefix:
-- `task.started` — task execution began
-- `task.succeeded` — task execution completed
-- `task.failed` — task execution threw
-
----
-
-## 10) Debug Mode
+## 9) Debug Mode
 
 ### Activation
 
@@ -286,16 +255,15 @@ This provides an immediate smoke test of the full lifecycle: register → tick �
 
 ---
 
-## 11) File/Module Plan
+## 10) File/Module Plan
 
 ```text
 server/
   task-manager/
-    index.ts               // createTaskManager, exported types
-    types.ts               // TaskDefinition, TaskRuntimeState, TaskSchedule, etc.
+    index.ts               // createTaskManager + types
 ```
 
-That's it — the entire implementation fits in two files.
+That's it — the entire implementation fits in one file.
 
 Bootstrap integration in `server/index.ts`:
 ```ts
@@ -319,13 +287,12 @@ taskManager.stop();
 
 ---
 
-## 12) Testing Strategy
+## 11) Testing Strategy
 
 ### Unit Tests
 1. `isDue()` logic for interval schedules (slot boundary, same slot, day rollover).
 2. `isDue()` logic for daily schedules (correct time, already run today).
 3. `removeTask` while running (should not crash).
-4. `runNow` fires immediately.
 
 ### Integration Tests
 1. Start/stop lifecycle with fake clock.
@@ -337,8 +304,8 @@ Run `tsx server/index.ts --debug-tasks` and observe 10 counter log lines followe
 
 ---
 
-## 13) Decision Summary
+## 12) Decision Summary
 
-The Task Manager is built around a single `setInterval` tick loop. Every tick checks which tasks are due and fires them asynchronously. No cron library, no retry, no concurrency control, no overlap policies — just a registry, a timer, and fire-and-forget execution. The entire implementation fits in ~150 lines across two files.
+The Task Manager is built around a single `setInterval` tick loop. Every tick checks which tasks are due and fires them asynchronously. No cron library, no retry, no concurrency control, no state tracking — just a registry, a timer, and fire-and-forget execution. The entire implementation fits in one file.
 
 A `--debug-tasks` CLI flag switches to 1-second ticks and registers a self-removing counter task for instant smoke testing.
