@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawn, type ChildProcess } from "child_process";
 import { mkdir, writeFile, unlink } from "fs/promises";
 import { homedir, tmpdir } from "os";
 import { join } from "path";
@@ -18,39 +18,11 @@ import {
   type RawStreamEvent,
 } from "./agent/stream.js";
 
-interface AgentRunResult {
-  events: AgentEvent[];
-  stderrOutput: string;
-  exitCode: number;
-}
-
-/**
- * Check whether any collected events or stderr indicate a 401 auth error.
- * The Claude CLI may report the error via stderr, via a "text" result event,
- * or via an "error" event on stdout.
- */
-function hasAuthFailure(result: AgentRunResult): boolean {
-  if (isAuthError(result.stderrOutput)) return true;
-  for (const event of result.events) {
-    if (
-      (event.type === "text" || event.type === "error") &&
-      isAuthError(event.message)
-    ) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
- * Spawn the claude CLI and collect all events and exit info.
- * This is the inner execution that does NOT handle retries.
- */
-async function execAgent(
+function spawnClaude(
   args: string[],
   useDocker: boolean,
   workspacePath: string,
-): Promise<AgentRunResult> {
+): ChildProcess {
   const toDockerPath = (p: string) => p.replace(/\\/g, "/");
   const extraHosts: string[] =
     process.platform === "linux"
@@ -60,7 +32,7 @@ async function execAgent(
   const uid = process.getuid?.() ?? 1000;
   const gid = process.getgid?.() ?? 1000;
   const projectRoot = process.cwd();
-  const proc = useDocker
+  return useDocker
     ? spawn(
         "docker",
         [
@@ -95,43 +67,6 @@ async function execAgent(
         cwd: workspacePath,
         stdio: ["ignore", "pipe", "pipe"],
       });
-
-  const events: AgentEvent[] = [];
-  let stderrOutput = "";
-
-  try {
-    proc.stderr.on("data", (chunk: Buffer) => {
-      stderrOutput += chunk.toString();
-    });
-
-    let buffer = "";
-    for await (const chunk of proc.stdout) {
-      buffer += chunk.toString();
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        let event: RawStreamEvent;
-        try {
-          event = JSON.parse(line);
-        } catch {
-          continue;
-        }
-        for (const agentEvent of parseStreamEvent(event)) {
-          events.push(agentEvent);
-        }
-      }
-    }
-
-    const exitCode = await new Promise<number>((resolve) =>
-      proc.on("close", resolve),
-    );
-
-    return { events, stderrOutput, exitCode };
-  } finally {
-    if (!proc.killed) proc.kill();
-  }
 }
 
 export async function* runAgent(
@@ -189,35 +124,88 @@ export async function* runAgent(
     mcpConfigPath: hasMcp ? mcpConfigArgPath : undefined,
   });
 
-  try {
-    let result = await execAgent(args, useDocker, workspacePath);
+  // On macOS sandbox, if the first attempt fails with a 401 auth error,
+  // refresh credentials from Keychain and retry. Auth errors cause the CLI
+  // to fail fast with no useful events, so pre-checking avoids the need to
+  // buffer the entire stream.
+  const canRetryAuth = useDocker && process.platform === "darwin";
 
-    // On macOS sandbox, if the CLI failed with a 401 auth error, try to
-    // auto-refresh credentials from macOS Keychain and retry once.
-    // The auth error may surface via stderr, a "text" result event, or an
-    // "error" event — so we check all of them.
-    if (useDocker && process.platform === "darwin" && hasAuthFailure(result)) {
+  try {
+    yield* streamAgent(args, useDocker, workspacePath, canRetryAuth);
+  } finally {
+    if (hasMcp) unlink(mcpConfigHostPath).catch(() => {});
+  }
+}
+
+async function* streamAgent(
+  args: string[],
+  useDocker: boolean,
+  workspacePath: string,
+  canRetryAuth: boolean,
+): AsyncGenerator<AgentEvent> {
+  const proc = spawnClaude(args, useDocker, workspacePath);
+
+  let stderrOutput = "";
+  let authErrorDetected = false;
+
+  try {
+    proc.stderr?.on("data", (chunk: Buffer) => {
+      stderrOutput += chunk.toString();
+    });
+
+    let buffer = "";
+    for await (const chunk of proc.stdout!) {
+      buffer += chunk.toString();
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        let event: RawStreamEvent;
+        try {
+          event = JSON.parse(line);
+        } catch {
+          continue;
+        }
+        for (const agentEvent of parseStreamEvent(event)) {
+          if (
+            canRetryAuth &&
+            (agentEvent.type === "text" || agentEvent.type === "error") &&
+            isAuthError(agentEvent.message)
+          ) {
+            authErrorDetected = true;
+          }
+          yield agentEvent;
+        }
+      }
+    }
+
+    const exitCode = await new Promise<number>((resolve) =>
+      proc.on("close", resolve),
+    );
+
+    if (canRetryAuth && !authErrorDetected && isAuthError(stderrOutput)) {
+      authErrorDetected = true;
+    }
+
+    if (authErrorDetected) {
       console.log(
         "[sandbox] Authentication error detected — refreshing credentials and retrying...",
       );
       const refreshed = await refreshCredentials();
       if (refreshed) {
-        result = await execAgent(args, useDocker, workspacePath);
+        yield* streamAgent(args, useDocker, workspacePath, false);
+        return;
       }
     }
 
-    for (const event of result.events) {
-      yield event;
-    }
-
-    if (result.exitCode !== 0) {
+    if (exitCode !== 0) {
       yield {
         type: "error",
-        message:
-          result.stderrOutput || `claude exited with code ${result.exitCode}`,
+        message: stderrOutput || `claude exited with code ${exitCode}`,
       };
     }
   } finally {
-    if (hasMcp) unlink(mcpConfigHostPath).catch(() => {});
+    if (!proc.killed) proc.kill();
   }
 }
