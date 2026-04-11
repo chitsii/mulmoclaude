@@ -4,6 +4,7 @@ import path from "path";
 import { Router, Request, Response } from "express";
 import { getRole } from "../roles.js";
 import { runAgent } from "../agent.js";
+import { prependJournalPointer } from "../agent/prompt.js";
 import {
   registerSession,
   removeSession,
@@ -12,6 +13,7 @@ import {
 } from "../sessions.js";
 import { workspacePath } from "../workspace.js";
 import { maybeRunJournal } from "../journal/index.js";
+import { maybeIndexSession } from "../chat-index/index.js";
 
 const router = Router();
 const PORT = Number(process.env.PORT) || 3001;
@@ -128,9 +130,20 @@ router.post(
       claudeSessionMap.get(chatSessionId) ??
       (await readClaudeSessionId(metaFilePath, resultsFilePath));
 
+    // First-turn only: prepend a pointer to the workspace journal so
+    // the LLM knows where to find historical context if the user's
+    // question benefits from it. On resumed turns the pointer is
+    // already in Claude's context from the first turn and does not
+    // need to be re-sent. The original `message` has already been
+    // appended to the jsonl above, so the user-facing chat log stays
+    // clean — only the version handed to Claude CLI is decorated.
+    const decoratedMessage = claudeSessionId
+      ? message
+      : prependJournalPointer(message, workspacePath);
+
     try {
       for await (const event of runAgent(
-        message,
+        decoratedMessage,
         role,
         workspacePath,
         sessionId,
@@ -173,6 +186,18 @@ router.post(
           console.warn("[journal] unexpected error in background:", err);
         },
       );
+      // Same fire-and-forget pattern as the journal above. The
+      // chat indexer is self-gated by `indexedAt` freshness, holds
+      // a per-session lock, and skips sessions still in the live
+      // registry — so back-to-back turns on the same conversation
+      // don't spam the CLI.
+      maybeIndexSession({
+        sessionId,
+        activeSessionIds: getActiveSessionIds(),
+      }).catch((err) => {
+        // eslint-disable-next-line no-console
+        console.warn("[chat-index] unexpected error in background:", err);
+      });
     }
   },
 );

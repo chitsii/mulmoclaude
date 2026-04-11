@@ -2,7 +2,10 @@ import { Router, Request, Response } from "express";
 import path from "path";
 import { workspacePath } from "../workspace.js";
 import { loadJsonFile, saveJsonFile } from "../utils/file.js";
-import { dispatchTodos, type TodosActionInput } from "./todosHandlers.js";
+import {
+  dispatchTodos,
+  type TodosActionInput,
+} from "./todosHandlers.js";
 
 const router = Router();
 
@@ -10,6 +13,7 @@ export interface TodoItem {
   id: string;
   text: string;
   note?: string;
+  labels?: string[];
   completed: boolean;
   createdAt: number;
 }
@@ -47,6 +51,10 @@ interface TodoResponse {
   updating: boolean;
 }
 
+// Actions whose handlers may mutate state. "show" / "list_labels"
+// are read-only views; persisting their result would be a no-op.
+const READ_ONLY_ACTIONS = new Set(["show", "list_labels"]);
+
 router.post(
   "/todos",
   (
@@ -62,9 +70,7 @@ router.post(
       return;
     }
 
-    // Persist whenever the action mutated state. "show" returns the
-    // same array reference unchanged, so we skip the no-op write.
-    if (action !== "show") {
+    if (!READ_ONLY_ACTIONS.has(action)) {
       saveTodos(result.items);
     }
 

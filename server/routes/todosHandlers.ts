@@ -11,11 +11,24 @@
 
 import type { TodoItem } from "./todos.js";
 import { randomBytes } from "crypto";
+import {
+  filterByLabels,
+  listLabelsWithCount,
+  mergeLabels,
+  subtractLabels,
+} from "../../src/plugins/todo/labels.js";
 
 export interface TodosActionInput {
   text?: string;
   newText?: string;
   note?: string;
+  // For `add`: labels to tag the new item with.
+  // For `add_label` / `remove_label`: labels to add to / remove from
+  // the item matched by `text`.
+  labels?: string[];
+  // For `show`: OR-semantics filter that restricts the returned list
+  // to items carrying at least one of these labels (case-insensitive).
+  filterLabels?: string[];
 }
 
 export type TodosActionResult =
@@ -32,7 +45,8 @@ function makeId(): string {
 }
 
 // Substring match (case-insensitive). Used by delete / update /
-// check / uncheck — all share the same lookup contract.
+// check / uncheck / add_label / remove_label — all share the same
+// lookup contract.
 export function findTodoByText(
   items: TodoItem[],
   text: string,
@@ -41,13 +55,26 @@ export function findTodoByText(
   return items.find((i) => i.text.toLowerCase().includes(needle));
 }
 
-export function handleShow(items: TodoItem[]): TodosActionResult {
+export function handleShow(
+  items: TodoItem[],
+  input: TodosActionInput,
+): TodosActionResult {
+  const filterLabels = input.filterLabels ?? [];
+  const filtered = filterByLabels(items, filterLabels);
+  const filtering = filterLabels.length > 0;
+  const message = filtering
+    ? `Showing ${filtered.length} of ${items.length} todo item(s) filtered by: ${filterLabels.join(", ")}`
+    : `Showing ${items.length} todo item(s)`;
   return {
     kind: "success",
-    items,
-    message: `Showing ${items.length} todo item(s)`,
+    items: filtered,
+    message,
     jsonData: {
-      items: items.map((i) => ({ text: i.text, completed: i.completed })),
+      items: filtered.map((i) => ({
+        text: i.text,
+        completed: i.completed,
+        ...(i.labels && i.labels.length > 0 && { labels: i.labels }),
+      })),
     },
   };
 }
@@ -59,18 +86,26 @@ export function handleAdd(
   if (!input.text) {
     return { kind: "error", status: 400, error: "text required" };
   }
+  // Normalise incoming labels by routing them through
+  // `mergeLabels([], labels ?? [])` — that handles trim / collapse /
+  // case-insensitive dedup in one shot.
+  const normalizedLabels = mergeLabels([], input.labels ?? []);
   const item: TodoItem = {
     id: makeId(),
     text: input.text,
     ...(input.note !== undefined && { note: input.note }),
+    ...(normalizedLabels.length > 0 && { labels: normalizedLabels }),
     completed: false,
     createdAt: Date.now(),
   };
   return {
     kind: "success",
     items: [...items, item],
-    message: `Added: "${input.text}"`,
-    jsonData: { added: input.text },
+    message:
+      normalizedLabels.length > 0
+        ? `Added: "${input.text}" [${normalizedLabels.join(", ")}]`
+        : `Added: "${input.text}"`,
+    jsonData: { added: input.text, labels: normalizedLabels },
   };
 }
 
@@ -179,6 +214,91 @@ export function handleClearCompleted(items: TodoItem[]): TodosActionResult {
   };
 }
 
+export function handleAddLabel(
+  items: TodoItem[],
+  input: TodosActionInput,
+): TodosActionResult {
+  if (!input.text || !input.labels || input.labels.length === 0) {
+    return {
+      kind: "error",
+      status: 400,
+      error: "text and a non-empty labels array required",
+    };
+  }
+  const target = findTodoByText(items, input.text);
+  if (!target) {
+    return {
+      kind: "success",
+      items,
+      message: `Item not found: "${input.text}"`,
+      jsonData: { notFound: input.text },
+    };
+  }
+  const merged = mergeLabels(target.labels ?? [], input.labels);
+  const updated: TodoItem = { ...target, labels: merged };
+  const next = items.map((i) => (i.id === target.id ? updated : i));
+  return {
+    kind: "success",
+    items: next,
+    message: `Labels on "${target.text}": ${merged.join(", ")}`,
+    jsonData: { item: target.text, labels: merged },
+  };
+}
+
+export function handleRemoveLabel(
+  items: TodoItem[],
+  input: TodosActionInput,
+): TodosActionResult {
+  if (!input.text || !input.labels || input.labels.length === 0) {
+    return {
+      kind: "error",
+      status: 400,
+      error: "text and a non-empty labels array required",
+    };
+  }
+  const target = findTodoByText(items, input.text);
+  if (!target) {
+    return {
+      kind: "success",
+      items,
+      message: `Item not found: "${input.text}"`,
+      jsonData: { notFound: input.text },
+    };
+  }
+  const remaining = subtractLabels(target.labels ?? [], input.labels);
+  const updated: TodoItem = { ...target };
+  if (remaining.length > 0) {
+    updated.labels = remaining;
+  } else {
+    delete updated.labels;
+  }
+  const next = items.map((i) => (i.id === target.id ? updated : i));
+  return {
+    kind: "success",
+    items: next,
+    message:
+      remaining.length > 0
+        ? `Labels on "${target.text}": ${remaining.join(", ")}`
+        : `"${target.text}" now has no labels`,
+    jsonData: { item: target.text, labels: remaining },
+  };
+}
+
+export function handleListLabels(items: TodoItem[]): TodosActionResult {
+  const inventory = listLabelsWithCount(items);
+  return {
+    kind: "success",
+    items,
+    message:
+      inventory.length === 0
+        ? "No labels in use"
+        : `${inventory.length} label(s) in use: ${inventory
+            .map((l) => `${l.label} (${l.count})`)
+            .join(", ")}`,
+    jsonData: { labels: inventory },
+  };
+}
+
 const HANDLERS: Record<
   string,
   (items: TodoItem[], input: TodosActionInput) => TodosActionResult
@@ -190,6 +310,9 @@ const HANDLERS: Record<
   check: handleCheck,
   uncheck: handleUncheck,
   clear_completed: handleClearCompleted,
+  add_label: handleAddLabel,
+  remove_label: handleRemoveLabel,
+  list_labels: handleListLabels,
 };
 
 export function dispatchTodos(
