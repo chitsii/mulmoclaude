@@ -6,7 +6,10 @@ import { executeForm } from "@mulmochat-plugin/form";
 import { executeOpenCanvas } from "../../src/plugins/canvas/definition.js";
 import { executePresent3D } from "@gui-chat-plugin/present3d";
 import { showMusic } from "@gui-chat-plugin/music";
-import { getGeminiClient, isGeminiAvailable } from "../utils/gemini.js";
+import {
+  generateGeminiImageFromPrompt,
+  isGeminiAvailable,
+} from "../utils/gemini.js";
 import { errorMessage } from "../utils/errors.js";
 
 const router = Router();
@@ -38,21 +41,8 @@ const IMAGE_PLACEHOLDER = /!\[([^\]]+)\]\(\/?__too_be_replaced_image_path__\)/g;
 async function generateInlineImage(prompt: string): Promise<string | null> {
   if (!isGeminiAvailable()) return null;
   try {
-    const ai = getGeminiClient();
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-image-preview",
-      contents: [{ text: prompt }],
-      config: {
-        responseModalities: ["TEXT", "IMAGE"],
-        imageConfig: { aspectRatio: "16:9" },
-      },
-    });
-    const parts = response.candidates?.[0]?.content?.parts ?? [];
-    for (const part of parts) {
-      if (part.inlineData?.data) {
-        return `data:image/png;base64,${part.inlineData.data}`;
-      }
-    }
+    const { imageData } = await generateGeminiImageFromPrompt(prompt);
+    if (imageData) return `data:image/png;base64,${imageData}`;
   } catch {
     // leave placeholder if generation fails
   }
