@@ -2,6 +2,8 @@ import { Router, Request, Response } from "express";
 import fs from "fs";
 import path from "path";
 import { workspacePath } from "../workspace.js";
+import { statSafe, readDirSafe, resolveWithinRoot } from "../utils/fs.js";
+import { errorMessage } from "../utils/errors.js";
 
 const router = Router();
 
@@ -162,9 +164,17 @@ interface FileContentMeta {
 
 type FileContentResponse = FileContentText | FileContentMeta;
 
-type ContentKind = "text" | "image" | "pdf" | "audio" | "video" | "binary";
+export type ContentKind =
+  | "text"
+  | "image"
+  | "pdf"
+  | "audio"
+  | "video"
+  | "binary";
 
-function classify(filename: string): ContentKind {
+// Exported for unit tests. Classification is purely extension-based
+// and case-insensitive (via `path.extname(...).toLowerCase()`).
+export function classify(filename: string): ContentKind {
   const ext = path.extname(filename).toLowerCase();
   if (TEXT_EXTENSIONS.has(ext)) return "text";
   if (IMAGE_EXTENSIONS.has(ext)) return "image";
@@ -176,31 +186,19 @@ function classify(filename: string): ContentKind {
   return "binary";
 }
 
-// Realpath of the workspace, computed once at module load. Using the
-// realpath defeats symlink-based escapes — `path.resolve` + `startsWith`
-// alone is insufficient because a symlink inside the workspace could
-// point at `/etc/passwd` and still pass the prefix check.
+// Cached realpath of the workspace. Computed once at module load so
+// every request avoids the syscall. resolveWithinRoot needs an
+// already-realpath'd root.
 const workspaceReal = fs.realpathSync(workspacePath);
 
+// Wraps the shared resolveWithinRoot helper with the additional
+// hidden-dir traversal check (e.g. `.git/config`). buildTree already
+// hides these from the listing, but the URL endpoints are reachable
+// directly so they need their own check.
 function resolveSafe(relPath: string): string | null {
-  const normalized = path.normalize(relPath || "");
-  const resolved = path.resolve(workspaceReal, normalized);
-  let resolvedReal: string;
-  try {
-    resolvedReal = fs.realpathSync(resolved);
-  } catch {
-    return null;
-  }
-  if (
-    resolvedReal !== workspaceReal &&
-    !resolvedReal.startsWith(workspaceReal + path.sep)
-  ) {
-    return null;
-  }
-  // Reject paths that traverse a hidden directory (e.g. `.git/config`).
-  // buildTree already hides these from the listing, but the URL endpoints
-  // are reachable directly so they need their own check.
-  const relativeFromWorkspace = path.relative(workspaceReal, resolvedReal);
+  const resolved = resolveWithinRoot(workspaceReal, relPath);
+  if (!resolved) return null;
+  const relativeFromWorkspace = path.relative(workspaceReal, resolved);
   if (relativeFromWorkspace) {
     for (const seg of relativeFromWorkspace.split(path.sep)) {
       if (HIDDEN_DIRS.has(seg)) return null;
@@ -209,11 +207,11 @@ function resolveSafe(relPath: string): string | null {
   // Reject workspace-sensitive filenames outright. `isSensitivePath`
   // matches on the basename so it catches `.env`, `id_rsa`, and
   // friends regardless of which directory they sit in.
-  if (isSensitivePath(resolvedReal)) return null;
-  return resolvedReal;
+  if (isSensitivePath(resolved)) return null;
+  return resolved;
 }
 
-interface ByteRange {
+export interface ByteRange {
   start: number;
   end: number;
 }
@@ -223,8 +221,18 @@ interface ByteRange {
 // so the caller can respond 416. We deliberately reject multi-range
 // requests (`bytes=0-99,200-299`) since browsers don't issue them for
 // media playback and supporting them would complicate the response.
-function parseRange(header: string, size: number): ByteRange | null {
-  const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+//
+// Exported for unit tests — this is the most security-sensitive piece
+// of the file-serving surface, so it's covered exhaustively in
+// `test/routes/test_filesRoute.ts`.
+export function parseRange(header: string, size: number): ByteRange | null {
+  // RFC 7233 §2.1: "A Range request on a representation whose current
+  // length is 0 cannot be satisfied". We also need this guard at the
+  // top because the naive suffix-range math below produces `end = -1`
+  // for zero-byte files, which then crashes `fs.createReadStream`
+  // with `ERR_OUT_OF_RANGE`.
+  if (size <= 0) return null;
+  const match = /^bytes=(\d*)-(\d*)$/i.exec(header.trim());
   if (!match) return null;
   const [, startStr, endStr] = match;
   if (startStr === "" && endStr === "") return null;
@@ -238,6 +246,33 @@ function parseRange(header: string, size: number): ByteRange | null {
   if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
   if (start < 0 || end < start || end >= size) return null;
   return { start, end };
+}
+
+// Security headers applied to every `/files/raw` response. Exported
+// so a regression test can pin the exact strings down — a silent
+// regression here reopens a real XSS surface (see plans/
+// fix-files-raw-csp-sandbox.md for the full threat model).
+//
+// `sandbox` (no allow-flags) creates an opaque origin for the
+// response. Even if an SVG / HTML / PDF with embedded JavaScript
+// gets loaded as a top-level document or inside an iframe, its
+// scripts can't access the localhost:3001 origin's cookies,
+// session storage, or hit the `/api/*` endpoints. Frames rendering
+// the response become sandboxed too — PDFs still work because
+// they don't rely on same-origin access to the parent.
+//
+// `nosniff` stops Chrome / Firefox from re-guessing Content-Type
+// on files the server declared but the browser might want to
+// re-interpret as HTML.
+export const RAW_SECURITY_HEADERS: Readonly<Record<string, string>> = {
+  "Content-Security-Policy": "sandbox",
+  "X-Content-Type-Options": "nosniff",
+};
+
+function applyRawSecurityHeaders(res: Response): void {
+  for (const [name, value] of Object.entries(RAW_SECURITY_HEADERS)) {
+    res.setHeader(name, value);
+  }
 }
 
 // If the read stream errors mid-flight (file deleted, disk error,
@@ -255,22 +290,6 @@ function pipeWithErrorHandling(
     res.status(500).json({ error: `Failed to read file: ${err.message}` });
   });
   stream.pipe(res);
-}
-
-function readDirSafe(absPath: string): fs.Dirent[] {
-  try {
-    return fs.readdirSync(absPath, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-}
-
-function statSafe(absPath: string): fs.Stats | null {
-  try {
-    return fs.statSync(absPath);
-  } catch {
-    return null;
-  }
 }
 
 function buildTree(absPath: string, relPath: string): TreeNode {
@@ -323,8 +342,9 @@ router.get(
       const tree = buildTree(workspaceReal, "");
       res.json(tree);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ error: `Failed to read workspace: ${message}` });
+      res
+        .status(500)
+        .json({ error: `Failed to read workspace: ${errorMessage(err)}` });
     }
   },
 );
@@ -333,31 +353,73 @@ interface PathQuery {
   path?: string;
 }
 
+// Shared validation preamble for /files/content and /files/raw. Both
+// endpoints need to: read `path` from the query, validate it's
+// inside the workspace (with symlink hardening), stat it, and
+// confirm it's a regular file. On any failure this writes the
+// appropriate 4xx response and returns null; the caller bails out.
+//
+// `T` lets each caller's Response type stay precise — both endpoints
+// have different success-shape unions and we just need ErrorResponse
+// to be one of the alternatives.
+//
+// Order matters: stat the syntactic candidate first so a missing
+// file gets a 404, then run the realpath-hardened resolveSafe check
+// for symlink escapes (which would return 400). Doing them in this
+// order keeps 404 reachable for the common "file not found" case
+// instead of conflating it with traversal attempts.
+function resolveAndStatFile<T>(
+  req: Request<object, unknown, unknown, PathQuery>,
+  res: Response<T | ErrorResponse>,
+): { relPath: string; absPath: string; stat: fs.Stats } | null {
+  const relPath = typeof req.query.path === "string" ? req.query.path : "";
+  if (!relPath) {
+    res.status(400).json({ error: "path required" });
+    return null;
+  }
+  // Syntactic candidate (no symlink resolution yet).
+  const candidate = path.resolve(workspaceReal, path.normalize(relPath));
+  const stat = statSafe(candidate);
+  if (!stat) {
+    // Distinguish "missing file under workspace" (404) from "path
+    // syntactically outside workspace" (400). We check the
+    // syntactic relative form, NOT realpath, because the file
+    // doesn't exist so realpath would throw anyway.
+    const relativeFromWorkspace = path.relative(workspaceReal, candidate);
+    const escapesSyntactically =
+      relativeFromWorkspace === ".." ||
+      relativeFromWorkspace.startsWith(`..${path.sep}`);
+    if (escapesSyntactically) {
+      res.status(400).json({ error: "Path outside workspace" });
+    } else {
+      res.status(404).json({ error: "File not found" });
+    }
+    return null;
+  }
+  if (!stat.isFile()) {
+    res.status(400).json({ error: "Not a file" });
+    return null;
+  }
+  // File exists — run the realpath-hardened check to defeat
+  // symlink-escape attempts (e.g. workspace/secret → /etc/passwd).
+  // resolveSafe also rejects paths that traverse a hidden dir.
+  const absPath = resolveSafe(relPath);
+  if (!absPath) {
+    res.status(400).json({ error: "Path outside workspace" });
+    return null;
+  }
+  return { relPath, absPath, stat };
+}
+
 router.get(
   "/files/content",
   (
     req: Request<object, unknown, unknown, PathQuery>,
     res: Response<FileContentResponse | ErrorResponse>,
   ) => {
-    const relPath = typeof req.query.path === "string" ? req.query.path : "";
-    if (!relPath) {
-      res.status(400).json({ error: "path required" });
-      return;
-    }
-    const absPath = resolveSafe(relPath);
-    if (!absPath) {
-      res.status(400).json({ error: "Path outside workspace" });
-      return;
-    }
-    const stat = statSafe(absPath);
-    if (!stat) {
-      res.status(404).json({ error: "File not found" });
-      return;
-    }
-    if (!stat.isFile()) {
-      res.status(400).json({ error: "Not a file" });
-      return;
-    }
+    const ctx = resolveAndStatFile(req, res);
+    if (!ctx) return;
+    const { relPath, absPath, stat } = ctx;
 
     const meta = {
       path: relPath,
@@ -407,8 +469,9 @@ router.get(
     try {
       content = fs.readFileSync(absPath, "utf-8");
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ error: `Failed to read file: ${message}` });
+      res
+        .status(500)
+        .json({ error: `Failed to read file: ${errorMessage(err)}` });
       return;
     }
     res.json({ kind: "text", ...meta, content });
@@ -421,25 +484,10 @@ router.get(
     req: Request<object, unknown, unknown, PathQuery>,
     res: Response<ErrorResponse>,
   ) => {
-    const relPath = typeof req.query.path === "string" ? req.query.path : "";
-    if (!relPath) {
-      res.status(400).json({ error: "path required" });
-      return;
-    }
-    const absPath = resolveSafe(relPath);
-    if (!absPath) {
-      res.status(400).json({ error: "Path outside workspace" });
-      return;
-    }
-    const stat = statSafe(absPath);
-    if (!stat) {
-      res.status(404).json({ error: "File not found" });
-      return;
-    }
-    if (!stat.isFile()) {
-      res.status(400).json({ error: "Not a file" });
-      return;
-    }
+    const ctx = resolveAndStatFile(req, res);
+    if (!ctx) return;
+    const { absPath, stat } = ctx;
+
     if (stat.size > MAX_RAW_BYTES) {
       res.status(413).json({
         error: `File too large to stream (${stat.size} bytes, limit ${MAX_RAW_BYTES})`,
@@ -450,6 +498,11 @@ router.get(
     const mime = MIME_BY_EXT[ext] ?? "application/octet-stream";
     res.setHeader("Accept-Ranges", "bytes");
     res.setHeader("Content-Type", mime);
+    // Sandbox the response so an `.svg` / `.html` / `.pdf` with
+    // embedded JavaScript can't escape into the localhost:3001
+    // origin via direct navigation or <iframe>. See
+    // plans/fix-files-raw-csp-sandbox.md for the threat model.
+    applyRawSecurityHeaders(res);
 
     // Range support is required for `<video>` playback (Safari refuses
     // to play media without 206 responses) and for seek-past-buffered
@@ -459,6 +512,11 @@ router.get(
     if (rangeHeader) {
       const range = parseRange(rangeHeader, stat.size);
       if (!range) {
+        // The media MIME was set above so the 206 success path
+        // doesn't have to repeat it, but on a 416 we want JSON so
+        // `res.json` doesn't lie about the body's content-type. Set
+        // the Content-Range per RFC 7233 §4.4 before sending.
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
         res.setHeader("Content-Range", `bytes */${stat.size}`);
         res.status(416).json({ error: "Range not satisfiable" });
         return;
