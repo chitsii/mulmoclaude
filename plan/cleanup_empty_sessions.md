@@ -38,6 +38,16 @@ function removeCurrentIfEmpty(): boolean {
 
 - **`loadSession()`** — calls `removeCurrentIfEmpty()` at the top, before any navigation. The returned boolean (`replaced`) is passed to `navigateToSession(id, replaced)`, which uses `router.replace` instead of `router.push` when an empty session was removed. This keeps the empty session URL out of browser history.
 
+### Early-return guard in `loadSession()`
+
+`loadSession()` has an early return to avoid re-loading the already-active session:
+
+```typescript
+if (id === currentSessionId.value && sessionMap.has(id)) return;
+```
+
+The `sessionMap.has(id)` check is essential. The route watcher sets `currentSessionId.value = newId` **before** calling `loadSession(newId)`. Without the `sessionMap.has` check, the guard would always match and bail out — preventing direct-URL navigation (`page.goto("/chat/<id>")`) and page reloads from loading the session data from the server.
+
 ### Effect on browser history
 
 | Scenario | Before | After |
@@ -48,3 +58,4 @@ function removeCurrentIfEmpty(): boolean {
 ## Files Changed
 
 - `src/App.vue` — added `removeCurrentIfEmpty()`, updated `createNewSession()` and `loadSession()`
+- `e2e/tests/router-navigation.spec.ts` — updated "browser forward works after going back" test to navigate between two non-empty sessions (the initial empty session is now intentionally replaced out of browser history)

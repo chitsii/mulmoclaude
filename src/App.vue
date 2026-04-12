@@ -1023,8 +1023,11 @@ async function toggleHistory() {
 }
 
 async function loadSession(id: string) {
-  // Re-selecting the already-active session is a no-op.
-  if (id === currentSessionId.value) return;
+  // Re-selecting the already-active, loaded session is a no-op.
+  // The sessionMap check is needed because the route watcher sets
+  // currentSessionId before calling loadSession — without it the
+  // guard would bail before the session data is fetched.
+  if (id === currentSessionId.value && sessionMap.has(id)) return;
 
   // If the current session is empty, remove it from memory and use
   // replace-navigation so the empty session doesn't linger in
