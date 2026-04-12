@@ -9,13 +9,18 @@
         class="p-4 border-b border-gray-200 flex items-center justify-between"
       >
         <div>
-          <h1 class="text-lg font-semibold" :style="debugTitleStyle">
+          <h1
+            data-testid="app-title"
+            class="text-lg font-semibold"
+            :style="debugTitleStyle"
+          >
             MulmoClaude
           </h1>
         </div>
         <div class="flex gap-2">
           <button
             class="text-gray-400 hover:text-gray-700"
+            data-testid="new-session-btn"
             @click="createNewSession()"
             title="New session"
           >
@@ -23,6 +28,7 @@
           </button>
           <button
             ref="historyButtonRef"
+            data-testid="history-btn"
             class="relative text-gray-400 hover:text-gray-700"
             :class="{ 'text-blue-500': showHistory }"
             @click="toggleHistory"
@@ -145,6 +151,7 @@
                     ? 'border-blue-400 bg-blue-50 hover:bg-blue-100'
                     : 'border-gray-200 hover:bg-gray-50'
             "
+            :data-testid="`session-item-${session.id}`"
             @click="loadSession(session.id)"
           >
             <div class="flex items-center gap-1 text-xs text-gray-500 mb-1">
@@ -249,6 +256,7 @@
             :title="
               tabSessions[i - 1].preview || roleName(tabSessions[i - 1].roleId)
             "
+            :data-testid="`session-tab-${tabSessions[i - 1].id}`"
             @click="loadSession(tabSessions[i - 1].id)"
           >
             <span
@@ -374,6 +382,7 @@
         <div class="flex gap-2">
           <textarea
             ref="textareaRef"
+            data-testid="user-input"
             v-model="userInput"
             placeholder="Type a task..."
             rows="2"
@@ -386,6 +395,7 @@
             "
           />
           <button
+            data-testid="send-btn"
             class="bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="isRunning"
             @click="sendMessage()"
