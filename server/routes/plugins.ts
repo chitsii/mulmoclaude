@@ -7,11 +7,30 @@ import { executeOpenCanvas } from "../../src/plugins/canvas/definition.js";
 import { executePresent3D } from "@gui-chat-plugin/present3d";
 import { showMusic } from "@gui-chat-plugin/music";
 import { getGeminiClient, isGeminiAvailable } from "../utils/gemini.js";
+import { errorMessage } from "../utils/errors.js";
 
 const router = Router();
 
 interface PluginErrorResponse {
   message: string;
+}
+
+// Wraps a plugin's `execute*` function in an Express handler. Each
+// plugin route used to inline the same try/catch + 500 response shell;
+// this collapses them to one line per route. The plugin function
+// receives the request body and returns whatever the plugin's
+// ToolResult shape is — typed as `T` so the response stays type-safe.
+function wrapPluginExecute<T>(
+  execute: (body: unknown) => Promise<T>,
+): (req: Request, res: Response<T | PluginErrorResponse>) => Promise<void> {
+  return async (req, res) => {
+    try {
+      const result = await execute(req.body);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ message: errorMessage(err) });
+    }
+  };
 }
 
 const IMAGE_PLACEHOLDER = /!\[([^\]]+)\]\(\/?__too_be_replaced_image_path__\)/g;
@@ -90,94 +109,39 @@ router.post(
 );
 
 // presentSpreadsheet — uses package execute for validation/processing
-router.post(
-  "/present-spreadsheet",
-  async (_req: Request, res: Response<PluginErrorResponse>) => {
-    try {
-      const result = await executeSpreadsheet(_req.body);
-      res.json(result);
-    } catch (err) {
-      res.status(500).json({ message: String(err) });
-    }
-  },
-);
+router.post("/present-spreadsheet", wrapPluginExecute(executeSpreadsheet));
 
 // createMindMap — uses package execute for node layout computation
 router.post(
   "/mindmap",
-  async (_req: Request, res: Response<PluginErrorResponse>) => {
-    try {
-      const result = await executeMindMap(null as never, _req.body);
-      res.json(result);
-    } catch (err) {
-      res.status(500).json({ message: String(err) });
-    }
-  },
+  wrapPluginExecute((body) => executeMindMap(null as never, body)),
 );
 
 // putQuestions — quiz
 router.post(
   "/quiz",
-  async (_req: Request, res: Response<PluginErrorResponse>) => {
-    try {
-      const result = await executeQuiz(null as never, _req.body);
-      res.json(result);
-    } catch (err) {
-      res.status(500).json({ message: String(err) });
-    }
-  },
+  wrapPluginExecute((body) => executeQuiz(null as never, body)),
 );
 
 // presentForm — form
 router.post(
   "/form",
-  async (_req: Request, res: Response<PluginErrorResponse>) => {
-    try {
-      const result = await executeForm(null as never, _req.body);
-      res.json(result);
-    } catch (err) {
-      res.status(500).json({ message: String(err) });
-    }
-  },
+  wrapPluginExecute((body) => executeForm(null as never, body)),
 );
 
 // openCanvas — drawing canvas
-router.post(
-  "/canvas",
-  async (_req: Request, res: Response<PluginErrorResponse>) => {
-    try {
-      const result = await executeOpenCanvas();
-      res.json(result);
-    } catch (err) {
-      res.status(500).json({ message: String(err) });
-    }
-  },
-);
+router.post("/canvas", wrapPluginExecute(() => executeOpenCanvas()));
 
 // present3d — 3D visualization
 router.post(
   "/present3d",
-  async (_req: Request, res: Response<PluginErrorResponse>) => {
-    try {
-      const result = await executePresent3D(null as never, _req.body);
-      res.json(result);
-    } catch (err) {
-      res.status(500).json({ message: String(err) });
-    }
-  },
+  wrapPluginExecute((body) => executePresent3D(null as never, body)),
 );
 
 // showMusic — sheet music display
 router.post(
   "/music",
-  async (_req: Request, res: Response<PluginErrorResponse>) => {
-    try {
-      const result = await showMusic(null as never, _req.body);
-      res.json(result);
-    } catch (err) {
-      res.status(500).json({ message: String(err) });
-    }
-  },
+  wrapPluginExecute((body) => showMusic(null as never, body)),
 );
 
 export default router;
