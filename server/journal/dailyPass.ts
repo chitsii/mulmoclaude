@@ -95,7 +95,16 @@ export async function runDailyPass(
 
   const perSessionExcerpts = await loadDirtySessionExcerpts(chatDir, dirty);
   const { dayBuckets, sessionToDays } = buildDayBuckets(perSessionExcerpts);
-  if (dayBuckets.size === 0) return { nextState: { ...state }, result };
+
+  // Note: we intentionally do NOT early-return when `dayBuckets` is
+  // empty. Letting the pipeline fall through preserves the pre-
+  // refactor behaviour for the edge case where every dirty session
+  // produces zero excerpts (all malformed, or all metadata/tool-only
+  // with no text turns): `readAllTopics` still fires, and the
+  // returned `nextState.knownTopics` is still normalized / sorted
+  // from the existing state. The empty `orderedDays` loop then
+  // iterates zero times and we fall through to `return { nextState,
+  // result }`.
 
   // --- Phase 2: set up per-pass state --------------------------------
   const existingTopics = await readAllTopics(workspaceRoot);
