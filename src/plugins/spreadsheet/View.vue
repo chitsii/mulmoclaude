@@ -141,6 +141,7 @@ import {
   type SpreadsheetCell,
   type CellValue,
 } from "./engine";
+import { applyCellHighlights, clearCellHighlights } from "./cellHighlights";
 
 // Import all spreadsheet functions to populate the function registry
 import "./engine/functions";
@@ -662,51 +663,20 @@ watch(
   },
 );
 
-// Highlight selected cell and referenced cells when mini editor is open
+// Highlight selected cell and referenced cells when mini editor is
+// open. The per-step DOM work lives in cellHighlights.ts so this
+// callback stays trivial and the complexity lands on the helpers,
+// each of which is linear.
 watch(
   [miniEditorOpen, miniEditorCell, referencedCells, renderedHtml],
   () => {
-    // Remove previous highlights
-    const prevEditingCell =
-      tableContainer.value?.querySelector(".cell-editing");
-    if (prevEditingCell) {
-      prevEditingCell.classList.remove("cell-editing");
-    }
-
-    const prevReferencedCells =
-      tableContainer.value?.querySelectorAll(".cell-referenced");
-    if (prevReferencedCells) {
-      prevReferencedCells.forEach((cell) =>
-        cell.classList.remove("cell-referenced"),
-      );
-    }
-
-    if (miniEditorOpen.value && tableContainer.value) {
-      const table = tableContainer.value.querySelector("#spreadsheet-table");
-      if (table) {
-        // Highlight the selected cell
-        if (miniEditorCell.value) {
-          const row = table.querySelectorAll("tr")[miniEditorCell.value.row];
-          if (row) {
-            const cell = row.querySelectorAll("td")[miniEditorCell.value.col];
-            if (cell) {
-              cell.classList.add("cell-editing");
-            }
-          }
-        }
-
-        // Highlight referenced cells
-        for (const cellRef of referencedCells.value) {
-          const row = table.querySelectorAll("tr")[cellRef.row];
-          if (row) {
-            const cell = row.querySelectorAll("td")[cellRef.col];
-            if (cell) {
-              cell.classList.add("cell-referenced");
-            }
-          }
-        }
-      }
-    }
+    clearCellHighlights(tableContainer.value);
+    if (!miniEditorOpen.value) return;
+    applyCellHighlights(
+      tableContainer.value,
+      miniEditorCell.value,
+      referencedCells.value,
+    );
   },
   { flush: "post" },
 );
