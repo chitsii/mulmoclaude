@@ -542,15 +542,20 @@ const router = useRouter();
 // --- Per-session state ---
 const sessionMap = reactive(new Map<string, ActiveSession>());
 
-// currentSessionId is derived from the URL. Writes go through
-// router.push / router.replace so the URL stays in sync and the
-// browser back/forward buttons work.
-const currentSessionId = computed(() => {
-  const param = route.params.sessionId;
-  return typeof param === "string" ? param : "";
-});
+// currentSessionId is a plain ref so that synchronous writes (e.g.
+// inside createNewSession, which is called right before sendMessage
+// might run) take effect immediately. The URL is kept in sync via
+// navigateToSession, and external URL changes (back button, typed
+// URL) feed back into the ref via the route watcher below.
+//
+// Earlier attempt used a computed derived from route.params, but
+// router.push is async — the route param doesn't update until the
+// next tick, so any code reading currentSessionId between the push
+// and the tick sees the stale value ("") and drops messages silently.
+const currentSessionId = ref("");
 
 function navigateToSession(id: string, replace = false): void {
+  currentSessionId.value = id;
   const method = replace ? router.replace : router.push;
   void method({
     name: "chat",
@@ -558,6 +563,22 @@ function navigateToSession(id: string, replace = false): void {
     query: route.query,
   });
 }
+
+// External URL changes (back/forward button, typed URL) → update ref.
+// If the session isn't in memory, load it from the server.
+watch(
+  () => route.params.sessionId,
+  async (newId) => {
+    if (typeof newId !== "string" || newId === currentSessionId.value) return;
+    currentSessionId.value = newId;
+    if (!sessionMap.has(newId)) {
+      await loadSession(newId);
+      if (!sessionMap.has(newId)) {
+        createNewSession();
+      }
+    }
+  },
+);
 
 const activeSession = computed(() => sessionMap.get(currentSessionId.value));
 
