@@ -56,6 +56,15 @@ export function migrateItems(
   // First pass: backfill status. Items pointing at a column that no
   // longer exists are reassigned to the default open or done column
   // depending on `completed`.
+  //
+  // Note: we deliberately do NOT re-sync `completed` to status on
+  // every read. Earlier versions of this function did, but that
+  // overrode the legacy MCP `check` / `uncheck` actions — those
+  // actions only flip the boolean, never touch status, so a sync
+  // pass kept reverting them on the next read. Treating the two
+  // fields as independent at the storage layer leaves both the REST
+  // PATCH path (which keeps them in sync explicitly) and the legacy
+  // MCP actions (which only touch `completed`) working correctly.
   const withStatus = rawItems.map((it): TodoItem => {
     const hasValidStatus =
       typeof it.status === "string" && validStatusIds.has(it.status);
@@ -64,20 +73,11 @@ export function migrateItems(
     return { ...it, status };
   });
 
-  // Sync `completed` to status: items in the done column are completed,
-  // items elsewhere are not. This makes the two fields agree even when
-  // legacy data was inconsistent.
-  const withCompletedSync = withStatus.map((it): TodoItem => {
-    const shouldBeDone = it.status === doneId;
-    if (it.completed === shouldBeDone) return it;
-    return { ...it, completed: shouldBeDone };
-  });
-
   // Second pass: backfill order per column. Sort by createdAt within
   // each column, then assign 1000 / 2000 / 3000 ... so drag-drop has
   // room to insert between any two existing items.
   const byStatus = new Map<string, TodoItem[]>();
-  for (const it of withCompletedSync) {
+  for (const it of withStatus) {
     const key = it.status ?? openId;
     if (!byStatus.has(key)) byStatus.set(key, []);
     byStatus.get(key)!.push(it);
@@ -92,7 +92,7 @@ export function migrateItems(
     const sorted = [...group].sort((a, b) => a.createdAt - b.createdAt);
     sorted.forEach((it, i) => orderById.set(it.id, (i + 1) * ORDER_STEP));
   }
-  return withCompletedSync.map((it): TodoItem => {
+  return withStatus.map((it): TodoItem => {
     const next = orderById.get(it.id);
     if (next === undefined) return it;
     return { ...it, order: next };

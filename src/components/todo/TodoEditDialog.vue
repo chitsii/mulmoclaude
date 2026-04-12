@@ -1,0 +1,55 @@
+<template>
+  <div
+    class="fixed inset-0 z-50 bg-black/30 flex items-center justify-center"
+    @click="emit('cancel')"
+  >
+    <div
+      class="bg-white rounded-lg shadow-xl w-[28rem] max-w-[92vw] overflow-hidden"
+      @click.stop
+    >
+      <div
+        class="flex items-center justify-between px-4 py-2 border-b border-gray-100"
+      >
+        <h3 class="text-base font-semibold text-gray-800">Edit Todo</h3>
+        <button
+          class="text-gray-400 hover:text-red-500 text-xs px-2 py-0.5"
+          title="Delete this item"
+          @click="confirmDelete"
+        >
+          Delete
+        </button>
+      </div>
+      <TodoEditPanel
+        :item="item"
+        :columns="columns"
+        @save="(input) => emit('save', input)"
+        @cancel="emit('cancel')"
+      />
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import type { StatusColumn, TodoItem } from "../../plugins/todo/index";
+import type { PatchItemInput } from "../../plugins/todo/composables/useTodos";
+import TodoEditPanel from "./TodoEditPanel.vue";
+
+const props = defineProps<{
+  item: TodoItem;
+  columns: StatusColumn[];
+}>();
+
+const emit = defineEmits<{
+  save: [input: PatchItemInput];
+  cancel: [];
+  delete: [id: string];
+}>();
+
+function confirmDelete(): void {
+  // Same UX as the column delete: native confirm because deletion is
+  // reversible (the next save would re-create) but worth a beat.
+  const ok = window.confirm(`Delete "${props.item.text}"?`);
+  if (!ok) return;
+  emit("delete", props.item.id);
+}
+</script>

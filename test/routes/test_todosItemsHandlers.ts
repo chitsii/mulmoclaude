@@ -68,12 +68,17 @@ describe("migrateItems", () => {
     assert.equal(result[0]?.status, "backlog");
   });
 
-  it("syncs completed to done column membership", () => {
+  it("does NOT re-sync completed against status on read", () => {
+    // Migration treats `status` and `completed` as independent at
+    // the storage layer so the legacy MCP `check`/`uncheck` actions
+    // (which only flip the boolean and never touch status) keep
+    // working. Re-syncing here used to revert their effect on the
+    // very next read.
     const items: TodoItem[] = [
       {
         id: "a",
         text: "x",
-        completed: false, // out-of-sync; status says done
+        completed: false,
         createdAt: 100,
         status: "done",
         order: 1000,
@@ -81,15 +86,15 @@ describe("migrateItems", () => {
       {
         id: "b",
         text: "y",
-        completed: true, // out-of-sync; status says todo
+        completed: true,
         createdAt: 200,
         status: "todo",
         order: 1000,
       },
     ];
     const result = migrateItems(items, cols());
-    assert.equal(result.find((i) => i.id === "a")?.completed, true);
-    assert.equal(result.find((i) => i.id === "b")?.completed, false);
+    assert.equal(result.find((i) => i.id === "a")?.completed, false);
+    assert.equal(result.find((i) => i.id === "b")?.completed, true);
   });
 
   it("preserves existing order values when every item in a column has one", () => {

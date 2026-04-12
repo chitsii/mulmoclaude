@@ -141,6 +141,17 @@
       @create="onCreateItem"
     />
 
+    <!-- Edit item dialog (used by kanban click; list/table use the
+         inline edit panel and don't need to open this) -->
+    <TodoEditDialog
+      v-if="editingItem"
+      :item="editingItem"
+      :columns="columns"
+      @cancel="editingItem = null"
+      @save="onEditDialogSave"
+      @delete="onEditDialogDelete"
+    />
+
     <!-- Add column dialog -->
     <div
       v-if="addColumnOpen"
@@ -196,6 +207,7 @@ import TodoKanbanView from "./todo/TodoKanbanView.vue";
 import TodoTableView from "./todo/TodoTableView.vue";
 import TodoListView from "./todo/TodoListView.vue";
 import TodoAddDialog from "./todo/TodoAddDialog.vue";
+import TodoEditDialog from "./todo/TodoEditDialog.vue";
 
 type ViewMode = "kanban" | "table" | "list";
 
@@ -348,12 +360,26 @@ function onMove(id: string, statusId: string, position: number): void {
   void moveItem(id, { status: statusId, position });
 }
 
-function onOpenItem(_item: TodoItem): void {
-  // Kanban click: switch to list/table view to expose the inline
-  // editor. Without this, kanban becomes drag-only and there's no
-  // way to edit a card's text. Picks list because it's the gentlest
-  // visual jump from a card grid.
-  setViewMode("list");
+// ── Edit dialog (kanban click) ─────────────────────────────────
+
+const editingItem = ref<TodoItem | null>(null);
+
+function onOpenItem(item: TodoItem): void {
+  // Kanban cards open the modal edit dialog. List and Table views
+  // have their own inline edit panels and don't go through here.
+  editingItem.value = item;
+}
+
+async function onEditDialogSave(input: PatchItemInput): Promise<void> {
+  const target = editingItem.value;
+  if (!target) return;
+  const ok = await patchItem(target.id, input);
+  if (ok) editingItem.value = null;
+}
+
+function onEditDialogDelete(id: string): void {
+  void deleteItem(id);
+  editingItem.value = null;
 }
 
 // ── Column handlers ────────────────────────────────────────────
