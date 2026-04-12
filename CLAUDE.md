@@ -52,6 +52,27 @@ workspace/
   memory.md       ← distilled facts always loaded as context
 ```
 
+### Routing (vue-router, history mode)
+
+URL-based navigation via `vue-router` (history mode — clean paths, no `#`). The router manages session, view mode, and (in future phases) file path, result UUID, and role in the URL.
+
+**URL scheme** (see #108 for full plan):
+
+```
+/                                          → /chat redirect
+/chat                                      → new session, single view
+/chat/:sessionId                           → existing session, single view
+/chat/:sessionId?view=stack                → stack view
+/chat/:sessionId?view=files                → files view
+/chat/:sessionId?view=files&path=wiki/foo  → files view + file selected (future)
+```
+
+**Key pattern — ref + bidirectional sync**: `router.push` is async, so state that must be readable synchronously (e.g. `currentSessionId`, `canvasViewMode`) is kept as a plain `ref`. The ref is the source of truth for reads; `router.push`/`router.replace` keeps the URL in sync. A `watch` on route params/query handles external URL changes (back/forward button, typed URL).
+
+**Navigation guards** (`src/router/guards.ts`): `beforeEach` validates all URL params (sessionId format, view whitelist) and strips invalid values via `router.replace`.
+
+**`navigateToSession`** in `App.vue` uses `buildViewQuery()` (from `useCanvasViewMode`) instead of raw `route.query` for the view param — this avoids a stale-query race when `setCanvasViewMode` and `navigateToSession` are called in the same synchronous block.
+
 ## Key Files
 
 | File | Purpose |
@@ -64,6 +85,9 @@ workspace/
 | `server/csrfGuard.ts` | CSRF origin-check middleware |
 | `src/config/roles.ts` | Role definitions |
 | `src/tools/index.ts` | Plugin registry |
+| `src/router/index.ts` | Vue-router setup (history mode, route definitions) |
+| `src/router/guards.ts` | Navigation guards (param validation + sanitize) |
+| `src/composables/useCanvasViewMode.ts` | View mode state — URL sync via router, localStorage fallback |
 | `src/App.vue` | Main UI — sidebar + canvas + role switcher |
 
 ## Plugin Development
@@ -127,6 +151,8 @@ Key shared helpers in this repo:
 | `statSafe` / `readDirSafe` | `server/utils/fs.ts` |
 | `dispatchResponse(res, result)` | `server/routes/dispatchResponse.ts` |
 | `useFreshPluginData(opts)` | `src/composables/useFreshPluginData.ts` |
+| `useCanvasViewMode(opts)` | `src/composables/useCanvasViewMode.ts` |
+| `applyViewToQuery(query, mode)` | `src/composables/useCanvasViewMode.ts` |
 
 Periodically audit for duplication (`sonarjs/no-duplicate-string` warnings, `jscpd`). Batch low-risk extractions into a single refactor PR (as #145 did).
 
@@ -153,6 +179,7 @@ src/
   components/     ← shared Vue components
   composables/    ← Vue 3 composables
   config/         ← static config (roles, system prompts)
+  router/         ← vue-router setup + navigation guards
   plugins/<name>/ ← one dir per plugin (definition, index, View, Preview)
   tools/          ← plugin registry + types
   types/          ← shared type definitions
