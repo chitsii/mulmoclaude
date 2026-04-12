@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { workspacePath } from "../workspace.js";
 import { statSafe, readDirSafe, resolveWithinRoot } from "../utils/fs.js";
+import { errorMessage } from "../utils/errors.js";
 
 const router = Router();
 
@@ -163,8 +164,9 @@ router.get(
       const tree = buildTree(workspaceReal, "");
       res.json(tree);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ error: `Failed to read workspace: ${message}` });
+      res
+        .status(500)
+        .json({ error: `Failed to read workspace: ${errorMessage(err)}` });
     }
   },
 );
@@ -242,8 +244,9 @@ router.get(
     try {
       content = fs.readFileSync(absPath, "utf-8");
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ error: `Failed to read file: ${message}` });
+      res
+        .status(500)
+        .json({ error: `Failed to read file: ${errorMessage(err)}` });
       return;
     }
     res.json({ kind: "text", ...meta, content });

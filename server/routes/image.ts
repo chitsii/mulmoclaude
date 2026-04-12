@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { getSessionImageData } from "../sessions.js";
 import { getGeminiClient } from "../utils/gemini.js";
+import { errorMessage } from "../utils/errors.js";
 
 const router = Router();
 
@@ -73,8 +74,9 @@ router.post(
         res.json({ message: message ?? "no image data in response" });
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ success: false, message: msg });
+      res
+        .status(500)
+        .json({ success: false, message: errorMessage(err) });
     }
   },
 );
@@ -152,8 +154,9 @@ router.post(
         res.json({ message: message ?? "no image data in response" });
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      res.status(500).json({ success: false, message: msg });
+      res
+        .status(500)
+        .json({ success: false, message: errorMessage(err) });
     }
   },
 );

@@ -23,6 +23,7 @@ import {
 import type { MulmoBeat, MulmoImagePromptMedia } from "@mulmocast/types";
 import { slugify } from "../utils/slug.js";
 import { resolveWithinRoot } from "../utils/fs.js";
+import { errorMessage } from "../utils/errors.js";
 
 const router = Router();
 const storiesDir = path.resolve(workspacePath, "stories");
@@ -226,10 +227,6 @@ router.get(
 function fileToDataUri(filePath: string, mimeType: string): string {
   const data = fs.readFileSync(filePath);
   return `data:${mimeType};base64,${data.toString("base64")}`;
-}
-
-function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
 
 // Helper: resolve and validate a stories filePath, returns absoluteFilePath or null
