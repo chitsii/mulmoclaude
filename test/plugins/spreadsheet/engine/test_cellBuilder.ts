@@ -64,6 +64,18 @@ describe("parseNonStringInput", () => {
     assert.equal(parseNonStringInput("hello"), "hello");
     assert.equal(parseNonStringInput("yes"), "yes");
   });
+
+  it("rejects trailing garbage that parseFloat would silently accept", () => {
+    // parseFloat("42abc") returns 42; we want the string preserved.
+    assert.equal(parseNonStringInput("42abc"), "42abc");
+    assert.equal(parseNonStringInput("100 USD"), "100 USD");
+    assert.equal(parseNonStringInput("3.14xyz"), "3.14xyz");
+  });
+
+  it("accepts scientific notation", () => {
+    assert.equal(parseNonStringInput("1e3"), 1000);
+    assert.equal(parseNonStringInput("-2.5E-2"), -0.025);
+  });
 });
 
 describe("buildCellFromInput", () => {

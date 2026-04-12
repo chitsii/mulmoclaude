@@ -70,12 +70,18 @@ async function mockFileContent(
 
 // Shared helper: open the session and click the sidebar entry so the
 // View mounts. Returns only after the View is visible.
-async function openSpreadsheetView(page: Page, sessionId = "sheet-session") {
+async function openSpreadsheetView(
+  page: Page,
+  sessionId = "sheet-session",
+  sidebarTitle = "Test Sheet",
+) {
   await page.goto(`/chat/${sessionId}`);
   await expect(page.getByText("MulmoClaude")).toBeVisible();
-  await page.waitForTimeout(300);
-  // Click the sidebar result. Use title as a distinctive label.
-  await page.getByText("Test Sheet").first().click();
+  // Wait for the actual sidebar item rather than a fixed sleep —
+  // page ready-state + element visibility is more reliable.
+  const item = page.getByText(sidebarTitle).first();
+  await expect(item).toBeVisible({ timeout: 5000 });
+  await item.click();
 }
 
 test.describe("spreadsheet — rendering", () => {
@@ -123,8 +129,9 @@ test.describe("spreadsheet — rendering", () => {
     await setupSpreadsheetSession(page, { sheets, title: "Q1 Revenue" });
     await page.goto("/chat/sheet-session");
     await expect(page.getByText("MulmoClaude")).toBeVisible();
-    await page.waitForTimeout(300);
-    await page.getByText("Q1 Revenue").first().click();
+    const item = page.getByText("Q1 Revenue").first();
+    await expect(item).toBeVisible({ timeout: 5000 });
+    await item.click();
     await expect(page.locator("h1.title", { hasText: "Q1 Revenue" })).toBeVisible({
       timeout: 5000,
     });

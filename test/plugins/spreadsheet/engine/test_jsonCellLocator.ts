@@ -85,4 +85,44 @@ describe("findCellJsonPosition", () => {
     assert.equal(tricky[pos], "{");
     assert.ok(tricky.substring(pos).includes(`"v": "second"`));
   });
+
+  it("picks the correct row when an earlier row contains '[' inside a string", () => {
+    // Row 0 cell 0 contains a literal '[' — the naive counter would
+    // treat that as an extra row opener and shift all subsequent
+    // rowIndex lookups by one.
+    const withBracketInRow0 = JSON.stringify(
+      [
+        {
+          name: "Sheet1",
+          data: [
+            [{ v: "row0 has [bracket]" }, { v: "r0c1" }],
+            [{ v: "r1c0" }, { v: "TARGET" }],
+          ],
+        },
+      ],
+      null,
+      2,
+    );
+    const pos = findCellJsonPosition(withBracketInRow0, "Sheet1", 1, 1);
+    assert.ok(pos > 0);
+    assert.ok(withBracketInRow0.substring(pos).includes(`"v": "TARGET"`));
+  });
+
+  it("finds a sheet whose name contains a quote character", () => {
+    // Sheet names with embedded `"` need JSON-escaping when building
+    // the text marker, otherwise indexOf misses them entirely.
+    const text = JSON.stringify(
+      [
+        {
+          name: 'Sheet "Q1"',
+          data: [[{ v: "FOUND" }]],
+        },
+      ],
+      null,
+      2,
+    );
+    const pos = findCellJsonPosition(text, 'Sheet "Q1"', 0, 0);
+    assert.ok(pos > 0, `expected to locate the sheet, got ${pos}`);
+    assert.ok(text.substring(pos).includes(`"v": "FOUND"`));
+  });
 });

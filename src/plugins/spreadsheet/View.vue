@@ -218,6 +218,10 @@ function isFilePath(value: unknown): value is string {
 
 async function fetchSheets(): Promise<void> {
   const raw = props.selectedResult.data?.sheets;
+  // Clear any stale error from a previous result BEFORE the early
+  // returns, otherwise switching from a failed file-backed load to
+  // a new inline-data result leaves the error panel on screen.
+  errorMessage.value = "";
   if (!raw) {
     resolvedSheets.value = [];
     return;
@@ -228,7 +232,6 @@ async function fetchSheets(): Promise<void> {
     return;
   }
   loading.value = true;
-  errorMessage.value = "";
   try {
     const res = await fetch(
       `/api/files/content?path=${encodeURIComponent(raw)}`,

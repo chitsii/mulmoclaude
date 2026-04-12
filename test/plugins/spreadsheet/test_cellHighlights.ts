@@ -53,12 +53,18 @@ function makeTable(rowsAndCols: number[][]): {
 // querySelectorAll responses. Arrays are already iterable so we can
 // return them directly.
 function makeContainer(opts: {
-  onQuerySelector?: (sel: string) => HighlightableElement | null;
+  onQuerySelector?: (
+    sel: string,
+  ) => HighlightableElement | HighlightableTable | null;
   onQueryAll?: (sel: string) => HighlightableElement[];
 }): HighlightableContainer {
+  // The `querySelector` overloaded signature can't be satisfied by
+  // a single closure, so we cast the callable to the interface
+  // slot — the test itself validates runtime behaviour.
+  const qs = opts.onQuerySelector ?? (() => null);
   return {
-    querySelector: opts.onQuerySelector ?? (() => null),
-    querySelectorAll: (sel) => (opts.onQueryAll ?? (() => []))(sel) as never,
+    querySelector: qs as HighlightableContainer["querySelector"],
+    querySelectorAll: (sel) => opts.onQueryAll?.(sel) ?? [],
   };
 }
 
@@ -123,10 +129,7 @@ describe("applyCellHighlights", () => {
       [1, 2, 3],
     ]);
     const container = makeContainer({
-      onQuerySelector: (sel) =>
-        sel === "#spreadsheet-table"
-          ? (table as unknown as HighlightableElement)
-          : null,
+      onQuerySelector: (sel) => (sel === "#spreadsheet-table" ? table : null),
     });
     applyCellHighlights(container, { row: 0, col: 1 }, [{ row: 1, col: 2 }]);
     assert.ok(rows[0].cells[1].classes.has("cell-editing"));
@@ -145,7 +148,7 @@ describe("applyCellHighlights", () => {
   it("skips editing cell when null, still applies references", () => {
     const { table, rows } = makeTable([[1, 2]]);
     const container = makeContainer({
-      onQuerySelector: () => table as unknown as HighlightableElement,
+      onQuerySelector: () => table,
     });
     applyCellHighlights(container, null, [{ row: 0, col: 1 }]);
     assert.ok(!rows[0].cells[0].classes.has("cell-editing"));

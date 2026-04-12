@@ -25,8 +25,18 @@ function findRowOpenBracket(
   rowIndex: number,
 ): number {
   let currentRow = -1;
+  let inString = false;
   for (let i = startPos; i < text.length; i++) {
-    if (text[i] === "[") {
+    const c = text[i];
+    const prevChar = i > 0 ? text[i - 1] : "";
+    // Track string literal boundaries so that a `[` inside a cell
+    // value like `"has [bracket]"` doesn't get mistaken for a row
+    // opener and throw off the row offset.
+    if (c === '"' && prevChar !== "\\") {
+      inString = !inString;
+      continue;
+    }
+    if (!inString && c === "[") {
       currentRow++;
       if (currentRow === rowIndex) return i + 1;
     }
@@ -96,7 +106,9 @@ export function findCellJsonPosition(
   rowIndex: number,
   colIndex: number,
 ): number {
-  const sheetStartMarker = `"name": "${sheetName}"`;
+  // JSON.stringify escapes embedded quotes/backslashes so the marker
+  // matches the way the sheet name actually appears in editorText.
+  const sheetStartMarker = `"name": ${JSON.stringify(sheetName)}`;
   const dataStartMarker = `"data": [`;
 
   const sheetPos = editorText.indexOf(sheetStartMarker);

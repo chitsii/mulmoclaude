@@ -37,6 +37,11 @@ const FORMULA_CELL_OP = /[A-Z]+\d+\s*[+\-*/^]/;
 // `6/100`, `5 * 2` — arithmetic between two literal numbers.
 const FORMULA_NUMERIC_OP = /\d+\s*[+\-*/^]\s*\d+/;
 
+// Strict numeric literal. `parseFloat` accepts trailing junk
+// ("42abc" → 42) which silently corrupts user input; this anchor
+// ensures the ENTIRE trimmed string is a number.
+const STRICT_NUMBER = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/;
+
 /**
  * Best-effort formula detection. The rules are conservative enough
  * that plain text like "hello world" stays as text, but any input
@@ -59,8 +64,7 @@ export function parseNonStringInput(raw: string): number | string {
   const input = raw.trim();
   if (input === "") return "";
   if (looksLikeFormula(input)) return `=${input}`;
-  const numValue = parseFloat(input);
-  return Number.isNaN(numValue) ? input : numValue;
+  return STRICT_NUMBER.test(input) ? Number(input) : input;
 }
 
 /**

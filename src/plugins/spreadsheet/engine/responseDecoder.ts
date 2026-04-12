@@ -64,5 +64,8 @@ export function decodeSpreadsheetResponse(
       message: "Spreadsheet content is not an array of sheets",
     };
   }
-  return { kind: "ok", sheets: parsed as SheetData[] };
+  // Array.isArray narrows to unknown[]; we trust the server contract
+  // and type the local explicitly rather than using an inline `as`.
+  const sheets: SheetData[] = parsed;
+  return { kind: "ok", sheets };
 }

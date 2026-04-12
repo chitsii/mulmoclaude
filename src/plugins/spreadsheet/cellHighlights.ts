@@ -25,10 +25,14 @@ export interface HighlightableTable {
 }
 
 export interface HighlightableContainer {
-  querySelector: (selector: string) => HighlightableElement | null;
-  querySelectorAll: (
+  // Overload: the spreadsheet root container is known to return a
+  // table when asked for the table id, so callers can keep the
+  // result strongly typed without casting.
+  querySelector(selector: "#spreadsheet-table"): HighlightableTable | null;
+  querySelector(selector: string): HighlightableElement | null;
+  querySelectorAll(
     selector: string,
-  ) => ArrayLike<HighlightableElement> & Iterable<HighlightableElement>;
+  ): ArrayLike<HighlightableElement> & Iterable<HighlightableElement>;
 }
 
 export interface CellCoord {
@@ -76,9 +80,7 @@ export function applyCellHighlights(
   references: readonly CellCoord[],
 ): void {
   if (!container) return;
-  const table = container.querySelector(
-    "#spreadsheet-table",
-  ) as unknown as HighlightableTable | null;
+  const table = container.querySelector("#spreadsheet-table");
   if (!table) return;
   if (editingCell) highlightCell(table, editingCell, CELL_EDITING);
   for (const ref of references) highlightCell(table, ref, CELL_REFERENCED);
