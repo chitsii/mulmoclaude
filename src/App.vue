@@ -553,10 +553,14 @@ const currentSessionId = ref("");
 function navigateToSession(id: string, replace = false): void {
   currentSessionId.value = id;
   const method = replace ? router.replace : router.push;
+  // Use buildViewQuery() (reads canvasViewMode ref) instead of raw
+  // route.query — the ref may have been updated synchronously by
+  // setCanvasViewMode before this navigation runs, while
+  // route.query.view is still stale (router.push is async).
   method({
     name: "chat",
     params: { sessionId: id },
-    query: route.query,
+    query: buildViewQuery(),
   }).catch((err) => {
     // NavigationDuplicated is harmless (user clicked the same session
     // they're already on). Anything else is a real bug.
@@ -659,6 +663,7 @@ const showRightSidebar = ref(
 const {
   canvasViewMode,
   setCanvasViewMode,
+  buildViewQuery,
   filesRefreshToken,
   handleViewModeShortcut,
 } = useCanvasViewMode({ isRunning });
@@ -869,10 +874,13 @@ function onSidebarItemClick(uuid: string) {
 // out of files mode, otherwise they'd still be staring at the file
 // tree after the session loaded.
 function onFilesViewLoadSession(sessionId: string): void {
-  loadSession(sessionId);
+  // Set view mode BEFORE loading session so that navigateToSession
+  // (called inside loadSession) picks up the updated canvasViewMode
+  // in its query — avoids a race where two router.push calls fight.
   if (canvasViewMode.value === "files") {
     setCanvasViewMode("single");
   }
+  loadSession(sessionId);
 }
 
 const GEMINI_PLUGINS = new Set(["generateImage", "presentDocument"]);
