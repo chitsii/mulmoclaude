@@ -16,7 +16,6 @@ import {
 import type {
   SessionExcerpt,
   ExistingTopicSnapshot,
-  TopicUpdate,
 } from "../../server/journal/archivist.js";
 import type { SessionFileMeta } from "../../server/journal/diff.js";
 import type { JournalState } from "../../server/journal/state.js";
@@ -611,6 +610,25 @@ describe("parseJsonlEvents", () => {
     const out = parseJsonlEvents(raw, 10);
     assert.equal(out.length, 1);
     assert.deepEqual(out[0].artifactPaths, ["stories/x.json"]);
+  });
+
+  it("skips non-object JSON values (null, arrays, primitives)", () => {
+    // JSON.parse will happily return any JSON value. The original
+    // inline code trusted the result, which meant a `null` line
+    // would crash the whole session at `entry.type === ...`.
+    // parseJsonlLine's guard should collapse each of these into
+    // the same "skip this line" path.
+    const raw = [
+      "null",
+      "[1,2,3]",
+      '"just a string"',
+      "42",
+      "true",
+      JSON.stringify({ source: "user", type: "text", message: "real" }),
+    ].join("\n");
+    const out = parseJsonlEvents(raw, 10);
+    assert.equal(out.length, 1);
+    assert.equal(out[0].excerpt.content, "real");
   });
 });
 

@@ -529,15 +529,26 @@ export function parseJsonlEvents(
   return events;
 }
 
-// JSON.parse one jsonl line with blank-line and malformed-json
-// guards. Returns null to signal "skip this line".
+// JSON.parse one jsonl line, guarding against blank lines,
+// malformed JSON, and any JSON value that isn't a plain object.
+// `JSON.parse` will happily return `null`, arrays, strings,
+// numbers, or booleans, none of which the downstream
+// `parseEntry` / `entryToExcerpt` functions can consume — and
+// `entry.type` on a `null` or primitive throws at runtime.
+// Returning `null` here collapses every invalid shape into the
+// same "skip this line" sentinel the caller already handles.
 function parseJsonlLine(line: string): Record<string, unknown> | null {
   if (!line.trim()) return null;
+  let parsed: unknown;
   try {
-    return JSON.parse(line);
+    parsed = JSON.parse(line);
   } catch {
     return null;
   }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return null;
+  }
+  return parsed as Record<string, unknown>;
 }
 
 function isMetadataEntry(entry: Record<string, unknown>): boolean {
