@@ -476,7 +476,7 @@
         <div class="editor-actions">
           <button
             class="apply-btn"
-            :disabled="!sourceChanged"
+            :disabled="!sourceChanged || !sourceValid"
             @click="applySource"
           >
             Apply Changes
@@ -554,7 +554,7 @@
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import type { ToolResultComplete } from "gui-chat-protocol/vue";
 import type { MulmoScriptData } from "./index";
-import { mulmoBeatSchema } from "@mulmocast/types";
+import { mulmoBeatSchema, mulmoScriptSchema } from "@mulmocast/types";
 import {
   extractErrorMessage,
   getMissingCharacterKeys,
@@ -695,6 +695,14 @@ const loadedSource = ref("");
 const sourceChanged = computed(
   () => editableSource.value !== loadedSource.value,
 );
+const sourceValid = computed(() => {
+  try {
+    const parsed = JSON.parse(editableSource.value);
+    return mulmoScriptSchema.safeParse(parsed).success;
+  } catch {
+    return false;
+  }
+});
 
 async function onSourceToggle(open: boolean) {
   editing.value = open;
