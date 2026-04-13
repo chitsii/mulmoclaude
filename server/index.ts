@@ -31,6 +31,11 @@ import { createPubSub } from "./pub-sub/index.js";
 import { createTaskManager } from "./task-manager/index.js";
 import type { ITaskManager } from "./task-manager/index.js";
 import type { IPubSub } from "./pub-sub/index.js";
+import {
+  initSessionStore,
+  getSessionSnapshot,
+  getAllSessionStates,
+} from "./session-store/index.js";
 import { requireSameOrigin } from "./csrfGuard.js";
 import { log } from "./logger/index.js";
 
@@ -229,6 +234,10 @@ function startRuntimeServices(httpServer: ReturnType<typeof app.listen>): void {
   // --- Pub/Sub ---
   const pubsub = createPubSub(httpServer);
 
+  // --- Session Store ---
+  initSessionStore(pubsub);
+  registerSessionSubscribeHandlers(pubsub);
+
   // --- Task Manager ---
   const taskManager = createTaskManager({
     tickMs: debugMode ? 1_000 : 60_000,
@@ -288,6 +297,29 @@ function registerDebugTasks(taskManager: ITaskManager, pubsub: IPubSub) {
   });
 
   log.info("debug", "Debug mode active — registered debug tasks");
+}
+
+function registerSessionSubscribeHandlers(pubsub: IPubSub): void {
+  // When a client subscribes to `session.<id>`, send the current
+  // snapshot so late joiners see the session's live state immediately.
+  pubsub.onSubscribe("session.", (channel, ws) => {
+    const chatSessionId = channel.slice("session.".length);
+    const snapshot = getSessionSnapshot(chatSessionId);
+    if (snapshot) {
+      pubsub.sendToClient(ws, channel, snapshot);
+    }
+  });
+
+  // When a client subscribes to the global `sessions` channel, send
+  // the current state of all in-memory sessions so the sidebar can
+  // render running/unread badges immediately.
+  pubsub.onSubscribe("sessions", (_channel, ws) => {
+    const states = getAllSessionStates();
+    pubsub.sendToClient(ws, "sessions", {
+      type: "sessions_snapshot",
+      sessions: states,
+    });
+  });
 }
 
 function registerDebugCounter2(taskManager: ITaskManager, pubsub: IPubSub) {

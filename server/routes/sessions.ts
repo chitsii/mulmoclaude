@@ -6,6 +6,7 @@ import { workspacePath } from "../workspace.js";
 import { readManifest } from "../chat-index/indexer.js";
 import { resolveWithinRoot } from "../utils/fs.js";
 import type { ChatIndexEntry } from "../chat-index/types.js";
+import { markRead } from "../session-store/index.js";
 
 async function readSessionMeta(
   chatDir: string,
@@ -240,6 +241,15 @@ router.get(
     } catch {
       res.status(404).json({ error: "Session not found" });
     }
+  },
+);
+
+// Mark a session as read (clears the hasUnread flag in the session store).
+router.post(
+  "/sessions/:id/mark-read",
+  (req: Request<SessionIdParams>, res: Response<{ ok: boolean }>) => {
+    const ok = markRead(req.params.id);
+    res.json({ ok });
   },
 );
 
