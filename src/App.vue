@@ -485,7 +485,6 @@ import {
   watch,
   nextTick,
   onMounted,
-  onUnmounted,
   reactive,
   markRaw,
 } from "vue";
@@ -532,6 +531,7 @@ import { useHealth } from "./composables/useHealth";
 import { useSessionHistory } from "./composables/useSessionHistory";
 import { useRightSidebar } from "./composables/useRightSidebar";
 import { useQueriesPanel } from "./composables/useQueriesPanel";
+import { useEventListeners } from "./composables/useEventListeners";
 import { useRoute, useRouter, isNavigationFailure } from "vue-router";
 
 // --- Debug beat (pub/sub) ---
@@ -1296,15 +1296,17 @@ const { handler: handleClickOutsideRoleDropdown } = useClickOutside({
   popupRef: roleDropdownRef,
 });
 
+useEventListeners({
+  onRolesUpdated: refreshRoles,
+  onKeyNavigation: handleKeyNavigation,
+  onViewModeShortcut: handleViewModeShortcut,
+  onClickOutsideHistory: handleClickOutsideHistory,
+  onClickOutsideLock: handleClickOutsideLock,
+  onClickOutsideRoleDropdown: handleClickOutsideRoleDropdown,
+  onTeardown: teardownPendingCalls,
+});
+
 onMounted(async () => {
-  // Listeners first so the UI responds to interactions even if the
-  // async fetches below take a moment.
-  window.addEventListener("roles-updated", refreshRoles);
-  window.addEventListener("keydown", handleKeyNavigation);
-  window.addEventListener("mousedown", handleClickOutsideHistory);
-  window.addEventListener("mousedown", handleClickOutsideLock);
-  window.addEventListener("mousedown", handleClickOutsideRoleDropdown);
-  window.addEventListener("keydown", handleViewModeShortcut);
   // Fire-and-forget side fetches.
   fetchHealth();
   fetchMcpToolsStatus();
@@ -1334,15 +1336,5 @@ onMounted(async () => {
   } else {
     createNewSession();
   }
-});
-
-onUnmounted(() => {
-  window.removeEventListener("roles-updated", refreshRoles);
-  window.removeEventListener("keydown", handleKeyNavigation);
-  window.removeEventListener("mousedown", handleClickOutsideHistory);
-  window.removeEventListener("mousedown", handleClickOutsideLock);
-  window.removeEventListener("mousedown", handleClickOutsideRoleDropdown);
-  window.removeEventListener("keydown", handleViewModeShortcut);
-  teardownPendingCalls();
 });
 </script>
