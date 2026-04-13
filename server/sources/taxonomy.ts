@@ -28,6 +28,20 @@ export const CATEGORY_SLUGS = [
   "general",
   "startup",
   "personal",
+  // --- Phase-1 expansion (resolved from #188 open-question Q1) ---
+  // Added to cover common genres the original 16 couldn't capture
+  // (which were tech-centric and collapsed everything non-tech
+  // into `general`). See plans/feat-source-registry.md §Resolved
+  // decisions for rationale per slug.
+  "finance",
+  "design",
+  "productivity",
+  "science",
+  "health",
+  "gaming",
+  "climate",
+  "culture",
+  "policy",
 ] as const;
 
 export type CategorySlug = (typeof CATEGORY_SLUGS)[number];

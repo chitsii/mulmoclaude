@@ -56,16 +56,32 @@ describe("path helpers", () => {
     assert.throws(() => dailyNewsPath(root, "foo"), /YYYY-MM-DD/);
   });
 
-  it("archivePath builds news/archive/<slug>/<YYYY-MM>.md", () => {
+  it("archivePath builds news/archive/<slug>/YYYY/MM.md", () => {
+    // The year and month are split into nested dirs so a
+    // long-running workspace doesn't end up with 60+ flat files
+    // in a single source's archive dir — matches daily/YYYY/MM/DD.md.
     assert.equal(
       archivePath(root, "hn-front-page", "2026-04"),
-      path.join(root, "news", "archive", "hn-front-page", "2026-04.md"),
+      path.join(root, "news", "archive", "hn-front-page", "2026", "04.md"),
+    );
+  });
+
+  it("archivePath splits the year-month even for edge months", () => {
+    assert.equal(
+      archivePath(root, "x", "2026-01"),
+      path.join(root, "news", "archive", "x", "2026", "01.md"),
+    );
+    assert.equal(
+      archivePath(root, "x", "2026-12"),
+      path.join(root, "news", "archive", "x", "2026", "12.md"),
     );
   });
 
   it("archivePath rejects invalid year-month strings", () => {
     assert.throws(() => archivePath(root, "x", "2026/04"), /YYYY-MM/);
     assert.throws(() => archivePath(root, "x", "2026-4"), /YYYY-MM/);
+    assert.throws(() => archivePath(root, "x", "26-04"), /YYYY-MM/);
+    assert.throws(() => archivePath(root, "x", ""), /YYYY-MM/);
   });
 });
 

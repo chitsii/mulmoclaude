@@ -28,6 +28,15 @@ describe("CATEGORY_SLUGS — shape pin", () => {
       "general",
       "startup",
       "personal",
+      "finance",
+      "design",
+      "productivity",
+      "science",
+      "health",
+      "gaming",
+      "climate",
+      "culture",
+      "policy",
     ]);
   });
 

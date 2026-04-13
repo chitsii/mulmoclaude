@@ -235,17 +235,89 @@ Designed in but not used in phase 1:
 | **2** | On-demand `searchSources` + wiki-page generation for research results + notification hookup | Phase 1 stable in daily use |
 | **3** | Auth-bearing fetchers (X / private GitHub / paid APIs) + secrets rotation + per-source rate-limit tuning | Real demand for a specific authed source |
 
-## Open questions (to resolve before implementation PR)
+## Resolved decisions
 
-1. **Taxonomy size**. Starting list above has 16 categories. Too many dilutes filtering; too few forces everything into `general`. Pilot with 16 and re-evaluate after 2 weeks of daily use?
-2. **Daily summary template**. Markdown only, or include a compact structured index (JSON block) so the dashboard can render without re-parsing markdown? Lean toward: both — markdown for humans, fenced JSON block at the end for the dashboard.
-3. **Item dedup across sources**. Two RSS feeds often carry the same HN story. Phase-1 answer: hash the normalized URL (strip utm params), skip dedup across sources but dedup within a single source. Phase-2: cross-source URL dedup.
-4. **Archive size**. Per-source monthly archives grow unbounded. Phase-1: no pruning. Phase-3-ish: add a `journal-archivist`-style compaction pass.
-5. **Error visibility**. When a source fails for 3 days in a row, how does the user learn? Ideas: (a) surface in daily summary footer ("3 sources failed today"), (b) push notification at 5-day mark, (c) badge on the manageSource UI. Pick one.
-6. **Timezone for "daily"**. Local time like the journal, or UTC? Journal uses local — match it.
-7. **Order of fetcher execution**. Parallel across hosts but serial per-host? Or fully serial with a 1s delay? Parallel-across-hosts is faster but needs a per-host queue. Start serial for simplicity; add parallelism if daily run exceeds 5 minutes.
-8. **Failure isolation**. A single source failing must not abort the pipeline. Model: per-source try/catch that logs + advances state + continues.
-9. **Claude-side fetcher invocation pattern**. One agent session per cron run that hits all web-search sources? Or per-source sessions? Per-run is cheaper (shared context, one summary pass) — start there.
+The original spec had 9 open questions; these were worked through in the #188 review thread. Decisions below are what subsequent implementation PRs will follow.
+
+### 1. Taxonomy size — **25 slugs (16 original + 9 expansion)**
+
+Added: `finance` (markets / crypto distinct from `business-news`), `design` (UI/UX — implementation-free complement to `frontend`), `productivity` (tools / workflow / PKM), `science` (broader physics / chem / bio news — `papers` stays academic-only), `health` (medical / fitness / wellness), `gaming`, `climate` (environment / energy / sustainability), `culture` (music / film / books / arts), `policy` (regulation / law / public policy — AI regulation lands here rather than under `ai`).
+
+Rationale: the original 16 were tech-centric enough that everything non-tech collapsed into `general`, defeating the purpose of categorization. Running with a broader table and trimming later (if a slug sees zero use over 2 months) is cheaper than starting small and adding under pressure.
+
+### 2. Daily summary template — **Markdown with a trailing fenced JSON block**
+
+Files under `workspace/news/daily/YYYY/MM/DD.md` are human-readable markdown (headings, bullet items, links). At the tail of the file, a ```` ```json ```` fence contains a compact item index the dashboard (#143) can read without regex-scraping markdown:
+
+```markdown
+# Daily brief — 2026-04-13
+
+## AI
+- [Anthropic releases Claude 4.7](...) — short summary
+- ...
+
+## Security
+- ...
+
+```json
+{
+  "itemCount": 42,
+  "byCategory": {"ai": 12, "security": 4, ...},
+  "items": [{"id": "...", "title": "...", "url": "...", "categories": [...], "severity": null, "sourceSlug": "..."}]
+}
+```
+```
+
+Markdown viewers render the JSON block as a code block and ignore it; dashboard fetches the file and parses the last fenced block as JSON.
+
+### 3. Item dedup — **Archive keeps everything, daily summary dedups cross-source**
+
+Each per-source archive (`workspace/news/archive/<slug>/YYYY/MM.md`) contains **every** item the fetcher produced for that source — lossless log for retrospective grep. The daily-summary aggregation pass uses a `Set<stableItemId>` (FNV-1a of the normalized URL from `urls.ts`) to drop the second and third occurrence of the same article across sources. Phase-2 can add title-similarity dedup for the "same article, different URL" case; phase-1 URL-hash dedup catches ~95% of real cases at zero extra cost.
+
+### 4. Archive growth — **Keep everything, organize as `archive/<slug>/YYYY/MM.md`**
+
+No compaction, no pruning. 50 sources × 12 months × ~30 items × ~200 bytes ≈ 3.6 MB / year, ~18 MB / 5 years — cheap relative to chat jsonl. The nested `YYYY/MM.md` layout (changed from flat `YYYY-MM.md`) keeps a single year browsable as one directory, matching `daily/YYYY/MM/DD.md`. If storage ever becomes a real problem, phase-3 can add a journal-optimization-style year-end compaction — out of scope for phase 1.
+
+### 5. Failure visibility — **Daily summary footer + `manageSource` UI badge**
+
+Two surfaces, combined:
+
+- **Daily summary footer**: after the per-category sections, a `## Source health` block listing every source that's failed 3+ days in a row (e.g. `⚠ 2 sources still failing: foo (5d), bar (3d)`). Nothing logged for one-day failures — noise. Cheap to add, catches neglected sources.
+- **`manageSource` UI badge**: each source row shows last-successful-fetch timestamp and a status badge — green (fresh), yellow (3-6 day failure), red (7+). Actionable: user clicks the failing source, sees the last error, fixes or removes.
+
+**Deferred to later phase**: external notification (#142) at a 7-day threshold. Needs the notification infrastructure to land first — flagged in #142 and #144 so they know about the consumer.
+
+### 6. Timezone — **Local time, matching the journal**
+
+Same `toIsoDate(d)` helper the journal already uses (`getFullYear()` / `getMonth()` / `getDate()` in local). Personal workspace → human time. If we ever go multi-user or daemonize this, UTC becomes more defensible.
+
+### 7. Fetcher execution order — **Parallel across hosts, serial per host**
+
+Group eligible fetchers by URL hostname. Distinct hosts run concurrently (bounded by Node's event loop so it's not literally parallel but close enough). Same-host fetchers serialize with the host's configured per-host rate limit. 50 sources across ~15 distinct hosts ≈ 15-second daily run, down from 75 seconds serial.
+
+Implementation note: a small per-host promise chain (`hostQueues: Map<string, Promise<void>>`) appended to per fetcher. No full job queue needed at phase-1 scale.
+
+### 8. Failure isolation — **Per-source try/catch with log + advance state + continue**
+
+The daily pipeline wraps each fetcher call in try/catch. Failure bumps `consecutiveFailures` in the state file and schedules the next attempt with exponential backoff. One source failing (parser error, HTTP 500, host unreachable) never aborts the remaining fetchers. A pipeline-level catch handles truly fatal errors (`ENOSPC`, `ClaudeCliNotFoundError`) and disables the module for the process lifetime, same as the journal.
+
+### 9. Claude-side fetcher invocation — **5-source batches per CLI spawn, configurable**
+
+The `claude` CLI is spawned via `spawn("claude", ["--print", "--output-format", "json", "--model", "haiku", "--max-budget-usd", ...])` (same pattern as `chat-index/summarizer.ts`). web-fetch and web-search sources are batched into groups of N before each spawn:
+
+```ts
+const BATCH_SIZE = Number(process.env.SOURCES_WEB_BATCH_SIZE) || 5;
+for (const batch of chunk(webSources, BATCH_SIZE)) {
+  await fetchBatchViaCLI(batch);
+}
+```
+
+Default batch size of 5 was chosen so that:
+- 1 CLI spawn pays the ~28k-token cache-creation cost for the system prompt + JSON schema, then processes 5 sources using the cached context. ~4x cheaper than per-source spawns.
+- Each batch's inbound content stays well under haiku's 200k context window — 5 × ~5k chars per page ≈ 25k tokens, safe headroom.
+- Budget-blowup blast radius is 5 sources at most, not all of them.
+
+Env var override (`SOURCES_WEB_BATCH_SIZE`) lets future tuning happen without code change. At the foundation layer of this PR the constant isn't used yet — it lands in the pipeline PR.
 
 ## Test plan (for the phase 1 PR, not this spec)
 

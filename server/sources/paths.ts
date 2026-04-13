@@ -79,17 +79,27 @@ export function archiveDir(workspaceRoot: string, slug: string): string {
   return path.join(newsRoot(workspaceRoot), ARCHIVE_DIR, slug);
 }
 
+// Archive file path. Written as `<slug>/YYYY/MM.md` (year and
+// month as nested directories) so long-running workspaces don't
+// end up with 60+ files in a single source's archive dir —
+// browsing a given year is one `cd YYYY/` away. Matches the
+// daily-news layout (`daily/YYYY/MM/DD.md`).
+//
+// Input stays `YYYY-MM` so callers don't need to remember whether
+// to split; we do the split here.
 export function archivePath(
   workspaceRoot: string,
   slug: string,
   yearMonth: string,
 ): string {
-  if (!/^\d{4}-\d{2}$/.test(yearMonth)) {
+  const m = /^(\d{4})-(\d{2})$/.exec(yearMonth);
+  if (!m) {
     throw new Error(
       `[sources] archivePath: expected YYYY-MM, got "${yearMonth}"`,
     );
   }
-  return path.join(archiveDir(workspaceRoot, slug), `${yearMonth}.md`);
+  const [, year, month] = m;
+  return path.join(archiveDir(workspaceRoot, slug), year, `${month}.md`);
 }
 
 // Very conservative slug validator. The slug doubles as a filename
