@@ -409,7 +409,16 @@ function applySessionStateEvent(event: SessionStateEvent): void {
   const session = sessionMap.get(event.chatSessionId);
   if (!session) return;
   if (event.isRunning !== undefined) session.isRunning = event.isRunning;
-  if (event.hasUnread !== undefined) session.hasUnread = event.hasUnread;
+  // Don't mark the currently viewed session as unread — the user is
+  // already looking at it. The mark-read POST in the session_finished
+  // handler ensures the server agrees.
+  if (event.hasUnread !== undefined) {
+    if (event.hasUnread && event.chatSessionId === currentSessionId.value) {
+      // Skip — user is viewing this session right now
+    } else {
+      session.hasUnread = event.hasUnread;
+    }
+  }
   if (event.statusMessage !== undefined)
     session.statusMessage = event.statusMessage;
   if (event.updatedAt !== undefined) session.updatedAt = event.updatedAt;
@@ -979,11 +988,21 @@ function ensureSessionSubscription(
     const event = data as SseEvent;
     if (!event || typeof event !== "object") return;
 
-    // session_finished signals end-of-run — clean up subscription
+    // session_finished signals end-of-run — clean up subscription.
+    // The server sets hasUnread = true unconditionally in endRun(),
+    // then publishes session_state_changed on the `sessions` channel.
+    // If the user is currently viewing this session we must tell the
+    // server to clear hasUnread, otherwise the `sessions` channel
+    // event will overwrite the local flag back to true.
     if (event.type === "session_finished") {
       session.isRunning = false;
       session.statusMessage = "";
-      if (currentSessionId.value !== session.id) {
+      if (currentSessionId.value === session.id) {
+        session.hasUnread = false;
+        fetch(`/api/sessions/${encodeURIComponent(session.id)}/mark-read`, {
+          method: "POST",
+        }).catch(() => {});
+      } else {
         session.hasUnread = true;
       }
       fetchSessions();
