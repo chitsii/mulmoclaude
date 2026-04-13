@@ -96,7 +96,10 @@ router.get(
               if (!meta) return null;
 
               const indexEntry = indexById.get(id);
-              // Prefer AI title → meta.firstUserMessage → empty
+              // Prefer AI title → meta.firstUserMessage → empty.
+              // `summary` and `keywords` are spread conditionally
+              // to respect the server tsconfig's
+              // exactOptionalPropertyTypes.
               const preview = indexEntry?.title ?? meta.firstUserMessage ?? "";
 
               const live = getSession(id);
