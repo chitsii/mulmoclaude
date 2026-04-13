@@ -21,9 +21,6 @@ import { log } from "../logger/index.js";
 const router = Router();
 const PORT = Number(process.env.PORT) || 3001;
 
-// Maps app-level chatSessionId → Claude CLI internal session ID for multi-turn dialog
-const claudeSessionMap = new Map<string, string>();
-
 // Called by the MCP server to push a ToolResult into the active session.
 interface OkResponse {
   ok: boolean;
@@ -163,9 +160,10 @@ router.post(
     res.status(202).json({ chatSessionId });
 
     const role = getRole(roleId);
-    const claudeSessionId =
-      claudeSessionMap.get(chatSessionId) ??
-      (await readClaudeSessionId(metaFilePath, resultsFilePath));
+    const claudeSessionId = await readClaudeSessionId(
+      metaFilePath,
+      resultsFilePath,
+    );
 
     const requestStartedAt = Date.now();
     log.info("agent", "request received", {
@@ -239,7 +237,6 @@ async function runAgentInBackground(
       abortSignal,
     )) {
       if (event.type === "claude_session_id") {
-        claudeSessionMap.set(chatSessionId, event.id);
         await updateClaudeSessionId(metaFilePath, event.id);
         continue;
       }
