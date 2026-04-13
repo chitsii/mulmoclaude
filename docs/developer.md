@@ -4,6 +4,33 @@ Reference for contributors hacking on MulmoClaude. End-user instructions live in
 
 ---
 
+## Contributing — please open an issue with a plan first
+
+Thanks for wanting to contribute! To keep collaboration productive on both sides, we ask that you follow this flow for **anything beyond a trivial fix**:
+
+1. **Open a GitHub issue describing the problem and a proposed plan.** A few paragraphs are enough: what's wrong (or what's missing), the approach you have in mind, the files / surface area you expect to touch, and any open questions. The files under [`plans/`](../plans/) are good references — your plan doesn't need to be that long.
+2. **Discuss the plan in the issue thread.** We may suggest scope adjustments, point out existing helpers or in-flight refactors that overlap, or surface constraints that aren't obvious from the outside (security boundaries, deprecation paths, etc.). This is usually a short back-and-forth.
+3. **A maintainer drafts the PR.** Once we agree on the plan, one of us turns it into a PR — and credits you in the issue / PR description. You're very welcome to review the resulting code and request changes.
+
+### Why this flow
+
+AI coding assistants make it easy to generate large, polished-looking diffs in minutes — and we use them ourselves. The catch is that reviewing such a PR cold can take far longer than writing it, and even when the code looks fine, validating that no subtle behavioural / security / data-handling regression was introduced is genuinely hard for a reviewer who didn't help shape the design. A short written plan is fast to review, easy to course-correct, and keeps the *intent* of the change traceable in the issue tracker.
+
+This isn't about screening out AI-assisted work — the maintainer who drafts the PR will often be using an agent too. The point is that **the plan is what we agree on, and the resulting code is owned by whoever lands it**, which keeps responsibility clear and review focused on the parts that need human judgement.
+
+### When you can skip the plan
+
+A direct PR is fine for:
+
+- Typos, copy fixes, doc tweaks
+- Dependency version bumps
+- Single-file bug fixes with an obvious root cause and a matching test
+- Anything a maintainer or CI bot explicitly asks for in a review comment
+
+If you're not sure, opening an issue first is always cheaper than writing a PR that needs reshaping. Thanks for understanding.
+
+---
+
 ## Environment variables
 
 All env vars are **optional unless flagged "required"**. The server reads them at process start (or per-agent-invocation where noted); set them in `.env` (loaded via `dotenv`) or your shell.
