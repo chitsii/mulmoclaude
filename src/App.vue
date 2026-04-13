@@ -395,6 +395,21 @@ async function refreshSessionStates(): Promise<void> {
   }
 }
 
+async function markSessionRead(id: string): Promise<void> {
+  try {
+    const res = await fetch(
+      `/api/sessions/${encodeURIComponent(id)}/mark-read`,
+      { method: "POST" },
+    );
+    if (!res.ok) {
+      // Server didn't clear the flag — refetch to restore truth.
+      await refreshSessionStates();
+    }
+  } catch {
+    await refreshSessionStates();
+  }
+}
+
 // --- Routing ---
 const route = useRoute();
 const router = useRouter();
@@ -690,9 +705,7 @@ watch(currentSessionId, (id) => {
   if (wasUnread) {
     if (session) session.hasUnread = false;
     if (summary) summary.hasUnread = false;
-    fetch(`/api/sessions/${encodeURIComponent(id)}/mark-read`, {
-      method: "POST",
-    }).catch(() => {});
+    markSessionRead(id);
   }
 });
 
@@ -981,9 +994,7 @@ function ensureSessionSubscription(
     // `sessions` channel notification → refetch cycle.
     if (event.type === "session_finished") {
       if (currentSessionId.value === session.id) {
-        fetch(`/api/sessions/${encodeURIComponent(session.id)}/mark-read`, {
-          method: "POST",
-        }).catch(() => {});
+        markSessionRead(session.id);
       }
       unsubscribeSession(session.id);
       return;
