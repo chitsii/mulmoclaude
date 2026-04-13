@@ -211,7 +211,6 @@ describe("runFetchPhase — failure isolation (Q8)", () => {
 
   it("converts non-Error throws to string error messages", async () => {
     const fetcher = fakeFetcher("rss", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-throw-literal
       throw "string error";
     });
     const result = await runFetchPhase({

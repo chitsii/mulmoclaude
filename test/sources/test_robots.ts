@@ -159,14 +159,14 @@ Disallow: /
     // REP, both apply to the same agent; merging them means the
     // disallow in the second group is honoured even though the
     // first group appears first in the file.
-    const robots = parseRobots(`
+    const duplicateGroupsRobots = parseRobots(`
 User-agent: Googlebot
 Allow: /public
 
 User-agent: Googlebot
 Disallow: /private
 `);
-    const merged = selectGroup(robots, "Googlebot");
+    const merged = selectGroup(duplicateGroupsRobots, "Googlebot");
     assert.ok(merged);
     const kinds = merged!.rules.map((r) => ({
       kind: r.kind,
@@ -182,7 +182,7 @@ Disallow: /private
     // The scoring inside isAllowedByRobots takes the longer-prefix
     // rule; merging preserves both so the /private disallow beats
     // the /public allow for /private/... paths.
-    const robots = parseRobots(`
+    const duplicateGroupsRobots = parseRobots(`
 User-agent: Googlebot
 Allow: /
 
@@ -190,10 +190,13 @@ User-agent: Googlebot
 Disallow: /private
 `);
     assert.equal(
-      isAllowedByRobots(robots, "Googlebot", "/private/page"),
+      isAllowedByRobots(duplicateGroupsRobots, "Googlebot", "/private/page"),
       false,
     );
-    assert.equal(isAllowedByRobots(robots, "Googlebot", "/public"), true);
+    assert.equal(
+      isAllowedByRobots(duplicateGroupsRobots, "Googlebot", "/public"),
+      true,
+    );
   });
 });
 

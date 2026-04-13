@@ -384,7 +384,7 @@ describe("fetchPolite — manual redirect handling", () => {
     // follow logic is disabled. We check the `redirect` init value
     // reaches our stub fetch.
     const start = "https://a.com/x";
-    let observedRedirect: RequestInit["redirect"] | undefined;
+    let observedRedirect: string | undefined;
     const fetchImpl: typeof fetch = async (_input, init) => {
       observedRedirect = init?.redirect;
       return new Response("ok", { status: 200 });
