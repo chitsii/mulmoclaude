@@ -124,11 +124,11 @@
           </button>
           <button
             class="px-3 py-1.5 text-sm rounded bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-300"
-            :disabled="saving"
+            :disabled="saving || loading"
             data-testid="settings-save-btn"
             @click="save"
           >
-            {{ saving ? "Saving…" : "Save" }}
+            {{ saving ? "Saving…" : loading ? "Loading…" : "Save" }}
           </button>
         </div>
       </div>
@@ -159,6 +159,14 @@ const loadError = ref("");
 const statusMessage = ref("");
 const statusError = ref(false);
 const saving = ref(false);
+// `true` from the moment the modal opens until the first loadConfig()
+// call resolves. Prevents the Save button from submitting the initial
+// empty arrays before the real config arrives, and prevents stale
+// responses (from a previous open) from overwriting fresh input.
+const loading = ref(false);
+// Monotonically increasing token so an in-flight loadConfig() whose
+// modal has been reopened can notice it's stale and discard its result.
+let loadToken = 0;
 
 const parsedToolNames = computed(() =>
   toolsText.value
@@ -185,10 +193,14 @@ function isBuiltIn(name: string): boolean {
 }
 
 async function loadConfig(): Promise<void> {
+  const token = ++loadToken;
+  loading.value = true;
   loadError.value = "";
   statusMessage.value = "";
   try {
     const response = await fetch("/api/config");
+    // A newer open() has already started another load — drop this one.
+    if (token !== loadToken) return;
     if (!response.ok) {
       loadError.value = `Failed to load settings (HTTP ${response.status})`;
       return;
@@ -197,14 +209,22 @@ async function loadConfig(): Promise<void> {
       settings: { extraAllowedTools: string[] };
       mcp?: { servers: McpServerEntry[] };
     } = await response.json();
+    if (token !== loadToken) return;
     toolsText.value = data.settings.extraAllowedTools.join("\n");
     mcpServers.value = data.mcp?.servers ?? [];
   } catch (err) {
+    if (token !== loadToken) return;
     loadError.value = err instanceof Error ? err.message : "Network error";
+  } finally {
+    if (token === loadToken) loading.value = false;
   }
 }
 
 async function save(): Promise<void> {
+  // Extra safety: the button is already disabled while loading, but
+  // guard the function body too so any programmatic caller can't
+  // submit a half-loaded form.
+  if (loading.value) return;
   saving.value = true;
   statusMessage.value = "";
   statusError.value = false;

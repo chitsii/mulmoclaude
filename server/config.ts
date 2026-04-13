@@ -11,6 +11,7 @@
 
 import fs from "fs";
 import path from "path";
+import { log } from "./logger/index.js";
 import { workspacePath } from "./workspace.js";
 
 export interface AppSettings {
@@ -68,12 +69,17 @@ export function loadSettings(): AppSettings {
   try {
     parsed = JSON.parse(raw);
   } catch (err) {
-    console.warn(`[config] ${file} is not valid JSON — using defaults`, err);
+    log.warn("config", "settings.json is not valid JSON — using defaults", {
+      file,
+      error: String(err),
+    });
     return { ...DEFAULT_SETTINGS };
   }
   if (!isAppSettings(parsed)) {
-    console.warn(
-      `[config] ${file} does not match AppSettings schema — using defaults`,
+    log.warn(
+      "config",
+      "settings.json does not match AppSettings schema — using defaults",
+      { file },
     );
     return { ...DEFAULT_SETTINGS };
   }
@@ -158,11 +164,23 @@ function isStringRecord(value: unknown): value is Record<string, string> {
   return Object.values(value).every((v) => typeof v === "string");
 }
 
+// Accept only http: / https: URLs. Rejects malformed strings, other
+// protocols (ftp:, file:, javascript:, ...), and empty values so bad
+// endpoints can't be persisted even if a client bypasses the UI.
+function isHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function isMcpHttpSpec(value: unknown): value is McpHttpSpec {
   if (typeof value !== "object" || value === null) return false;
   const c = value as Record<string, unknown>;
   if (c.type !== "http") return false;
-  if (typeof c.url !== "string" || c.url.length === 0) return false;
+  if (typeof c.url !== "string" || !isHttpUrl(c.url)) return false;
   if (c.headers !== undefined && !isStringRecord(c.headers)) return false;
   if (c.enabled !== undefined && typeof c.enabled !== "boolean") return false;
   return true;
@@ -220,12 +238,17 @@ export function loadMcpConfig(): McpConfigFile {
   try {
     parsed = JSON.parse(raw);
   } catch (err) {
-    console.warn(`[config] ${file} is not valid JSON — using defaults`, err);
+    log.warn("config", "mcp.json is not valid JSON — using defaults", {
+      file,
+      error: String(err),
+    });
     return { mcpServers: {} };
   }
   if (!isMcpConfigFile(parsed)) {
-    console.warn(
-      `[config] ${file} does not match McpConfigFile schema — using defaults`,
+    log.warn(
+      "config",
+      "mcp.json does not match McpConfigFile schema — using defaults",
+      { file },
     );
     return { mcpServers: {} };
   }

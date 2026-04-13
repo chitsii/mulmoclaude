@@ -81,11 +81,21 @@ router.put(
       res.status(400).json({ error: "Invalid mcp payload envelope" });
       return;
     }
+    // fromMcpEntries rejects malformed client input (400). saveMcpConfig
+    // can fail for server-side reasons like disk/permission errors (500).
+    let cfg;
     try {
-      const cfg = fromMcpEntries(body.servers);
-      saveMcpConfig(cfg);
+      cfg = fromMcpEntries(body.servers);
     } catch (err) {
       res.status(400).json({
+        error: err instanceof Error ? err.message : "invalid mcp entries",
+      });
+      return;
+    }
+    try {
+      saveMcpConfig(cfg);
+    } catch (err) {
+      res.status(500).json({
         error: err instanceof Error ? err.message : "saveMcpConfig failed",
       });
       return;

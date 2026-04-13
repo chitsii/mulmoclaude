@@ -320,6 +320,9 @@ function wouldRewriteLocalhost(url: string): boolean {
 
 function stdioHasNonWorkspaceArg(args?: string[]): boolean {
   if (!args) return false;
-  return args.some((arg) => /^\//.test(arg) && !arg.startsWith("/workspace/"));
+  return args.some(
+    (arg) =>
+      /^\//.test(arg) && arg !== "/workspace" && !arg.startsWith("/workspace/"),
+  );
 }
 </script>

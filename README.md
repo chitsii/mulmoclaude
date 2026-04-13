@@ -2,6 +2,8 @@
 
 Experience GUI-chat with Claude Code — and long-term memory! You chat with Claude Code, and it responds not just with text but with interactive visual tools — documents, spreadsheets, mind maps, images, forms, 3D scenes, piano, and more. A built-in personal wiki gives Claude persistent, structured knowledge that grows with every conversation.
 
+> **Hacking on MulmoClaude?** See [`docs/developer.md`](docs/developer.md) for environment variables, scripts, the process map, sandbox layout, and other contributor-facing notes. Logging knobs live in [`docs/logging.md`](docs/logging.md).
+
 ## Installation
 
 **Prerequisites**: Node.js 18+, [Claude Code CLI](https://claude.ai/code) installed and authenticated.
@@ -163,7 +165,7 @@ The gear icon in the sidebar opens a Settings modal where you can extend Claude'
 
 Paste tool names one per line. Useful for Claude Code's built-in MCP servers (Gmail, Google Calendar) after a one-time OAuth handshake:
 
-```
+```text
 mcp__claude_ai_Gmail
 mcp__claude_ai_Google_Calendar
 ```
@@ -179,7 +181,7 @@ Add external MCP servers without hand-editing JSON. Two types are supported:
 
 Configuration lives under `<workspace>/configs/`:
 
-```
+```text
 <workspace>/configs/
   settings.json    ← extra allowed tool names
   mcp.json         ← Claude CLI --mcp-config compatible

@@ -10,6 +10,7 @@ import path from "path";
 // import keeps the module under test pinned to this suite's HOME.
 let tmpRoot: string;
 let originalHome: string | undefined;
+let originalUserProfile: string | undefined;
 
 type ConfigModule = typeof import("../../server/config.js");
 let mod: ConfigModule;
@@ -17,7 +18,11 @@ let mod: ConfigModule;
 before(async () => {
   tmpRoot = await mkdtemp(path.join(os.tmpdir(), "mulmo-config-test-"));
   originalHome = process.env.HOME;
+  originalUserProfile = process.env.USERPROFILE;
+  // os.homedir() uses HOME on POSIX and USERPROFILE on Windows; set both
+  // so the test's temp workspace is picked up regardless of platform.
   process.env.HOME = tmpRoot;
+  process.env.USERPROFILE = tmpRoot;
   // Pre-create the workspace root that workspace.ts expects.
   fs.mkdirSync(path.join(tmpRoot, "mulmoclaude"), { recursive: true });
   mod = await import("../../server/config.js");
@@ -26,6 +31,8 @@ before(async () => {
 after(async () => {
   if (originalHome === undefined) delete process.env.HOME;
   else process.env.HOME = originalHome;
+  if (originalUserProfile === undefined) delete process.env.USERPROFILE;
+  else process.env.USERPROFILE = originalUserProfile;
   await rm(tmpRoot, { recursive: true, force: true });
 });
 

@@ -24,6 +24,7 @@ type RouteModule = typeof import("../../server/routes/config.js");
 
 let tmpRoot: string;
 let originalHome: string | undefined;
+let originalUserProfile: string | undefined;
 let configMod: ConfigModule;
 let routeMod: RouteModule;
 
@@ -32,10 +33,6 @@ let routeMod: RouteModule;
 type Handler = (req: Request, res: Response) => void;
 let getHandler: Handler;
 let putSettingsHandler: Handler;
-
-interface RouteLayer {
-  route?: { stack: Array<{ method: string; handle: Handler }> };
-}
 
 interface StackFrame {
   route?: {
@@ -50,14 +47,14 @@ interface RouterInternals {
 
 function extractRouteHandler(
   mod: RouteModule,
-  path: string,
+  routePath: string,
   method: "get" | "put",
 ): Handler {
   const router = mod.default as unknown as RouterInternals;
-  const frame = router.stack.find((f) => f.route?.path === path);
-  if (!frame?.route) throw new Error(`route ${path} not registered`);
+  const frame = router.stack.find((f) => f.route?.path === routePath);
+  if (!frame?.route) throw new Error(`route ${routePath} not registered`);
   const layer = frame.route.stack.find((s) => s.method === method);
-  if (!layer) throw new Error(`method ${method} not found on ${path}`);
+  if (!layer) throw new Error(`method ${method} not found on ${routePath}`);
   return layer.handle;
 }
 
@@ -84,7 +81,10 @@ function mockRes() {
 before(async () => {
   tmpRoot = await mkdtemp(path.join(os.tmpdir(), "mulmo-config-route-"));
   originalHome = process.env.HOME;
+  originalUserProfile = process.env.USERPROFILE;
+  // os.homedir() uses HOME on POSIX and USERPROFILE on Windows.
   process.env.HOME = tmpRoot;
+  process.env.USERPROFILE = tmpRoot;
   fs.mkdirSync(path.join(tmpRoot, "mulmoclaude"), { recursive: true });
   configMod = await import("../../server/config.js");
   routeMod = await import("../../server/routes/config.js");
@@ -95,6 +95,8 @@ before(async () => {
 after(async () => {
   if (originalHome === undefined) delete process.env.HOME;
   else process.env.HOME = originalHome;
+  if (originalUserProfile === undefined) delete process.env.USERPROFILE;
+  else process.env.USERPROFILE = originalUserProfile;
   await rm(tmpRoot, { recursive: true, force: true });
 });
 
@@ -177,8 +179,3 @@ describe("PUT /config/settings", () => {
     assert.deepEqual(configMod.loadSettings().extraAllowedTools, ["new"]);
   });
 });
-
-// Suppress the "unused" warning for RouteLayer (kept for symmetry
-// with StackFrame in case we need to introspect individual layers).
-const _layerUnused: RouteLayer = {};
-void _layerUnused;
