@@ -16,7 +16,7 @@ The messaging transport layer turns MulmoClaude into a **remote-accessible perso
 
 **Switch roles on the fly.** Type `/role artist` in Telegram to switch to the artist persona, or `/roles` to see what's available. The role system works identically across all platforms.
 
-**Maintain conversation context.** The agent remembers your conversation within a session. Send follow-up messages and it picks up where you left off — same as the web UI. Type `/new` to start a fresh session.
+**Maintain conversation context.** The agent remembers your conversation within a session. Send follow-up messages and it picks up where you left off — same as the web UI. Type `/reset` to start a fresh session.
 
 **Control access.** Restrict which Telegram chats, LINE users, or WhatsApp numbers can talk to your bot. This is your personal assistant running on your machine — access control is essential.
 
@@ -29,7 +29,7 @@ MulmoClaude's web UI supports multiple sessions (visible in the sidebar), but a 
 1. **First message from Telegram** → creates a new session `telegram-{chatId}-{timestamp}`. This becomes the active session for that chat. The session ID is persisted to disk.
 2. **Subsequent messages** → continue the same active session. The agent has full conversation context.
 3. **View from Web UI** → the messaging session appears in the sidebar like any other session. The user can open it, read the history, and continue the conversation from the browser.
-4. **`/new` in the messaging app** → creates a fresh session `telegram-{chatId}-{newTimestamp}` and makes it the new active session. The old session remains in the sidebar (not deleted).
+4. **`/reset` in the messaging app** → creates a fresh session `telegram-{chatId}-{newTimestamp}` and makes it the new active session. The old session remains in the sidebar (not deleted).
 5. **`/connect telegram` in the Web UI** → takes the currently-open browser session and makes it the active session for the Telegram chat. This is how you "hand off" a browser conversation to your phone.
 
 **Key properties:**
@@ -178,7 +178,7 @@ export function createChatStateStore(transportId: string): ChatStateStore;
 The `ChatStateStore` provides:
 - `get(externalChatId)` — read state, return null if not found
 - `set(state)` — write state
-- `newSession(externalChatId, roleId?)` — create a fresh session (new ID), make it active. Old session is not deleted
+- `reset(externalChatId, roleId?)` — create a fresh session (new ID), make it active. Old session is not deleted
 - `connect(externalChatId, chatSessionId)` — point this chat at an existing MulmoClaude session (for `/connect` from Web UI)
 - `delete(externalChatId)` — remove state file
 
@@ -235,7 +235,7 @@ Common commands shared across all transports:
 
 | Command | Action |
 |---|---|
-| `/new` | Create a fresh session, make it the active session for this chat |
+| `/reset` | Create a fresh session, make it the active session for this chat |
 | `/help` | Show available commands |
 | `/roles` | List available roles |
 | `/role <id>` | Switch role and create a new session |
@@ -497,9 +497,9 @@ Workspace storage:
 
 ### Phase 0: Foundation + Telegram
 1. Create `server/transports/types.ts` — interfaces
-2. Create `server/transports/chat-state.ts` — state store with `resolveWithinRoot()`, `newSession()`, `connect()`
+2. Create `server/transports/chat-state.ts` — state store with `resolveWithinRoot()`, `reset()`, `connect()`
 3. Create `server/transports/relay.ts` — bridge to `startChat()` + pub/sub subscription
-4. Create `server/transports/commands.ts` — shared `/new`, `/help`, `/roles`, `/role`, `/status`
+4. Create `server/transports/commands.ts` — shared `/reset`, `/help`, `/roles`, `/role`, `/status`
 5. Create `server/transports/index.ts` — registry + init/shutdown
 6. Create `server/transports/telegram/` — reference implementation using the above
 7. Wire into `server/index.ts` — call `initTransports()` after task manager starts
@@ -556,7 +556,7 @@ Both patterns converge at `relayMessage()` — once an incoming message is parse
 | Decision | Rationale |
 |---|---|
 | 1 chat = 1 active session pointer | Messaging apps have one thread; the pointer resolves the multi-session mismatch cleanly |
-| `/new` creates, `/connect` reassigns | Both sides can change what the pointer targets; old sessions are never lost |
+| `/reset` creates, `/connect` reassigns | Both sides can change what the pointer targets; old sessions are never lost |
 | Sessions are normal MulmoClaude sessions | No special "transport session" type — accessible from both messaging and Web UI |
 | Session ID encodes origin (`telegram-xxx`) | Visible in sidebar, easy to filter, no metadata lookup needed |
 | Use `startChat()` not `runAgent()` | Gets session persistence, JSONL, journal, chat-index for free |
@@ -564,5 +564,5 @@ Both patterns converge at `relayMessage()` — once an incoming message is parse
 | Transport-agnostic relay | Telegram, Slack, LINE, WhatsApp, Twitter all use the same relay function |
 | Workspace storage for chat state | Consistent with MulmoClaude's "workspace is the database" philosophy |
 | `resolveWithinRoot()` for all paths | Prevents path traversal from external chat IDs |
-| Shared command handler | `/new`, `/help`, `/roles`, `/status` work identically across all transports |
+| Shared command handler | `/reset`, `/help`, `/roles`, `/status` work identically across all transports |
 | Pub/sub subscription for event collection | Reuses existing infrastructure instead of re-iterating `runAgent()` |
