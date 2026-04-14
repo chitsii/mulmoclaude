@@ -15,16 +15,19 @@ export type ValidationResult<T> =
   | { ok: false; error: string };
 
 function formatZodIssues(
-  issues: ReadonlyArray<{
-    message: string;
-    path: ReadonlyArray<string | number>;
-  }>,
+  // Zod's `$ZodIssue.path` is `PropertyKey[]` (includes `symbol`).
+  // Accept the wider type so callers can pass `safeParse().error.issues`
+  // directly; stringify any non-string/number segments at format time.
+  issues: ReadonlyArray<{ message: string; path: ReadonlyArray<PropertyKey> }>,
 ): string {
   if (issues.length === 0) return "invalid shape";
   const head = issues
     .slice(0, 3)
     .map((i) => {
-      const pathStr = i.path.length > 0 ? i.path.join(".") : "<root>";
+      const pathStr =
+        i.path.length > 0
+          ? i.path.map((seg) => String(seg)).join(".")
+          : "<root>";
       return `${pathStr}: ${i.message}`;
     })
     .join("; ");
