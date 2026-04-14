@@ -94,9 +94,9 @@ user can export each chart as PNG.
 
 ## Tests
 
-- `test/routes/test_chart.ts` — POST body validation, slug → file
+- `test/routes/test_chartRoute.ts` — POST body validation, slug → file
   path, writes valid JSON, 400 on missing `document.charts`
-- `e2e/tests/chart.spec.ts` — stub `/api/agent` to deliver a
+- `e2e/tests/chart-plugin.spec.ts` — stub `/api/agent` to deliver a
   `tool_result` for `presentChart` with a two-chart document, assert
   two `<canvas>` nodes and that the PNG button exists
 
