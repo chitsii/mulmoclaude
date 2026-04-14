@@ -78,6 +78,28 @@ function disposeAll(): void {
   instances.length = 0;
 }
 
+// Force-disable mouse-wheel zoom on any dataZoom entry in the user's
+// option. Rationale: in stack view the page needs to scroll past the
+// chart, and `inside`-type dataZoom captures the wheel by default
+// (zoomOnMouseWheel=true), which traps the scroll over the canvas.
+// Toolbox/slider/drag zoom still work — only the wheel is disabled.
+function disableWheelZoom(
+  option: Record<string, unknown>,
+): Record<string, unknown> {
+  const dz = option.dataZoom;
+  if (dz === undefined || dz === null) return option;
+  const normalise = (entry: unknown): unknown => {
+    if (typeof entry !== "object" || entry === null) return entry;
+    return {
+      ...(entry as Record<string, unknown>),
+      zoomOnMouseWheel: false,
+      moveOnMouseWheel: false,
+    };
+  };
+  const next = Array.isArray(dz) ? dz.map(normalise) : normalise(dz);
+  return { ...option, dataZoom: next };
+}
+
 function renderAll(): void {
   disposeAll();
   for (let i = 0; i < charts.value.length; i += 1) {
@@ -86,7 +108,7 @@ function renderAll(): void {
     if (!el || !chart) continue;
     const instance = echarts.init(el);
     try {
-      instance.setOption(chart.option);
+      instance.setOption(disableWheelZoom(chart.option));
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn(`[chart] setOption failed for chart ${i}`, err);
