@@ -154,17 +154,17 @@ watch(
   { immediate: true },
 );
 
-// Run = send a new chat message whose body is the SKILL.md content,
-// preceded by a one-line framing note so the LLM knows it's a skill
-// invocation. App.vue listens for the `skill-run` window event and
-// routes to its existing sendMessage pipeline.
+// Run = send the skill invocation as a Claude Code slash command.
+// Claude CLI already knows about every ~/.claude/skills/<name>/SKILL.md
+// at spawn, so sending `/<name>` is enough — no need to ship the
+// body. App.vue listens for the `skill-run` window event and routes
+// to its existing sendMessage pipeline. (See論点 1 on PR #224.)
 function runSkill(): void {
-  if (!detail.value) return;
-  const message = [
-    `Run the "${detail.value.name}" skill:`,
-    "",
-    detail.value.body,
-  ].join("\n");
-  window.dispatchEvent(new CustomEvent("skill-run", { detail: { message } }));
+  if (!selectedName.value) return;
+  window.dispatchEvent(
+    new CustomEvent("skill-run", {
+      detail: { message: `/${selectedName.value}` },
+    }),
+  );
 }
 </script>

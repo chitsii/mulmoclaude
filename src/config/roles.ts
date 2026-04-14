@@ -65,6 +65,7 @@ export const ROLES: Role[] = [
       "presentHtml",
       "readXPost",
       "searchX",
+      "manageSkills",
       "switchRole",
     ],
     queries: [
@@ -158,6 +159,7 @@ export const ROLES: Role[] = [
       "presentForm",
       "generateImage",
       "presentHTML",
+      "manageSkills",
       "switchRole",
     ],
     queries: [

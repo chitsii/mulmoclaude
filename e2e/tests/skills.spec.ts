@@ -92,8 +92,7 @@ async function setupSkillsSession(page: Page) {
   // assert the Run message reflects the selected skill.
   await page.route(
     (url) =>
-      url.pathname.startsWith("/api/skills/") &&
-      url.pathname !== "/api/skills",
+      url.pathname.startsWith("/api/skills/") && url.pathname !== "/api/skills",
     (route: Route) => {
       const name = route.request().url().split("/api/skills/").pop() ?? "";
       const bodies: Record<string, string> = {
@@ -181,8 +180,9 @@ test.describe("manageSkills plugin", () => {
     const dispatched = await page.evaluate(
       () => (window as unknown as { __lastSkillRun?: string }).__lastSkillRun,
     );
-    expect(dispatched).toBeDefined();
-    expect(dispatched).toContain('Run the "ci_enable" skill:');
-    expect(dispatched).toContain("## CI Enable");
+    // Run button sends the skill invocation as a Claude Code slash
+    // command — Claude CLI resolves /<name> against ~/.claude/skills/
+    // natively, so we don't need to ship the body.
+    expect(dispatched).toBe("/ci_enable");
   });
 });

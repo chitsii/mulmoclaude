@@ -123,6 +123,24 @@ test/routes/test_skillsRoute.ts
 e2e/tests/skills.spec.ts
 ```
 
+## Known limitations (phase 0)
+
+### Docker sandbox + symlinked skills
+
+MulmoClaude's default Docker sandbox mounts `~/.claude` into the container at `/home/node/.claude`. When an entry under that path is a **symlink** pointing outside `~/.claude/` (e.g. `~/.claude/skills` → `~/ss/dotfiles/claude/skills`), the symlink appears in the container as a **dangling link** — the target path doesn't exist inside the container, so the Claude CLI cannot resolve the skill.
+
+**Observed symptom:** in the MulmoClaude UI, the manageSkills list is empty (only built-in skills from the CLI itself) and Run button fires `"Unknown skill: <name>"`.
+
+**Workaround:** run MulmoClaude with `DISABLE_SANDBOX=1 yarn dev` to bypass the sandbox. Slash commands then resolve against the host's real `~/.claude/skills/` directly.
+
+**Not addressed in phase 0** because:
+
+- Resolving multi-level symlink chains (e.g. `~/.claude/skills/pptx` → `~/ss/llm/skills/pptx`) requires recursive realpath + adding each target as a separate Docker mount. Complex and user-specific.
+- The workaround (`DISABLE_SANDBOX=1`) is documented and easy.
+- Most users do not have symlinked `~/.claude` setups.
+
+Users with symlinked skill trees should either (a) use `DISABLE_SANDBOX=1`, (b) place skills they want in the sandbox under the project scope (`~/mulmoclaude/.claude/skills/`) which is mounted as the workspace, or (c) run with a flat (non-symlinked) `~/.claude/skills/` dir.
+
 ## Phase 1+ follow-ups (out of scope)
 
 - Accept an explicit `skillsRoot` env var / config so a user can point at a shared skills repo
