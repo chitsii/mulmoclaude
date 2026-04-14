@@ -1,8 +1,42 @@
 # Messaging Transport Layer — Design Document
 
-## 1) Context and Problem
+## 1) User Experience — Remote Access to MulmoClaude
 
-PR #106 proposed a Telegram integration that directly called `runAgent()` in an infinite polling loop. The review identified several issues: no structured logging, a 507-line monolith, no path safety, no graceful shutdown, and tight coupling to Telegram. Meanwhile, users want the same capability for Slack, Twitter/X, and potentially other platforms.
+### The Problem We're Solving
+
+MulmoClaude today is a **localhost-only** app. You must be sitting in front of the machine running the server to use it. But the most valuable use cases happen when you're **away from your desk** — commuting, in a meeting, on your phone, or simply on a different device.
+
+The messaging transport layer turns MulmoClaude into a **remote-accessible personal assistant**. You message it from the apps you already have open — Telegram, LINE, WhatsApp, Slack, Twitter/X — and it responds using the same Claude agent, the same workspace, the same roles and plugins.
+
+### What the User Can Do
+
+**Chat from anywhere.** Send a message from your phone's Telegram/LINE/WhatsApp. MulmoClaude receives it, runs the agent, and sends the text reply back to the same chat. No browser, no VPN, no port forwarding needed — the messaging platform handles the connectivity.
+
+**Use the same workspace.** Everything the agent does — file edits, wiki updates, todo changes, calendar entries — happens in the same `~/mulmoclaude/` workspace. When you get back to your desk and open the web UI, all the work is there. Chat history from messaging sessions appears in the sidebar alongside browser sessions.
+
+**Switch roles on the fly.** Type `/role artist` in Telegram to switch to the artist persona, or `/roles` to see what's available. The role system works identically across all platforms.
+
+**Maintain conversation context.** The agent remembers your conversation within a session. Send follow-up messages and it picks up where you left off — same as the web UI. Type `/reset` to start fresh.
+
+**Control access.** Restrict which Telegram chats, LINE users, or WhatsApp numbers can talk to your bot. This is your personal assistant running on your machine — access control is essential.
+
+### What Stays in the Web UI
+
+Rich visual output — plugin views (spreadsheets, charts, images, wiki pages, stories), drag-and-drop, canvas layout — stays in the browser. Messaging transports are **text-first**. The agent still generates visual artifacts, but they're accessed through the web UI. The messaging reply tells you what was done; the web UI shows you the result.
+
+### Example Scenarios
+
+- **On the train**: "Add a todo: review the Q3 budget proposal by Friday" → agent creates the todo, confirms via LINE
+- **In a meeting**: "Summarize my wiki page on project-alpha" → agent reads the wiki, sends a summary to WhatsApp
+- **Quick check from phone**: "What's on my calendar today?" → agent reads calendar files, replies in Telegram
+- **Creative work**: "Write a haiku about spring rain" → agent responds in the chat; if you asked the storyteller role, the MulmoScript is saved to workspace for later viewing in the web UI
+- **Multi-device**: Start a conversation on Telegram during lunch, continue in the web UI when back at your desk (same session ID, same history)
+
+---
+
+## 2) Context and Problem
+
+PR #106 proposed a Telegram integration that directly called `runAgent()` in an infinite polling loop. The review identified several issues: no structured logging, a 507-line monolith, no path safety, no graceful shutdown, and tight coupling to Telegram. Meanwhile, users want the same capability for Slack, Twitter/X, LINE, and WhatsApp.
 
 We need a **transport-agnostic messaging layer** — a solid foundation that any messaging platform can plug into without duplicating agent orchestration, session management, or chat persistence logic.
 
@@ -18,10 +52,10 @@ The key insight: **`startChat()` is the right entry point**, not `runAgent()`. I
 
 ---
 
-## 2) Design Goals and Non-Goals
+## 3) Design Goals and Non-Goals
 
 ### Goals
-1. **Transport-agnostic core** — A `MessagingBridge` abstraction that any platform (Telegram, Slack, Twitter/X) can implement
+1. **Transport-agnostic core** — A `MessagingBridge` abstraction that any platform (Telegram, Slack, Twitter/X, LINE, WhatsApp) can implement
 2. **Reuse `startChat()`** — All transports go through the same code path as the web UI
 3. **Use the task manager** — Polling loops run as registered tasks with proper lifecycle (start/stop/restart)
 4. **Per-transport state** — Each transport manages its own connection state (bot tokens, polling offsets, webhook secrets) independently
@@ -36,7 +70,7 @@ The key insight: **`startChat()` is the right entry point**, not `runAgent()`. I
 
 ---
 
-## 3) Architecture
+## 4) Architecture
 
 ### 3.1 Transport Interface
 
@@ -224,7 +258,7 @@ export async function shutdownTransports(): Promise<void>;
 
 ---
 
-## 4) Telegram Transport (Phase 0 reference implementation)
+## 5) Telegram Transport (Phase 0 reference implementation)
 
 ```ts
 // server/transports/telegram/index.ts
@@ -293,7 +327,7 @@ The `TELEGRAM_ALLOWED_CHAT_IDS` env var restricts which Telegram chats can inter
 
 ---
 
-## 5) Other Transports (sketched)
+## 6) Other Transports (sketched)
 
 ### Slack
 
@@ -331,7 +365,7 @@ The `TELEGRAM_ALLOWED_CHAT_IDS` env var restricts which Telegram chats can inter
 
 ---
 
-## 6) Integration with Server
+## 7) Integration with Server
 
 ### Startup (server/index.ts)
 
@@ -372,7 +406,7 @@ process.on("SIGTERM", async () => {
 
 ---
 
-## 7) File Layout
+## 8) File Layout
 
 ```
 server/transports/
@@ -415,7 +449,7 @@ Workspace storage:
 
 ---
 
-## 8) Implementation Phases
+## 9) Implementation Phases
 
 ### Phase 0: Foundation + Telegram
 1. Create `server/transports/types.ts` — interfaces
@@ -450,7 +484,7 @@ Workspace storage:
 
 ---
 
-## 9) Ingress Patterns: Polling vs Webhook
+## 10) Ingress Patterns: Polling vs Webhook
 
 The five platforms split into two ingress patterns. The `MessagingTransport` interface supports both via `TransportContext`:
 
@@ -467,7 +501,7 @@ Both patterns converge at `relayMessage()` — once an incoming message is parse
 
 ---
 
-## 10) Key Design Decisions
+## 11) Key Design Decisions
 
 | Decision | Rationale |
 |---|---|
