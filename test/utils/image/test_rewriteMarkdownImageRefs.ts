@@ -180,6 +180,30 @@ describe("rewriteMarkdownImageRefs — code blocks and special chars", () => {
     assert.equal(out, '![alt](/api/files/raw?path=images%2Ffoo.png "a title")');
   });
 
+  it("does not rewrite a skipped literal when the same raw appears later in real markdown", () => {
+    // Regression for a forward-indexOf splice: when a fence contains
+    // `![a](x.png)` and a later paragraph contains the identical
+    // `![a](x.png)`, the earlier token-tree approach could rewrite
+    // the fenced literal instead of the real image.
+    const src = "```\n![a](x.png)\n```\n\n![a](x.png)";
+    const out = rewriteMarkdownImageRefs(src);
+    // Fenced literal unchanged.
+    assert.ok(out.includes("```\n![a](x.png)\n```"));
+    // Real image rewritten.
+    assert.ok(out.includes("![a](/api/files/raw?path=x.png)"));
+    // The fenced literal is NOT rewritten.
+    assert.ok(!out.includes("![a](/api/files/raw?path=x.png)\n```"));
+  });
+
+  it("preserves nested brackets in alt text", () => {
+    // `![outer [inner]](img.png)` — CommonMark balanced-bracket alt.
+    // The earlier regex-based alt extraction stopped at the first `]`
+    // and produced malformed output.
+    const src = "![outer [inner]](img.png)";
+    const out = rewriteMarkdownImageRefs(src);
+    assert.equal(out, "![outer [inner]](/api/files/raw?path=img.png)");
+  });
+
   it("rewrites multiple refs across paragraphs, lists, and blockquotes", () => {
     const src = [
       "# Page",
