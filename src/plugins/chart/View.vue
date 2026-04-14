@@ -65,6 +65,8 @@ const charts = computed<ChartEntry[]>(() => data.value?.document?.charts ?? []);
 const title = computed(() => data.value?.title ?? data.value?.document?.title);
 
 const containers = ref<Array<HTMLDivElement | null>>([]);
+// Kept as a plain array (not `ref`): ECharts instances are managed
+// imperatively and should not trigger Vue re-renders on mutation.
 const instances: echarts.ECharts[] = [];
 
 function setChartRef(idx: number, el: HTMLDivElement | null): void {
