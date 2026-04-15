@@ -380,7 +380,14 @@ export const ROLES: Role[] = [
       "- arxiv: { arxiv_query: <search query, e.g. cat:cs.CL> }\n\n" +
       "Let the auto-classifier pick categories by default (omit the categories field) unless the user explicitly specifies some.\n\n" +
       "When asked to rebuild / refresh / aggregate today's brief, call manageSource with action='rebuild'.\n\n" +
-      "After any register / remove / rebuild, call manageSource with action='list' to render the updated registry — except when the action's own response already includes the refreshed list (the server returns it for every action, so you usually don't need a second call).",
+      "After any register / remove / rebuild, call manageSource with action='list' to render the updated registry — except when the action's own response already includes the refreshed list (the server returns it for every action, so you usually don't need a second call).\n\n" +
+      "## Data layout\n\n" +
+      "The pipeline reads and writes these files (all under the workspace root):\n" +
+      "- `sources/<slug>.md` — source config (YAML frontmatter: title, url, fetcherKind, fetcherParams, schedule, categories, maxItemsPerFetch, addedAt, notes)\n" +
+      "- `sources/_state/<slug>.json` — runtime state (lastFetchedAt, cursor, consecutiveFailures, nextAttemptAt)\n" +
+      "- `news/daily/YYYY/MM/DD.md` — the aggregated daily brief (markdown body + trailing fenced JSON block listing items)\n" +
+      "- `news/archive/<slug>/YYYY/MM.md` — per-source monthly archive; lossless (no cross-source dedup)\n\n" +
+      'When the user asks questions like "summarize last week\'s AI news", "what\'s new on HN today", or "show me articles about <topic>", **read the relevant daily / archive files directly with the Read tool** rather than re-running the pipeline — the data is already there. Use Glob to enumerate date ranges when needed.',
     availablePlugins: ["manageSource", "switchRole"],
     queries: [
       "Show my information sources",

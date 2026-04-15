@@ -113,11 +113,43 @@
     <div class="flex-1 overflow-y-auto">
       <div
         v-if="sources.length === 0"
-        class="flex items-center justify-center h-full p-6 text-center text-sm text-gray-500 italic"
+        class="flex flex-col items-center justify-center h-full p-6 gap-4"
         data-testid="sources-empty"
       >
-        No sources registered yet. Click <strong>+ Add</strong> above, or ask
-        Claude to register one.
+        <p class="text-sm text-gray-500 italic text-center max-w-md">
+          No sources registered yet. Pick a starter pack below, click
+          <strong>+ Add</strong> above, or ask Claude to register one.
+        </p>
+        <div class="w-full max-w-md space-y-2" data-testid="sources-presets">
+          <button
+            v-for="preset in PRESETS"
+            :key="preset.id"
+            class="w-full text-left border border-gray-200 rounded-lg p-3 hover:bg-blue-50 hover:border-blue-300 disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:border-gray-200"
+            :disabled="busy === 'preset-' + preset.id"
+            :data-testid="`sources-preset-${preset.id}`"
+            @click="installPreset(preset)"
+          >
+            <div class="flex items-baseline justify-between gap-2">
+              <span class="text-sm font-medium text-gray-800">
+                {{ preset.label }}
+              </span>
+              <span class="text-[11px] text-gray-500 shrink-0">
+                {{ preset.entries.length }} source{{
+                  preset.entries.length === 1 ? "" : "s"
+                }}
+              </span>
+            </div>
+            <div class="text-xs text-gray-500 mt-1">
+              {{ preset.description }}
+            </div>
+            <div
+              v-if="busy === 'preset-' + preset.id"
+              class="text-xs text-blue-600 mt-1 italic"
+            >
+              Registering + fetching…
+            </div>
+          </button>
+        </div>
       </div>
       <ul v-else class="divide-y divide-gray-100 border-b border-gray-100">
         <li
@@ -421,6 +453,137 @@ async function commitAdd(): Promise<void> {
   } finally {
     busy.value = null;
   }
+}
+
+// --- Starter-pack presets ----------------------------------------------
+
+interface PresetEntry {
+  slug: string;
+  title: string;
+  url: string;
+  fetcherKind: "rss" | "github-releases" | "github-issues" | "arxiv";
+  fetcherParams: Record<string, string>;
+  categories?: string[];
+}
+
+interface Preset {
+  id: string;
+  label: string;
+  description: string;
+  entries: PresetEntry[];
+}
+
+const PRESETS: Preset[] = [
+  {
+    id: "tech-news",
+    label: "Tech news",
+    description: "Hacker News front page — daily tech headlines.",
+    entries: [
+      {
+        slug: "hacker-news",
+        title: "Hacker News",
+        url: "https://news.ycombinator.com/rss",
+        fetcherKind: "rss",
+        fetcherParams: { rss_url: "https://news.ycombinator.com/rss" },
+        categories: ["tech-news", "startup"],
+      },
+    ],
+  },
+  {
+    id: "ai-research",
+    label: "AI research",
+    description:
+      "Latest arXiv papers in NLP (cs.CL) and machine learning (cs.LG).",
+    entries: [
+      {
+        slug: "arxiv-cs-cl",
+        title: "arXiv cs.CL",
+        url: "https://export.arxiv.org/api/query?search_query=cat:cs.CL",
+        fetcherKind: "arxiv",
+        fetcherParams: { arxiv_query: "cat:cs.CL" },
+        categories: ["ai", "research"],
+      },
+      {
+        slug: "arxiv-cs-lg",
+        title: "arXiv cs.LG",
+        url: "https://export.arxiv.org/api/query?search_query=cat:cs.LG",
+        fetcherKind: "arxiv",
+        fetcherParams: { arxiv_query: "cat:cs.LG" },
+        categories: ["ai", "research"],
+      },
+    ],
+  },
+  {
+    id: "claude-code",
+    label: "Claude Code updates",
+    description:
+      "New releases of the Claude Code CLI from the anthropics/claude-code repo.",
+    entries: [
+      {
+        slug: "claude-code-releases",
+        title: "Claude Code releases",
+        url: "https://github.com/anthropics/claude-code",
+        fetcherKind: "github-releases",
+        fetcherParams: { github_repo: "anthropics/claude-code" },
+        categories: ["ai", "tech-news"],
+      },
+    ],
+  },
+];
+
+async function installPreset(preset: Preset): Promise<void> {
+  busy.value = `preset-${preset.id}`;
+  const alreadyHave = new Set(sources.value.map((s) => s.slug));
+  const toRegister = preset.entries.filter((e) => !alreadyHave.has(e.slug));
+  if (toRegister.length === 0) {
+    flash(`All sources in "${preset.label}" are already registered.`);
+    busy.value = null;
+    return;
+  }
+  const failures: string[] = [];
+  for (const entry of toRegister) {
+    try {
+      const res = await fetch("/api/sources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: entry.slug,
+          title: entry.title,
+          url: entry.url,
+          fetcherKind: entry.fetcherKind,
+          fetcherParams: entry.fetcherParams,
+          // Presets know their categories — skip the classifier
+          // CLI call so the first brief is ready sooner.
+          categories: entry.categories,
+          skipClassify: true,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        const reason = body?.error ?? `HTTP ${res.status}`;
+        failures.push(`${entry.slug}: ${reason}`);
+      }
+    } catch (err) {
+      failures.push(
+        `${entry.slug}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+  if (failures.length > 0) {
+    flash(
+      `Registered ${toRegister.length - failures.length}/${toRegister.length}. Errors: ${failures.join("; ")}`,
+      true,
+    );
+  } else {
+    flash(
+      `Registered ${toRegister.length} source${toRegister.length === 1 ? "" : "s"} from "${preset.label}". Fetching…`,
+    );
+  }
+  await refreshList();
+  await rebuildInline();
+  busy.value = null;
 }
 
 // Rebuild step extracted so commitAdd can chain it without recursing
