@@ -79,8 +79,7 @@ async function setupSourceSession(page: Page) {
   // the test log with unhandled-route warnings.
   await page.route(
     (url) => url.pathname === "/api/files/content",
-    (route) =>
-      route.fulfill({ status: 404, json: { error: "not found" } }),
+    (route) => route.fulfill({ status: 404, json: { error: "not found" } }),
   );
 }
 

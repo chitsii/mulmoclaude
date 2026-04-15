@@ -355,9 +355,26 @@ async function loadBrief(isoDate: string): Promise<void> {
   }
 }
 
+// The daily file ends with a trailing ```json block that carries
+// the structured item list for later machine consumption (Q2 of the
+// plan: "Markdown + trailing fenced JSON block"). Strip it for the
+// human-facing render so the UI doesn't dump a 1000-line JSON blob
+// after the brief. The file on disk stays unchanged.
+function stripTrailingJsonBlock(markdown: string): string {
+  const marker = "\n```json\n";
+  const idx = markdown.lastIndexOf(marker);
+  if (idx < 0) return markdown;
+  // Only strip if everything after the marker looks like it belongs
+  // to that block (i.e. it's the last fenced block in the file).
+  const tail = markdown.slice(idx);
+  if (!tail.trimEnd().endsWith("```")) return markdown;
+  return markdown.slice(0, idx).trimEnd();
+}
+
 const briefHtml = computed(() => {
   if (!briefMarkdown.value) return "";
-  return marked(briefMarkdown.value) as string;
+  const body = stripTrailingJsonBlock(briefMarkdown.value);
+  return marked(body) as string;
 });
 
 // Load on mount — try today's brief first, then last rebuild's date
