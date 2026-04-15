@@ -40,19 +40,31 @@ export function useMcpTools(opts: UseMcpToolsOptions) {
     ),
   );
 
+  interface McpToolStatus {
+    name: string;
+    enabled: boolean;
+    prompt?: string;
+  }
+
+  function hasPrompt(
+    tool: McpToolStatus,
+  ): tool is McpToolStatus & { prompt: string } {
+    return typeof tool.prompt === "string" && tool.prompt.length > 0;
+  }
+
   async function fetchMcpToolsStatus(): Promise<void> {
-    const result =
-      await apiGet<{ name: string; enabled: boolean; prompt?: string }[]>(
-        "/api/mcp-tools",
-      );
-    // ignore failures — all tools remain visible if the fetch fails
-    if (!result.ok) return;
+    const result = await apiGet<McpToolStatus[]>("/api/mcp-tools");
+    // Ignore failures and unexpected shapes — all tools remain visible
+    // if anything goes wrong. The Array.isArray guard makes explicit
+    // the previous behaviour (a try/catch used to silently swallow a
+    // .filter TypeError when the response wasn't an array).
+    if (!result.ok || !Array.isArray(result.data)) return;
     const tools = result.data;
     disabledMcpTools.value = new Set(
       tools.filter((t) => !t.enabled).map((t) => t.name),
     );
     mcpToolDescriptions.value = Object.fromEntries(
-      tools.filter((t) => t.prompt).map((t) => [t.name, t.prompt as string]),
+      tools.filter(hasPrompt).map((t) => [t.name, t.prompt]),
     );
   }
 
