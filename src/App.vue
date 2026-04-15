@@ -93,6 +93,7 @@
         <button
           ref="roleButtonRef"
           class="flex-1 flex items-center gap-2 bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 hover:bg-gray-50 text-left"
+          data-testid="role-selector-btn"
           @click="showRoleDropdown = !showRoleDropdown"
         >
           <span class="material-icons text-base text-gray-500">{{
@@ -109,6 +110,7 @@
           <button
             v-for="role in roles"
             :key="role.id"
+            :data-testid="`role-option-${role.id}`"
             class="w-full flex items-center gap-1.5 px-3 py-1 text-sm text-gray-900 hover:bg-gray-50 text-left"
             @click="
               currentRoleId = role.id;

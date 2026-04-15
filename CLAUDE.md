@@ -254,9 +254,22 @@ e2e/
 ### Writing tests
 
 1. Call `await mockAllApis(page)` before `page.goto()` — it intercepts all API routes
-2. Use `data-testid` attributes for element selection (change-resistant)
+2. Use `data-testid` attributes for element selection (change-resistant) — see "Selector stability" below
 3. Use URL assertions for router behaviour (`expect(page.url()).toContain(...)`)
 4. Override specific API responses per test by adding a `page.route()` AFTER `mockAllApis` (Playwright checks last-registered first)
+
+### Selector stability — avoid layout-dependent tests
+
+E2E tests MUST survive **layout** changes (moving an element from sidebar to canvas, regrouping buttons, etc.) without being rewritten. Tests break the moment they walk the DOM structure instead of addressing elements by role.
+
+**Rules:**
+
+1. **Every element that an E2E test touches MUST carry a `data-testid`.** Source of truth is the Vue template — add the testid when you add the element, not when a test needs it. Missing testid = add it in the same PR.
+2. **Name testids by function, not position.** `chat-input`, `send-btn`, `role-selector-btn`, `plugin-toolbar-todos` — not `left-sidebar-input`, `top-bar-right-button`. The whole point is that layout can change without renaming.
+3. **Never use raw tag / structural CSS locators** (`page.locator("textarea")`, `page.locator('button:has(span.material-icons:text("send"))')`, `page.locator("div > div:nth-child(2)")`). These break on any layout tweak.
+4. **Layout-shift PRs (moving an element) MUST NOT rename testids.** Move the DOM node; the testid travels with it. If a rename is genuinely needed, do it in a separate PR so the layout diff stays minimal.
+5. **Reusable interactions go in `e2e/fixtures/chat.ts`** (and sibling fixture files). Tests call `sendChatMessage(page, "hi")`, `switchRole(page, "general")` etc. — when a layout change breaks the underlying testid hunt, only the helper needs updating, not every test. Drop to `page.getByTestId(...)` inline only when the interaction is one-off and no helper fits.
+6. **Content-based locators** (`page.locator("text=Hello")`, `img[alt='chart']`) are fine for asserting rendered output, but NOT for navigation. Prefer testid for clicks / fills; content selectors for `toBeVisible` / `toHaveText` assertions.
 
 ### When to add E2E coverage
 
