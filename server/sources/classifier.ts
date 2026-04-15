@@ -25,6 +25,7 @@ import {
   normalizeCategories,
   type CategorySlug,
 } from "./taxonomy.js";
+import { errorMessage } from "../utils/errors.js";
 
 // Structured input passed to the classifier. Kept small (not the
 // full source content) so the prompt stays cheap — a couple of
@@ -148,9 +149,7 @@ export function parseClassifyOutput(stdout: string): ClassifyResult {
     parsed = JSON.parse(stdout.trim());
   } catch (err) {
     throw new Error(
-      `[sources/classifier] failed to parse claude json: ${
-        err instanceof Error ? err.message : String(err)
-      }`,
+      `[sources/classifier] failed to parse claude json: ${errorMessage(err)}`,
     );
   }
   if (parsed.is_error) {

@@ -142,6 +142,7 @@ import { useFreshPluginData } from "../../composables/useFreshPluginData";
 import { renderWikiLinks } from "./helpers";
 import { rewriteMarkdownImageRefs } from "../../utils/image/rewriteMarkdownImageRefs";
 import { apiPost, apiFetchRaw } from "../../utils/api";
+import { errorMessage } from "../../utils/errors";
 
 const props = defineProps<{
   selectedResult: ToolResultComplete<WikiData>;
@@ -255,7 +256,7 @@ async function downloadPdf() {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
-    pdfError.value = err instanceof Error ? err.message : String(err);
+    pdfError.value = errorMessage(err);
     pdfDownloading.value = false;
     return;
   }

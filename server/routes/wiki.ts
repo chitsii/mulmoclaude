@@ -4,6 +4,7 @@ import fsp from "node:fs/promises";
 import path from "path";
 import { workspacePath } from "../workspace.js";
 import { getPageIndex } from "./wiki/pageIndex.js";
+import { badRequest } from "../utils/httpError.js";
 
 const router = Router();
 
@@ -364,7 +365,7 @@ router.post(
         return;
       case "page":
         if (!pageName) {
-          res.status(400).json({ error: "pageName required for page action" });
+          badRequest(res, "pageName required for page action");
           return;
         }
         res.json(await buildPageResponse(action, pageName));
@@ -376,7 +377,7 @@ router.post(
         res.json(await buildLintReportResponse(action));
         return;
       default:
-        res.status(400).json({ error: `Unknown action: ${action}` });
+        badRequest(res, `Unknown action: ${action}`);
     }
   },
 );

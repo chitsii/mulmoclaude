@@ -4,6 +4,7 @@ import { Router, Request, Response } from "express";
 import { marked } from "marked";
 import puppeteer from "puppeteer";
 import { errorMessage } from "../utils/errors.js";
+import { badRequest, serverError } from "../utils/httpError.js";
 import { workspacePath } from "../workspace.js";
 import { resolveWithinRoot } from "../utils/fs.js";
 import { log } from "../logger/index.js";
@@ -154,7 +155,7 @@ router.post(
     const { markdown, filename = "document.pdf", format = "Letter" } = req.body;
 
     if (!markdown) {
-      res.status(400).json({ error: "markdown is required" });
+      badRequest(res, "markdown is required");
       return;
     }
 
@@ -165,9 +166,7 @@ router.post(
       sendPdf(res, buffer, filename);
     } catch (err) {
       log.error("pdf", "generation failed", { error: String(err) });
-      res
-        .status(500)
-        .json({ error: `PDF generation failed: ${errorMessage(err)}` });
+      serverError(res, `PDF generation failed: ${errorMessage(err)}`);
     }
   },
 );

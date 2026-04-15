@@ -9,6 +9,12 @@ import {
   resolveWithinRoot,
 } from "../utils/fs.js";
 import { errorMessage } from "../utils/errors.js";
+import {
+  badRequest,
+  notFound,
+  sendError,
+  serverError,
+} from "../utils/httpError.js";
 
 const router = Router();
 
@@ -293,7 +299,7 @@ function pipeWithErrorHandling(
       res.destroy(err);
       return;
     }
-    res.status(500).json({ error: `Failed to read file: ${err.message}` });
+    serverError(res, `Failed to read file: ${err.message}`);
   });
   stream.pipe(res);
 }
@@ -457,16 +463,16 @@ router.get(
     // workspace root; any traversal / sensitive / missing path → null.
     const absPath = resolveSafe(relPath);
     if (!absPath) {
-      res.status(404).json({ error: "Not found" });
+      notFound(res, "Not found");
       return;
     }
     const stat = await statSafeAsync(absPath);
     if (!stat) {
-      res.status(404).json({ error: "Not found" });
+      notFound(res, "Not found");
       return;
     }
     if (!stat.isDirectory()) {
-      res.status(400).json({ error: "path is not a directory" });
+      badRequest(res, "path is not a directory");
       return;
     }
     try {
@@ -476,9 +482,7 @@ router.get(
       );
       res.json(listing);
     } catch (err) {
-      res
-        .status(500)
-        .json({ error: `Failed to read directory: ${errorMessage(err)}` });
+      serverError(res, `Failed to read directory: ${errorMessage(err)}`);
     }
   },
 );
@@ -508,7 +512,7 @@ function resolveAndStatFile<T>(
 ): { relPath: string; absPath: string; stat: fs.Stats } | null {
   const relPath = typeof req.query.path === "string" ? req.query.path : "";
   if (!relPath) {
-    res.status(400).json({ error: "path required" });
+    badRequest(res, "path required");
     return null;
   }
   // Syntactic candidate (no symlink resolution yet).
@@ -524,14 +528,14 @@ function resolveAndStatFile<T>(
       relativeFromWorkspace === ".." ||
       relativeFromWorkspace.startsWith(`..${path.sep}`);
     if (escapesSyntactically) {
-      res.status(400).json({ error: "Path outside workspace" });
+      badRequest(res, "Path outside workspace");
     } else {
-      res.status(404).json({ error: "File not found" });
+      notFound(res, "File not found");
     }
     return null;
   }
   if (!stat.isFile()) {
-    res.status(400).json({ error: "Not a file" });
+    badRequest(res, "Not a file");
     return null;
   }
   // File exists — run the realpath-hardened check to defeat
@@ -539,7 +543,7 @@ function resolveAndStatFile<T>(
   // resolveSafe also rejects paths that traverse a hidden dir.
   const absPath = resolveSafe(relPath);
   if (!absPath) {
-    res.status(400).json({ error: "Path outside workspace" });
+    badRequest(res, "Path outside workspace");
     return null;
   }
   return { relPath, absPath, stat };
@@ -623,9 +627,11 @@ router.get(
     const { absPath, stat } = ctx;
 
     if (stat.size > MAX_RAW_BYTES) {
-      res.status(413).json({
-        error: `File too large to stream (${stat.size} bytes, limit ${MAX_RAW_BYTES})`,
-      });
+      sendError(
+        res,
+        413,
+        `File too large to stream (${stat.size} bytes, limit ${MAX_RAW_BYTES})`,
+      );
       return;
     }
     const ext = path.extname(absPath).toLowerCase();
@@ -652,7 +658,7 @@ router.get(
         // the Content-Range per RFC 7233 §4.4 before sending.
         res.setHeader("Content-Type", "application/json; charset=utf-8");
         res.setHeader("Content-Range", `bytes */${stat.size}`);
-        res.status(416).json({ error: "Range not satisfiable" });
+        sendError(res, 416, "Range not satisfiable");
         return;
       }
       res.status(206);

@@ -18,6 +18,7 @@ import type {
 } from "../fetchers/index.js";
 import type { FetcherKind, Source, SourceState } from "../types.js";
 import { defaultSourceState } from "../types.js";
+import { errorMessage } from "../../utils/errors.js";
 
 // Outcome of one source's fetch attempt.
 export type FetchOutcome =
@@ -93,7 +94,7 @@ async function fetchOneSource(
     return {
       kind: "error",
       sourceSlug: source.slug,
-      error: err instanceof Error ? err.message : String(err),
+      error: errorMessage(err),
     };
   }
 }

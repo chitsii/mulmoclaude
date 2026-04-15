@@ -7,6 +7,7 @@ import { readManifest } from "../chat-index/indexer.js";
 import { resolveWithinRoot } from "../utils/fs.js";
 import type { ChatIndexEntry } from "../chat-index/types.js";
 import { markRead, getSession } from "../session-store/index.js";
+import { notFound } from "../utils/httpError.js";
 
 interface SessionMeta {
   roleId: string;
@@ -237,7 +238,7 @@ router.get(
         : entries;
       res.json(result);
     } catch {
-      res.status(404).json({ error: "Session not found" });
+      notFound(res, "Session not found");
     }
   },
 );

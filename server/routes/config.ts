@@ -10,6 +10,7 @@ import {
   type AppSettings,
   type McpServerEntry,
 } from "../config.js";
+import { badRequest, serverError } from "../utils/httpError.js";
 
 // Public surface of /api/config. GET returns the full config tree so
 // the client can render every section in one request. PUT surfaces are
@@ -71,16 +72,17 @@ router.put(
   ) => {
     const body = req.body;
     if (!isPutConfigBody(body)) {
-      res.status(400).json({ error: "Invalid config payload" });
+      badRequest(res, "Invalid config payload");
       return;
     }
     let mcpCfg;
     try {
       mcpCfg = fromMcpEntries(body.mcp.servers);
     } catch (err) {
-      res.status(400).json({
-        error: err instanceof Error ? err.message : "invalid mcp entries",
-      });
+      badRequest(
+        res,
+        err instanceof Error ? err.message : "invalid mcp entries",
+      );
       return;
     }
     // Snapshot previous settings so we can roll back if the second
@@ -90,9 +92,10 @@ router.put(
     try {
       saveSettings(body.settings);
     } catch (err) {
-      res.status(500).json({
-        error: err instanceof Error ? err.message : "saveSettings failed",
-      });
+      serverError(
+        res,
+        err instanceof Error ? err.message : "saveSettings failed",
+      );
       return;
     }
     try {
@@ -103,9 +106,10 @@ router.put(
       } catch {
         // If rollback fails too, surface the original mcp error.
       }
-      res.status(500).json({
-        error: err instanceof Error ? err.message : "saveMcpConfig failed",
-      });
+      serverError(
+        res,
+        err instanceof Error ? err.message : "saveMcpConfig failed",
+      );
       return;
     }
     res.json(buildFullResponse());
@@ -120,15 +124,16 @@ router.put(
   ) => {
     const body = req.body;
     if (!isAppSettings(body)) {
-      res.status(400).json({ error: "Invalid AppSettings payload" });
+      badRequest(res, "Invalid AppSettings payload");
       return;
     }
     try {
       saveSettings(body);
     } catch (err) {
-      res.status(500).json({
-        error: err instanceof Error ? err.message : "saveSettings failed",
-      });
+      serverError(
+        res,
+        err instanceof Error ? err.message : "saveSettings failed",
+      );
       return;
     }
     res.json(buildFullResponse());
@@ -143,7 +148,7 @@ router.put(
   ) => {
     const body = req.body;
     if (!isMcpPutBody(body)) {
-      res.status(400).json({ error: "Invalid mcp payload envelope" });
+      badRequest(res, "Invalid mcp payload envelope");
       return;
     }
     // fromMcpEntries rejects malformed client input (400). saveMcpConfig
@@ -152,17 +157,19 @@ router.put(
     try {
       cfg = fromMcpEntries(body.servers);
     } catch (err) {
-      res.status(400).json({
-        error: err instanceof Error ? err.message : "invalid mcp entries",
-      });
+      badRequest(
+        res,
+        err instanceof Error ? err.message : "invalid mcp entries",
+      );
       return;
     }
     try {
       saveMcpConfig(cfg);
     } catch (err) {
-      res.status(500).json({
-        error: err instanceof Error ? err.message : "saveMcpConfig failed",
-      });
+      serverError(
+        res,
+        err instanceof Error ? err.message : "saveMcpConfig failed",
+      );
       return;
     }
     res.json(buildFullResponse());

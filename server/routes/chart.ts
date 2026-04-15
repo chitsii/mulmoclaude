@@ -4,6 +4,7 @@ import path from "path";
 import { workspacePath } from "../workspace.js";
 import { slugify } from "../utils/slug.js";
 import { errorMessage } from "../utils/errors.js";
+import { badRequest, serverError } from "../utils/httpError.js";
 
 const router = Router();
 
@@ -79,15 +80,15 @@ router.post(
     const { document, title } = req.body;
 
     if (!isValidChartDocument(document)) {
-      res.status(400).json({
-        error:
-          "document must be { charts: [{ option: {...}, title?, type? }, ...] } with at least one entry",
-      });
+      badRequest(
+        res,
+        "document must be { charts: [{ option: {...}, title?, type? }, ...] } with at least one entry",
+      );
       return;
     }
 
     if (title !== undefined && typeof title !== "string") {
-      res.status(400).json({ error: "title must be a string when provided" });
+      badRequest(res, "title must be a string when provided");
       return;
     }
 
@@ -112,7 +113,7 @@ router.post(
         data: { document, title, filePath },
       });
     } catch (err) {
-      res.status(500).json({ error: errorMessage(err) });
+      serverError(res, errorMessage(err));
     }
   },
 );

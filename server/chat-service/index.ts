@@ -11,6 +11,7 @@ import {
   connectSession,
 } from "./chat-state.js";
 import { handleCommand } from "./commands.js";
+import { badRequest, notFound } from "../utils/httpError.js";
 
 const router = Router();
 
@@ -48,7 +49,7 @@ router.post(
     const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
 
     if (!text) {
-      res.status(400).json({ error: "text is required" });
+      badRequest(res, "text is required");
       return;
     }
 
@@ -140,7 +141,7 @@ router.post(
         : "";
 
     if (!chatSessionId) {
-      res.status(400).json({ error: "chatSessionId is required" });
+      badRequest(res, "chatSessionId is required");
       return;
     }
 
@@ -150,7 +151,7 @@ router.post(
       chatSessionId,
     );
     if (!updated) {
-      res.status(404).json({ error: "No chat state found for this transport" });
+      notFound(res, "No chat state found for this transport");
       return;
     }
 

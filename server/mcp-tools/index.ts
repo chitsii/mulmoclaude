@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { readXPost, searchX } from "./x.js";
 import { errorMessage } from "../utils/errors.js";
+import { notFound, sendError, serverError } from "../utils/httpError.js";
 
 export interface McpTool {
   definition: {
@@ -50,20 +51,18 @@ mcpToolsRouter.post(
   ) => {
     const tool = toolMap.get(req.params.tool);
     if (!tool) {
-      res.status(404).json({ error: `Unknown MCP tool: ${req.params.tool}` });
+      notFound(res, `Unknown MCP tool: ${req.params.tool}`);
       return;
     }
     if (!isMcpToolEnabled(tool)) {
-      res
-        .status(503)
-        .json({ error: `Tool ${req.params.tool} is not configured.` });
+      sendError(res, 503, `Tool ${req.params.tool} is not configured.`);
       return;
     }
     try {
       const result = await tool.handler(req.body);
       res.json({ result });
     } catch (err) {
-      res.status(500).json({ error: errorMessage(err) });
+      serverError(res, errorMessage(err));
     }
   },
 );

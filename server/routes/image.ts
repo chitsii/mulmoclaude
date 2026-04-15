@@ -5,6 +5,7 @@ import {
   generateGeminiImageFromPrompt,
 } from "../utils/gemini.js";
 import { errorMessage } from "../utils/errors.js";
+import { badRequest, serverError } from "../utils/httpError.js";
 import {
   saveImage,
   overwriteImage,
@@ -79,7 +80,7 @@ async function saveCanvasImage(
     const imagePath = await writeFn(base64);
     res.json({ path: imagePath });
   } catch (err) {
-    res.status(500).json({ error: errorMessage(err) });
+    serverError(res, errorMessage(err));
   }
 }
 
@@ -171,7 +172,7 @@ router.post(
   ) => {
     const { imageData } = req.body;
     if (!imageData) {
-      res.status(400).json({ error: "imageData is required" });
+      badRequest(res, "imageData is required");
       return;
     }
     const base64 = stripDataUri(imageData);
@@ -188,11 +189,11 @@ router.put(
     const relativePath = `images/${req.params.filename}`;
     const { imageData } = req.body;
     if (!imageData || !relativePath) {
-      res.status(400).json({ error: "imageData and path are required" });
+      badRequest(res, "imageData and path are required");
       return;
     }
     if (!isImagePath(relativePath)) {
-      res.status(400).json({ error: "invalid image path" });
+      badRequest(res, "invalid image path");
       return;
     }
     const base64 = stripDataUri(imageData);

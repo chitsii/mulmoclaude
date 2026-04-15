@@ -575,6 +575,7 @@ import {
   validateBeatJSON,
 } from "./helpers";
 import { apiGet, apiPost, apiFetchRaw } from "../../utils/api";
+import { errorMessage } from "../../utils/errors";
 
 interface Beat {
   speaker?: string;
@@ -819,8 +820,7 @@ async function updateBeat(index: number) {
   try {
     beat = JSON.parse(sourceText[index]);
   } catch (err) {
-    beatSaveErrors[index] =
-      `Invalid JSON: ${err instanceof Error ? err.message : String(err)}`;
+    beatSaveErrors[index] = `Invalid JSON: ${errorMessage(err)}`;
     return;
   }
   const prevImage = JSON.stringify(effectiveBeat(index).image);
@@ -990,7 +990,7 @@ async function onBeatDrop(event: DragEvent, index: number) {
       reader.readAsDataURL(file);
     });
   } catch (err) {
-    renderErrors[index] = err instanceof Error ? err.message : String(err);
+    renderErrors[index] = errorMessage(err);
     renderState[index] = "error";
     return;
   }
@@ -1039,7 +1039,7 @@ async function onCharDrop(event: DragEvent, key: string) {
       reader.readAsDataURL(file);
     });
   } catch (err) {
-    charErrors[key] = err instanceof Error ? err.message : String(err);
+    charErrors[key] = errorMessage(err);
     charRenderState[key] = "error";
     return;
   }

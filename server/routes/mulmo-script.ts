@@ -24,6 +24,7 @@ import type { MulmoBeat, MulmoImagePromptMedia } from "@mulmocast/types";
 import { slugify } from "../utils/slug.js";
 import { resolveWithinRoot } from "../utils/fs.js";
 import { errorMessage } from "../utils/errors.js";
+import { badRequest, notFound, serverError } from "../utils/httpError.js";
 import { log } from "../logger/index.js";
 import {
   validateUpdateBeatBody,
@@ -88,7 +89,7 @@ router.post(
     const { script, filename } = req.body;
 
     if (!script || !Array.isArray(script.beats)) {
-      res.status(400).json({ error: "script with beats array is required" });
+      badRequest(res, "script with beats array is required");
       return;
     }
 
@@ -114,7 +115,7 @@ router.post(
   (req: Request<object, object, unknown>, res: Response) => {
     const validation = validateUpdateBeatBody(req.body);
     if (!validation.ok) {
-      res.status(400).json({ error: validation.error });
+      badRequest(res, validation.error);
       return;
     }
     const { filePath, beatIndex, beat } = validation.value;
@@ -127,7 +128,7 @@ router.post(
     );
 
     if (!Array.isArray(script.beats) || beatIndex >= script.beats.length) {
-      res.status(400).json({ error: "Invalid beatIndex" });
+      badRequest(res, "Invalid beatIndex");
       return;
     }
 
@@ -143,7 +144,7 @@ router.post(
   (req: Request<object, object, unknown>, res: Response) => {
     const validation = validateUpdateScriptBody(req.body);
     if (!validation.ok) {
-      res.status(400).json({ error: validation.error });
+      badRequest(res, validation.error);
       return;
     }
     const { filePath, script: updatedScript } = validation.value;
@@ -167,7 +168,7 @@ router.get(
       beatIndexStr !== undefined ? parseInt(beatIndexStr, 10) : undefined;
 
     if (!filePath || beatIndex === undefined || isNaN(beatIndex)) {
-      res.status(400).json({ error: "filePath and beatIndex are required" });
+      badRequest(res, "filePath and beatIndex are required");
       return;
     }
 
@@ -191,7 +192,7 @@ router.get(
     const { filePath } = req.query;
 
     if (!filePath) {
-      res.status(400).json({ error: "filePath is required" });
+      badRequest(res, "filePath is required");
       return;
     }
 
@@ -221,7 +222,7 @@ router.get(
       const relPath = path.relative(workspacePath, outputPath);
       res.json({ moviePath: relPath });
     } catch (err) {
-      res.status(500).json({ error: errorMessage(err) });
+      serverError(res, errorMessage(err));
     }
   },
 );
@@ -247,13 +248,13 @@ function fileToDataUri(filePath: string, mimeType: string): string {
 function resolveStoryPath(filePath: string, res: Response): string | null {
   const storiesReal = ensureStoriesReal();
   if (!storiesReal) {
-    res.status(500).json({ error: "stories directory not available" });
+    serverError(res, "stories directory not available");
     return null;
   }
   // Reject absolute paths and parent traversal at the syntactic
   // level — defense in depth on top of the realpath check below.
   if (path.isAbsolute(filePath)) {
-    res.status(400).json({ error: "Invalid filePath" });
+    badRequest(res, "Invalid filePath");
     return null;
   }
   // Strip the optional "stories/" prefix so the remainder is a path
@@ -273,9 +274,9 @@ function resolveStoryPath(filePath: string, res: Response): string | null {
   if (!resolved) {
     const candidate = path.resolve(storiesReal, relFromStories);
     if (!fs.existsSync(candidate)) {
-      res.status(404).json({ error: `File not found: ${filePath}` });
+      notFound(res, `File not found: ${filePath}`);
     } else {
-      res.status(400).json({ error: "Invalid filePath" });
+      badRequest(res, "Invalid filePath");
     }
     return null;
   }
@@ -351,7 +352,7 @@ export async function withStoryContext(
       if (options.onContextMissing) {
         options.onContextMissing(res);
       } else {
-        res.status(500).json({ error: "Failed to initialize mulmo context" });
+        serverError(res, "Failed to initialize mulmo context");
       }
       return;
     }
@@ -371,7 +372,7 @@ export async function withStoryContext(
     // trigger Express's "Cannot set headers after they are sent"
     // warning and corrupt the on-wire response.
     if (!res.headersSent) {
-      res.status(500).json({ error: errorMessage(err) });
+      serverError(res, errorMessage(err));
     }
   }
 }
@@ -387,7 +388,7 @@ router.get(
       beatIndexStr !== undefined ? parseInt(beatIndexStr, 10) : undefined;
 
     if (!filePath || beatIndex === undefined || isNaN(beatIndex)) {
-      res.status(400).json({ error: "filePath and beatIndex are required" });
+      badRequest(res, "filePath and beatIndex are required");
       return;
     }
 
@@ -433,7 +434,7 @@ router.post(
     const { filePath, beatIndex, force } = req.body;
 
     if (!filePath || beatIndex === undefined) {
-      res.status(400).json({ error: "filePath and beatIndex are required" });
+      badRequest(res, "filePath and beatIndex are required");
       return;
     }
 
@@ -469,7 +470,7 @@ router.post(
               context.studio.beats[beatIndex]?.audioFile,
             ),
           });
-          res.status(500).json({ error: "Audio was not generated" });
+          serverError(res, "Audio was not generated");
           return;
         }
 
@@ -485,7 +486,7 @@ router.post(
     const { filePath, beatIndex, force } = req.body;
 
     if (!filePath || beatIndex === undefined) {
-      res.status(400).json({ error: "filePath and beatIndex are required" });
+      badRequest(res, "filePath and beatIndex are required");
       return;
     }
 
@@ -498,7 +499,7 @@ router.post(
 
       const { imagePath } = getBeatPngImagePath(context, beatIndex);
       if (!fs.existsSync(imagePath)) {
-        res.status(500).json({ error: "Image was not generated" });
+        serverError(res, "Image was not generated");
         return;
       }
       res.json({ image: fileToDataUri(imagePath, "image/png") });
@@ -512,7 +513,7 @@ router.post(
     const { filePath } = req.body;
 
     if (!filePath) {
-      res.status(400).json({ error: "filePath is required" });
+      badRequest(res, "filePath is required");
       return;
     }
 
@@ -613,7 +614,7 @@ router.get(
     const { filePath, key } = req.query;
 
     if (!filePath || !key) {
-      res.status(400).json({ error: "filePath and key are required" });
+      badRequest(res, "filePath and key are required");
       return;
     }
 
@@ -637,9 +638,7 @@ router.post(
     const { filePath, beatIndex, imageData } = req.body;
 
     if (!filePath || beatIndex === undefined || !imageData) {
-      res
-        .status(400)
-        .json({ error: "filePath, beatIndex, and imageData are required" });
+      badRequest(res, "filePath, beatIndex, and imageData are required");
       return;
     }
 
@@ -664,7 +663,7 @@ router.post(
     const { filePath, key, force } = req.body;
 
     if (!filePath || !key) {
-      res.status(400).json({ error: "filePath and key are required" });
+      badRequest(res, "filePath and key are required");
       return;
     }
 
@@ -672,7 +671,7 @@ router.post(
       const images = context.studio.script.imageParams?.images ?? {};
       const imageEntry = images[key];
       if (!imageEntry || imageEntry.type !== "imagePrompt") {
-        res.status(400).json({ error: `No imagePrompt entry for key: ${key}` });
+        badRequest(res, `No imagePrompt entry for key: ${key}`);
         return;
       }
 
@@ -688,7 +687,7 @@ router.post(
         force,
       });
       if (!fs.existsSync(imagePath)) {
-        res.status(500).json({ error: "Character image was not generated" });
+        serverError(res, "Character image was not generated");
         return;
       }
       res.json({ image: fileToDataUri(imagePath, "image/png") });
@@ -705,9 +704,7 @@ router.post(
     const { filePath, key, imageData } = req.body;
 
     if (!filePath || !key || !imageData) {
-      res
-        .status(400)
-        .json({ error: "filePath, key, and imageData are required" });
+      badRequest(res, "filePath, key, and imageData are required");
       return;
     }
 
@@ -728,7 +725,7 @@ router.get("/mulmo-script/download-movie", (req: Request, res: Response) => {
     typeof req.query.moviePath === "string" ? req.query.moviePath : undefined;
 
   if (!moviePath) {
-    res.status(400).json({ error: "moviePath is required" });
+    badRequest(res, "moviePath is required");
     return;
   }
 

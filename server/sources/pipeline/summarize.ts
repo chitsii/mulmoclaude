@@ -13,6 +13,7 @@
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { ClaudeCliNotFoundError } from "../../journal/archivist.js";
+import { errorMessage } from "../../utils/errors.js";
 import type { SourceItem } from "../types.js";
 
 // A function that takes items and returns markdown. The
@@ -101,9 +102,7 @@ export function parseSummarizeOutput(stdout: string): string {
     parsed = JSON.parse(stdout.trim());
   } catch (err) {
     throw new Error(
-      `[sources/summarize] failed to parse claude json: ${
-        err instanceof Error ? err.message : String(err)
-      }`,
+      `[sources/summarize] failed to parse claude json: ${errorMessage(err)}`,
     );
   }
   if (parsed.is_error) {

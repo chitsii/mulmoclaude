@@ -19,6 +19,12 @@ import {
 import type { Skill, SkillSummary } from "../skills/index.js";
 import { workspacePath } from "../workspace.js";
 import { log } from "../logger/index.js";
+import {
+  badRequest,
+  conflict,
+  forbidden,
+  notFound,
+} from "../utils/httpError.js";
 
 const router = Router();
 
@@ -73,7 +79,7 @@ router.get(
     const skills = await discoverSkills({ workspaceRoot: workspacePath });
     const skill = skills.find((s) => s.name === req.params.name);
     if (!skill) {
-      res.status(404).json({ error: `skill not found: ${req.params.name}` });
+      notFound(res, `skill not found: ${req.params.name}`);
       return;
     }
     res.json({ skill });
@@ -88,15 +94,15 @@ router.post(
   ) => {
     const { name, description, body } = req.body ?? {};
     if (typeof name !== "string") {
-      res.status(400).json({ error: "name must be a string" });
+      badRequest(res, "name must be a string");
       return;
     }
     if (typeof description !== "string") {
-      res.status(400).json({ error: "description must be a string" });
+      badRequest(res, "description must be a string");
       return;
     }
     if (typeof body !== "string") {
-      res.status(400).json({ error: "body must be a string" });
+      badRequest(res, "body must be a string");
       return;
     }
     const result = await saveProjectSkill({
@@ -111,21 +117,21 @@ router.post(
       return;
     }
     if (result.kind === "invalid-slug") {
-      res.status(400).json({
-        error: `invalid slug: "${result.slug}". Use lowercase letters, digits, and hyphens (1-64 chars, no leading/trailing hyphen, no consecutive hyphens).`,
-      });
+      badRequest(
+        res,
+        `invalid slug: "${result.slug}". Use lowercase letters, digits, and hyphens (1-64 chars, no leading/trailing hyphen, no consecutive hyphens).`,
+      );
       return;
     }
     if (result.kind === "missing-field") {
-      res
-        .status(400)
-        .json({ error: `${result.field} must be a non-empty string` });
+      badRequest(res, `${result.field} must be a non-empty string`);
       return;
     }
     if (result.kind === "exists") {
-      res.status(409).json({
-        error: `skill already exists: ${result.name}. Choose a different name or delete the existing one first.`,
-      });
+      conflict(
+        res,
+        `skill already exists: ${result.name}. Choose a different name or delete the existing one first.`,
+      );
     }
   },
 );
@@ -146,17 +152,18 @@ router.delete(
       return;
     }
     if (result.kind === "invalid-slug") {
-      res.status(400).json({ error: `invalid slug: "${result.slug}"` });
+      badRequest(res, `invalid slug: "${result.slug}"`);
       return;
     }
     if (result.kind === "user-scope") {
-      res.status(403).json({
-        error: `cannot delete user-scope skill "${result.name}" — only project-scope skills under ~/mulmoclaude/.claude/skills/ are writable from MulmoClaude.`,
-      });
+      forbidden(
+        res,
+        `cannot delete user-scope skill "${result.name}" — only project-scope skills under ~/mulmoclaude/.claude/skills/ are writable from MulmoClaude.`,
+      );
       return;
     }
     if (result.kind === "not-found") {
-      res.status(404).json({ error: `skill not found: ${result.name}` });
+      notFound(res, `skill not found: ${result.name}`);
     }
   },
 );

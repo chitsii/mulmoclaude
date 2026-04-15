@@ -29,6 +29,8 @@
 //   - setAuthToken() populates a module-level token used by every call
 //   - interceptors could go here for logging, retry, metrics
 
+import { errorMessage } from "./errors";
+
 // ── Auth token (populated by bootstrap; consumed by every call) ─────
 
 let authToken: string | null = null;
@@ -156,7 +158,7 @@ export async function apiCall<T = unknown>(
   } catch (err) {
     return {
       ok: false,
-      error: err instanceof Error ? err.message : String(err),
+      error: errorMessage(err),
       status: 0,
     };
   }
@@ -174,7 +176,7 @@ export async function apiCall<T = unknown>(
   } catch (err) {
     return {
       ok: false,
-      error: `Invalid JSON response: ${err instanceof Error ? err.message : String(err)}`,
+      error: `Invalid JSON response: ${errorMessage(err)}`,
       status: res.status,
     };
   }

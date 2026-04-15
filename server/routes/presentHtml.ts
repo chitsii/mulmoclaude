@@ -4,6 +4,7 @@ import path from "path";
 import { workspacePath } from "../workspace.js";
 import { slugify } from "../utils/slug.js";
 import { errorMessage } from "../utils/errors.js";
+import { badRequest, serverError } from "../utils/httpError.js";
 
 const router = Router();
 
@@ -34,7 +35,7 @@ router.post(
   ) => {
     const { html, title } = req.body;
     if (!html) {
-      res.status(400).json({ error: "html is required" });
+      badRequest(res, "html is required");
       return;
     }
 
@@ -53,7 +54,7 @@ router.post(
         data: { html, title, filePath },
       });
     } catch (err) {
-      res.status(500).json({ error: errorMessage(err) });
+      serverError(res, errorMessage(err));
     }
   },
 );
