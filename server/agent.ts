@@ -139,6 +139,7 @@ export async function* runAgent(
   const fullSystemPrompt = buildSystemPrompt({
     role,
     workspacePath: useDocker ? CONTAINER_WORKSPACE_PATH : workspacePath,
+    useDocker,
   });
 
   // In debug mode (--debug), dump the full system prompt on the first
