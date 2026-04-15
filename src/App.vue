@@ -229,6 +229,7 @@
             @compositionstart="onCompositionStart"
             @compositionend="onCompositionEnd"
             @keydown="onTextareaKeydown"
+            @blur="onTextareaBlur"
           />
           <button
             data-testid="send-btn"
@@ -629,36 +630,41 @@ const userInput = ref("");
 const activePane = ref<"sidebar" | "main">("sidebar");
 
 // IME composition tracking. Safari fires `compositionend` BEFORE the
-// confirming Enter's `keydown`, while Chrome keeps `isComposing` true
-// on that Enter keydown. Track composition state and suppress only the
-// immediate post-composition Enter to align behavior across browsers.
+// confirming Enter's `keydown`, so `event.isComposing` is already
+// false on that keydown — the inline `!isComposing` guard let the
+// message send on IME confirmation. Chrome / Firefox fire
+// `compositionend` AFTER the keydown and keep `isComposing` true,
+// so they handle confirmation correctly on their own.
+//
+// We use a tight time window after `compositionend` (30ms) to suppress
+// only the immediately-following keydown — short enough that Safari's
+// synchronous race fits, long enough that human reaction time on a
+// follow-up Enter (>=100ms) never falls inside.
 let isImeComposing = false;
-let suppressNextEnter = false;
+let lastCompositionEndAt = 0;
+const SAFARI_IME_RACE_WINDOW_MS = 30;
 function onCompositionStart() {
   isImeComposing = true;
-  suppressNextEnter = false;
 }
 function onCompositionEnd() {
   isImeComposing = false;
-  suppressNextEnter = true;
+  lastCompositionEndAt = performance.now();
+}
+function onTextareaBlur() {
+  isImeComposing = false;
+  lastCompositionEndAt = 0;
 }
 function onTextareaKeydown(event: KeyboardEvent) {
-  if (event.key !== "Enter") {
-    suppressNextEnter = false;
-    return;
-  }
-  if (event.shiftKey) return;
+  if (event.key !== "Enter" || event.shiftKey) return;
   if (event.isComposing || isImeComposing) {
     event.preventDefault();
     return;
   }
-  if (suppressNextEnter) {
-    suppressNextEnter = false;
+  if (performance.now() - lastCompositionEndAt < SAFARI_IME_RACE_WINDOW_MS) {
     event.preventDefault();
     return;
   }
   event.preventDefault();
-  suppressNextEnter = false;
   sendMessage();
 }
 
