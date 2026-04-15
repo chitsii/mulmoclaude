@@ -170,7 +170,26 @@ export function buildPluginPromptSections(role: Role): string[] {
 export interface SystemPromptParams {
   role: Role;
   workspacePath: string;
+  /** True when the agent runs inside the Dockerfile.sandbox container.
+   *  Controls whether the "Sandbox Tools" hint is emitted — the host
+   *  environment has no such guarantees, so without Docker we stay
+   *  silent. */
+  useDocker: boolean;
 }
+
+// Mirror the tool set installed by Dockerfile.sandbox. Kept here so a
+// prompt-level mention stays in sync with what the image actually
+// ships; if you add/remove a tool there, update this too.
+const SANDBOX_TOOLS_HINT = `## Sandbox Tools
+
+The bash tool runs inside a Docker sandbox. The following tools are guaranteed preinstalled — prefer them over reinventing or searching the filesystem:
+
+- **Core CLI**: \`git\`, \`curl\`, \`jq\`, \`make\`, \`sqlite3\`, \`zip\`, \`unzip\`, \`ripgrep\` (\`rg\`)
+- **Data / plotting**: \`python3\` with \`pandas\`, \`numpy\`, \`matplotlib\`, \`requests\` preinstalled; \`graphviz\` (\`dot\`); \`imagemagick\` (\`convert\`)
+- **Docs / media**: \`pandoc\`, \`ffmpeg\`, \`poppler-utils\` (\`pdftotext\`, \`pdftoppm\`)
+- **Misc**: \`tree\`, \`bc\`, \`less\`
+
+Runtime \`pip install\` / \`apt install\` are not available (no network-installed deps by design). Work within the list above; if something is missing, say so rather than attempting to install it.`;
 
 function buildInlinedHelpFiles(
   rolePrompt: string,
@@ -189,7 +208,7 @@ function buildInlinedHelpFiles(
 }
 
 export function buildSystemPrompt(params: SystemPromptParams): string {
-  const { role, workspacePath } = params;
+  const { role, workspacePath, useDocker } = params;
 
   const memoryContext = buildMemoryContext(workspacePath);
   const wikiContext = buildWikiContext(workspacePath);
@@ -202,6 +221,7 @@ export function buildSystemPrompt(params: SystemPromptParams): string {
     `Workspace directory: ${workspacePath}`,
     `Today's date: ${new Date().toISOString().split("T")[0]}`,
     memoryContext,
+    ...(useDocker ? [SANDBOX_TOOLS_HINT] : []),
     ...(wikiContext ? [wikiContext] : []),
     ...(helpSections.length
       ? [`## Reference Files\n\n${helpSections.join("\n\n")}`]
