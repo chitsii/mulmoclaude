@@ -226,8 +226,9 @@
             rows="2"
             class="flex-1 bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed resize-none"
             :disabled="isRunning"
+            @compositionstart="onCompositionStart"
             @compositionend="onCompositionEnd"
-            @keydown.enter="onTextareaEnter"
+            @keydown="onTextareaKeydown"
           />
           <button
             data-testid="send-btn"
@@ -628,19 +629,36 @@ const userInput = ref("");
 const activePane = ref<"sidebar" | "main">("sidebar");
 
 // IME composition tracking. Safari fires `compositionend` BEFORE the
-// confirming Enter's `keydown`, so by the time the keydown handler
-// runs both `event.isComposing` and a flag set on `compositionend`
-// have already flipped to false. Recording the timestamp lets us
-// suppress the immediately-following Enter without relying on the
-// deprecated `keyCode === 229` check.
-let lastCompositionEndAt = 0;
-function onCompositionEnd() {
-  lastCompositionEndAt = Date.now();
+// confirming Enter's `keydown`, while Chrome keeps `isComposing` true
+// on that Enter keydown. Track composition state and suppress only the
+// immediate post-composition Enter to align behavior across browsers.
+let isImeComposing = false;
+let suppressNextEnter = false;
+function onCompositionStart() {
+  isImeComposing = true;
+  suppressNextEnter = false;
 }
-function onTextareaEnter(event: KeyboardEvent) {
-  if (event.isComposing || event.shiftKey) return;
-  if (Date.now() - lastCompositionEndAt < 200) return;
+function onCompositionEnd() {
+  isImeComposing = false;
+  suppressNextEnter = true;
+}
+function onTextareaKeydown(event: KeyboardEvent) {
+  if (event.key !== "Enter") {
+    suppressNextEnter = false;
+    return;
+  }
+  if (event.shiftKey) return;
+  if (event.isComposing || isImeComposing) {
+    event.preventDefault();
+    return;
+  }
+  if (suppressNextEnter) {
+    suppressNextEnter = false;
+    event.preventDefault();
+    return;
+  }
   event.preventDefault();
+  suppressNextEnter = false;
   sendMessage();
 }
 
