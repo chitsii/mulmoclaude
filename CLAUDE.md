@@ -98,6 +98,7 @@ URL-based navigation via `vue-router` (history mode — clean paths, no `#`). Th
 | `server/utils/` | Shared helpers: `fs.ts`, `errors.ts` |
 | `server/logger/` | Structured logger (console + rotating file + telemetry stub) |
 | `server/csrfGuard.ts` | CSRF origin-check middleware |
+| `src/api-routes.ts` | Central `/api/*` endpoint path constants (shared by server + frontend) |
 | `src/config/roles.ts` | Role definitions |
 | `src/tools/index.ts` | Plugin registry |
 | `src/router/index.ts` | Vue-router setup (history mode, route definitions) |
@@ -118,11 +119,11 @@ Import the canonical `TOOL_DEFINITION` directly — **do not copy or re-type the
 3. `src/config/roles.ts` — add to relevant role's `availablePlugins`
 4. `server/agent.ts` — add to `MCP_PLUGINS`
 
-Route handler goes in `server/routes/plugins.ts`.
+Route handler goes in `server/routes/plugins.ts`. Add the endpoint path to `src/api-routes.ts`.
 
 ### Adding a local plugin (`src/plugins/<name>/`)
 
-Local plugins import Vue components, so `toolDefinition` must be in a **separate file** (`definition.ts`) to allow server-side imports without pulling in Vue. Update **7 places**: `definition.ts`, `index.ts`, `server/routes/<name>.ts`, `server/mcp-server.ts`, `src/tools/index.ts`, `src/config/roles.ts`, `server/agent.ts`.
+Local plugins import Vue components, so `toolDefinition` must be in a **separate file** (`definition.ts`) to allow server-side imports without pulling in Vue. Update **8 places**: `definition.ts`, `index.ts`, `server/routes/<name>.ts`, `server/mcp-server.ts`, `src/tools/index.ts`, `src/config/roles.ts`, `server/agent.ts`, `src/api-routes.ts`.
 
 > If a plugin is in `availablePlugins` but absent from `MCP_PLUGINS` or `ALL_TOOLS`, it will be silently dropped.
 
@@ -142,6 +143,20 @@ router.post("/items/:id", (req: Request, res: Response) => { const x = req.body 
 
 - NEVER cast `req.query` — use `typeof req.query.x === "string" ? req.query.x : undefined`
 - Use type annotation (`const data: MyType = JSON.parse(raw)`) instead of `as` cast
+
+## Centralized Constants
+
+String literals that form cross-module contracts (endpoint paths, event types, tool names, role IDs, pub-sub channels, workspace directory names) MUST be defined once in a shared `as const` module and referenced everywhere else. NEVER introduce a new raw string literal for something that already has a constant.
+
+| What | Source of truth | Pattern |
+|---|---|---|
+| API endpoint paths | `src/api-routes.ts` → `API_ROUTES` | `router.post(API_ROUTES.todos.items, ...)` / `fetch(API_ROUTES.todos.items)` |
+| Workspace directories | `server/workspace-paths.ts` → `WORKSPACE_PATHS` | `path.join(WORKSPACE_PATHS.wiki, "pages")` |
+| Tool names | `src/config/toolNames.ts` → `TOOL_NAMES` / `ToolName` | `availablePlugins: [TOOL_NAMES.manageTodoList, ...]` |
+| Built-in role IDs | `src/config/roles.ts` → `BUILTIN_ROLE_IDS` | `if (roleId === BUILTIN_ROLE_IDS.general)` |
+| Pub-sub channels | `src/config/pubsubChannels.ts` → `sessionChannel()` | `pubsub.publish(sessionChannel(id), event)` |
+
+**Adding a new endpoint**: add the path to `src/api-routes.ts` first, then reference `API_ROUTES.<group>.<name>` from both the router file and the frontend `fetch()` call. Routers register the full `/api/...` path directly (no mount prefix in `server/index.ts`).
 
 ## Cross-platform considerations
 
@@ -195,6 +210,11 @@ Key shared helpers in this repo:
 
 | Helper | Location |
 |---|---|
+| `API_ROUTES` | `src/api-routes.ts` |
+| `WORKSPACE_PATHS` / `WORKSPACE_DIRS` | `server/workspace-paths.ts` |
+| `TOOL_NAMES` / `ToolName` | `src/config/toolNames.ts` |
+| `BUILTIN_ROLE_IDS` / `BuiltInRoleId` | `src/config/roles.ts` |
+| `PUBSUB_CHANNELS` / `sessionChannel()` | `src/config/pubsubChannels.ts` |
 | `resolveWithinRoot(root, relPath)` | `server/utils/fs.ts` |
 | `errorMessage(err)` | `server/utils/errors.ts` |
 | `statSafe` / `readDirSafe` | `server/utils/fs.ts` |
