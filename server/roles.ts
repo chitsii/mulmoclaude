@@ -1,9 +1,9 @@
 import path from "path";
 import fs from "fs";
-import os from "os";
 import { BUILTIN_ROLES, RoleSchema, type Role } from "../src/config/roles.js";
+import { WORKSPACE_PATHS } from "./workspace-paths.js";
 
-const rolesDir = path.join(os.homedir(), "mulmoclaude", "roles");
+const rolesDir = WORKSPACE_PATHS.roles;
 
 function withSwitchRole(role: Role): Role {
   if (role.availablePlugins.includes("switchRole")) return role;

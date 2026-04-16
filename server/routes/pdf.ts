@@ -6,6 +6,7 @@ import puppeteer from "puppeteer";
 import { errorMessage } from "../utils/errors.js";
 import { badRequest, serverError } from "../utils/httpError.js";
 import { workspacePath } from "../workspace.js";
+import { WORKSPACE_DIRS } from "../workspace-paths.js";
 import { resolveWithinRoot } from "../utils/fs.js";
 import { log } from "../logger/index.js";
 import { API_ROUTES } from "../../src/config/apiRoutes.js";
@@ -59,15 +60,15 @@ const workspaceReal = fs.realpathSync(workspacePath);
 
 /**
  * Inline local images as base64 data URIs so Puppeteer can render them.
- * Markdown files live in workspace/markdowns/ and reference images as
- * "../images/xyz.png" → workspace/images/xyz.png.
+ * Markdown files live in workspace/artifacts/documents/ and reference
+ * images as "../images/xyz.png" → workspace/artifacts/images/xyz.png.
  *
  * Paths are validated against the workspace root via resolveWithinRoot
  * so an attacker-controlled <img src="../../../etc/passwd"> can't read
  * files outside the workspace.
  */
 function inlineImages(html: string): string {
-  const baseDir = path.join(workspaceReal, "markdowns");
+  const baseDir = path.join(workspaceReal, WORKSPACE_DIRS.markdowns);
   return html.replace(
     /(<img\s[^>]*src=")([^"]+)(")/g,
     (_match, before: string, src: string, after: string) => {

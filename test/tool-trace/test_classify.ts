@@ -11,11 +11,11 @@ describe("classifyToolResult — WebSearch", () => {
       toolName: "WebSearch",
       args: { query: "foo" },
       content: "irrelevant",
-      searchContentRef: "searches/2026-04-13/foo-abc.md",
+      searchContentRef: "conversations/searches/2026-04-13/foo-abc.md",
     });
     assert.deepEqual(c, {
       kind: "pointer",
-      contentRef: "searches/2026-04-13/foo-abc.md",
+      contentRef: "conversations/searches/2026-04-13/foo-abc.md",
     });
   });
 

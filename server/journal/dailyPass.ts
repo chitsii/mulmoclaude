@@ -11,6 +11,7 @@
 import fsp from "node:fs/promises";
 import path from "node:path";
 import { workspacePath as defaultWorkspacePath } from "../workspace.js";
+import { WORKSPACE_DIRS } from "../workspace-paths.js";
 import {
   type Summarize,
   type SessionExcerpt,
@@ -80,7 +81,7 @@ export async function runDailyPass(
   deps: DailyPassDeps,
 ): Promise<{ nextState: JournalState; result: DailyPassResult }> {
   const workspaceRoot = deps.workspaceRoot ?? defaultWorkspacePath;
-  const chatDir = path.join(workspaceRoot, "chat");
+  const chatDir = path.join(workspaceRoot, WORKSPACE_DIRS.chat);
   const result: DailyPassResult = {
     daysTouched: [],
     sessionsIngested: [],
@@ -263,7 +264,13 @@ async function writeDailySummaryForDate(
   // into true-relative links from the daily summary's location
   // before writing to disk. Same treatment below for topic files.
   const [yearPart, monthPart, dayPart] = date.split("-");
-  const dailyFileWsPath = `summaries/daily/${yearPart}/${monthPart}/${dayPart}.md`;
+  const dailyFileWsPath = path.posix.join(
+    WORKSPACE_DIRS.summaries,
+    "daily",
+    yearPart,
+    monthPart,
+    `${dayPart}.md`,
+  );
   const content = rewriteWorkspaceLinks(dailyFileWsPath, rawMarkdown);
   await writeDailySummary(workspaceRoot, date, content);
 }
@@ -390,7 +397,7 @@ export function normalizeTopicAction(
   const canonicalSlug = slugify(update.slug);
   const exists = existingTopics.some((t) => t.slug === canonicalSlug);
   const topicFileWsPath = path.posix.join(
-    "summaries",
+    WORKSPACE_DIRS.summaries,
     "topics",
     `${canonicalSlug}.md`,
   );

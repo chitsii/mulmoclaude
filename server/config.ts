@@ -1,9 +1,9 @@
 // Workspace-scoped user settings, loaded fresh on every agent
 // invocation so the UI can change things without a server restart.
 //
-// Layout under <workspace>/configs/:
+// Layout under <workspace>/config/ (post-#284):
 //   settings.json   ← AppSettings (this file)
-//   mcp.json        ← Phase 2 (not yet read by runtime)
+//   mcp.json        ← user-defined MCP servers
 //
 // All helpers tolerate missing / malformed files by falling back to
 // defaults. Writers perform an atomic replace (tmp + rename) so a
@@ -12,7 +12,7 @@
 import fs from "fs";
 import path from "path";
 import { log } from "./logger/index.js";
-import { workspacePath } from "./workspace.js";
+import { WORKSPACE_PATHS } from "./workspace-paths.js";
 
 export interface AppSettings {
   // Extra tool names appended to BASE_ALLOWED_TOOLS in
@@ -25,12 +25,11 @@ export interface AppSettings {
 
 const DEFAULT_SETTINGS: AppSettings = { extraAllowedTools: [] };
 
-export const CONFIGS_DIR_NAME = "configs";
 export const SETTINGS_FILE_NAME = "settings.json";
 export const MCP_FILE_NAME = "mcp.json";
 
 export function configsDir(): string {
-  return path.join(workspacePath, CONFIGS_DIR_NAME);
+  return WORKSPACE_PATHS.configs;
 }
 
 export function settingsPath(): string {
@@ -113,7 +112,7 @@ export function saveSettings(settings: AppSettings): void {
 
 // ── MCP user-defined servers ────────────────────────────────────
 //
-// Stored under <workspace>/configs/mcp.json in the Claude CLI's
+// Stored under <workspace>/config/mcp.json in the Claude CLI's
 // standard `--mcp-config` shape so the file is portable:
 //   { "mcpServers": { "<id>": <McpServerSpec> } }
 //

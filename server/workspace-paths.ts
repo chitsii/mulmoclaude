@@ -1,14 +1,21 @@
 // Single source of truth for workspace directory / file names and
-// their absolute paths. Before this module, ~15 call sites each
-// wrote `path.join(workspacePath, "wiki")` / "markdowns" / etc. by
-// hand — renaming a directory meant grep-and-edit across the
-// server, with no typecheck help against typos.
+// their absolute paths. The record below uses workspace-relative
+// paths (possibly multi-segment, e.g. `config/roles`) as values; code
+// looks up via `WORKSPACE_PATHS.<key>` to get the absolute form.
 //
-// **This module does not change any paths.** Every name here is
-// the string that was previously baked into its call site, so
-// centralizing is a pure source-level refactor — no files move.
-// The layout rethink + migration that issue #284 proposes will
-// happen on top of this, by re-mapping the values below.
+// Layout grouping (issue #284):
+//
+//   config/          settings + roles + helps
+//   conversations/   chat + memory.md + summaries
+//   data/            user-managed (wiki, todos, calendar, contacts,
+//                    scheduler, sources, transports)
+//   artifacts/       LLM-generated (charts, html, images, documents,
+//                    spreadsheets, stories, news)
+//
+// Existing workspaces need the one-shot `scripts/migrate-workspace-284.ts`
+// script run before first startup with this code. `server/workspace.ts`
+// detects the pre-migration layout at boot and aborts with a pointer
+// to the script.
 //
 // When adding a new top-level directory: add the name to the
 // `WORKSPACE_DIRS` record below. The absolute path is derived
@@ -24,40 +31,61 @@ import path from "path";
 // callers that `import { workspacePath } from "./workspace.js"`.
 export const workspacePath = path.join(os.homedir(), "mulmoclaude");
 
-// Top-level directory *names*. Use these when you need the bare
-// name (e.g. a relative path in a response envelope): most code
-// should reach for `WORKSPACE_PATHS` instead.
+// Workspace-relative paths. Keys are the stable code-side identifiers
+// (e.g. `markdowns` — unchanged for call-site compatibility); values
+// are the on-disk paths, grouped per issue #284.
 export const WORKSPACE_DIRS = {
-  chat: "chat",
-  todos: "todos",
-  calendar: "calendar",
-  contacts: "contacts",
-  scheduler: "scheduler",
-  roles: "roles",
-  stories: "stories",
-  images: "images",
-  markdowns: "markdowns",
-  spreadsheets: "spreadsheets",
-  charts: "charts",
-  configs: "configs",
-  helps: "helps",
-  wiki: "wiki",
-  news: "news",
-  sources: "sources",
-  summaries: "summaries",
-  // presentHtml plugin writes here. Note the legacy capitalization
-  // — issue #284 will consider normalizing to lower-case `html/`.
-  htmls: "HTMLs",
-  // Distinct from `htmls` above: transient render output by the
-  // raw `html` route (server/routes/html.ts). Co-exists with
-  // `HTMLs/` on disk today.
-  html: "html",
-  transports: "transports",
+  // conversations/
+  chat: "conversations/chat",
+  summaries: "conversations/summaries",
+  // Tool-trace output for WebSearch (one .md per search, referenced
+  // from chat JSONL `contentRef`). Lives alongside chat/ so search
+  // trace and chat session share the same grouping.
+  searches: "conversations/searches",
+  // data/
+  wiki: "data/wiki",
+  todos: "data/todos",
+  calendar: "data/calendar",
+  contacts: "data/contacts",
+  scheduler: "data/scheduler",
+  sources: "data/sources",
+  transports: "data/transports",
+  // artifacts/
+  charts: "artifacts/charts",
+  // `markdowns` key preserved for call-site compatibility; on-disk
+  // name is `documents` for clarity.
+  markdowns: "artifacts/documents",
+  // `htmls` = `presentHtml` plugin output (many files, persistent).
+  // On-disk normalized to lowercase `html`.
+  htmls: "artifacts/html",
+  // Distinct from `htmls`: scratch buffer for the `/api/html`
+  // generate-and-preview route. One file (`current.html`), always
+  // overwritten. Kept separate so reloading a saved HTML artifact
+  // doesn't clobber the current preview.
+  html: "artifacts/html-scratch",
+  images: "artifacts/images",
+  spreadsheets: "artifacts/spreadsheets",
+  stories: "artifacts/stories",
+  news: "artifacts/news",
+  // config/
+  configs: "config",
+  roles: "config/roles",
+  helps: "config/helps",
+  // Nested subdirs inside a top-level grouping. Kept here (rather
+  // than module-local constants) when multiple modules need to
+  // reference the same nested path — e.g. wiki/pages/ is used by
+  // the wiki route, the wiki-backlinks driver, and the system
+  // prompt hint.
+  wikiPages: "data/wiki/pages",
+  wikiSources: "data/wiki/sources",
 } as const;
 
-// File names at the workspace root (not under a subdirectory).
+// Well-known individual files. Values are workspace-relative paths.
+// Grouped alongside `WORKSPACE_DIRS` so cross-module callers use a
+// single source of truth (a rename needs one-file change here, not
+// a grep across server / tests).
 export const WORKSPACE_FILES = {
-  memory: "memory.md",
+  memory: "conversations/memory.md",
   // Bearer auth token (#272). Written at server startup, mode 0600, read
   // by the Vite plugin (dev) / Express HTML serve (prod) to inject into
   // the `<meta name="mulmoclaude-auth">` tag, and by CLI bridges
@@ -65,6 +93,23 @@ export const WORKSPACE_FILES = {
   // shutdown; stale files after a crash are harmless since the next
   // startup regenerates and the in-memory token is the only one checked.
   sessionToken: ".session-token",
+  // Wiki metadata. Consumed by `server/routes/wiki.ts` (the API) and
+  // `server/agent/prompt.ts` (the system-prompt hint) — keep them
+  // here so a rename hits both.
+  wikiIndex: "data/wiki/index.md",
+  wikiLog: "data/wiki/log.md",
+  wikiSchema: "data/wiki/SCHEMA.md",
+  wikiSummary: "data/wiki/summary.md",
+  // Journal index for the summaries/ grouping. Read by the system
+  // prompt's `prependJournalPointer` to decide whether the journal
+  // is bootstrapped yet.
+  summariesIndex: "conversations/summaries/_index.md",
+  // Plugin data files. Currently each is written by one module, but
+  // name-here-so-future-consumers-can-import (tests, CLI tools,
+  // migration scripts).
+  todosItems: "data/todos/todos.json",
+  todosColumns: "data/todos/columns.json",
+  schedulerItems: "data/scheduler/items.json",
 } as const;
 
 // Absolute paths, built once at module load from `workspacePath`.
@@ -89,11 +134,24 @@ export const WORKSPACE_PATHS = {
   news: path.join(workspacePath, WORKSPACE_DIRS.news),
   sources: path.join(workspacePath, WORKSPACE_DIRS.sources),
   summaries: path.join(workspacePath, WORKSPACE_DIRS.summaries),
+  searches: path.join(workspacePath, WORKSPACE_DIRS.searches),
   htmls: path.join(workspacePath, WORKSPACE_DIRS.htmls),
   html: path.join(workspacePath, WORKSPACE_DIRS.html),
   transports: path.join(workspacePath, WORKSPACE_DIRS.transports),
+  // nested subdirs
+  wikiPages: path.join(workspacePath, WORKSPACE_DIRS.wikiPages),
+  wikiSources: path.join(workspacePath, WORKSPACE_DIRS.wikiSources),
+  // files
   memory: path.join(workspacePath, WORKSPACE_FILES.memory),
   sessionToken: path.join(workspacePath, WORKSPACE_FILES.sessionToken),
+  wikiIndex: path.join(workspacePath, WORKSPACE_FILES.wikiIndex),
+  wikiLog: path.join(workspacePath, WORKSPACE_FILES.wikiLog),
+  wikiSchema: path.join(workspacePath, WORKSPACE_FILES.wikiSchema),
+  wikiSummary: path.join(workspacePath, WORKSPACE_FILES.wikiSummary),
+  summariesIndex: path.join(workspacePath, WORKSPACE_FILES.summariesIndex),
+  todosItems: path.join(workspacePath, WORKSPACE_FILES.todosItems),
+  todosColumns: path.join(workspacePath, WORKSPACE_FILES.todosColumns),
+  schedulerItems: path.join(workspacePath, WORKSPACE_FILES.schedulerItems),
 } as const;
 
 export type WorkspaceDirKey = keyof typeof WORKSPACE_DIRS;

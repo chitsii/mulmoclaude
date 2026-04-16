@@ -54,7 +54,7 @@ export async function maybeAppendWikiBacklinks(
   if (!opts.chatSessionId) return;
   const workspaceRoot = opts.workspaceRoot ?? defaultWorkspacePath;
   const deps: WikiBacklinksDeps = { ...defaultDeps, ...(opts.deps ?? {}) };
-  const pagesDir = path.join(workspaceRoot, WORKSPACE_DIRS.wiki, "pages");
+  const pagesDir = path.join(workspaceRoot, WORKSPACE_DIRS.wikiPages);
 
   const files = await listPageFiles(pagesDir, deps);
   if (files.length === 0) return;
@@ -98,7 +98,22 @@ async function processOneFile(
     if (st.mtimeMs < mtimeThreshold) return;
 
     const content = await deps.readFile(fullPath);
-    const linkHref = `../../chat/${sessionId}.jsonl`;
+    // Compute the relative path from the wiki page's directory to
+    // the chat jsonl. Layout grouped both under `data/wiki/pages/`
+    // and `conversations/chat/` post-#284, so the href is no longer
+    // a fixed `../../chat/…` — derive from the constants.
+    const workspaceRoot = path.resolve(pagesDir, "..", "..", "..");
+    const chatFileAbs = path.join(
+      workspaceRoot,
+      WORKSPACE_DIRS.chat,
+      `${sessionId}.jsonl`,
+    );
+    // Markdown link targets are URL-ish and must use forward slashes
+    // even on Windows, where `path.relative` returns backslashes.
+    const linkHref = path
+      .relative(path.dirname(fullPath), chatFileAbs)
+      .split(path.sep)
+      .join("/");
     const updated = updateSessionBacklinks(content, sessionId, linkHref);
     if (updated === content) return;
 

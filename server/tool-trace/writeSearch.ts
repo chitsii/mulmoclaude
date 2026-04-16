@@ -1,6 +1,6 @@
 // Saves WebSearch results as a durable markdown file under
-// `workspace/searches/YYYY-MM-DD/<slug>-<hash>.md` and returns the
-// workspace-relative path for use as a jsonl `contentRef`.
+// `workspace/conversations/searches/YYYY-MM-DD/<slug>-<hash>.md` and
+// returns the workspace-relative path for use as a jsonl `contentRef`.
 //
 // The pure helpers (slug / hash / path / content template) are
 // exported for unit tests; the side-effecting function at the end is
@@ -10,8 +10,9 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { slugify } from "../utils/slug.js";
+import { WORKSPACE_DIRS } from "../workspace-paths.js";
 
-export const SEARCHES_DIR = "searches";
+export const SEARCHES_DIR = WORKSPACE_DIRS.searches;
 const SEARCH_HASH_LEN = 8;
 const MAX_QUERY_SLUG_CHARS = 40;
 
@@ -39,8 +40,8 @@ export interface SearchPathInputs {
   ts: Date;
 }
 
-// Returns the workspace-relative path (POSIX slashes) where the
-// search file should live, e.g. "searches/2026-04-13/foo-abc12345.md".
+// Returns the workspace-relative path (POSIX slashes) where the search
+// file should live, e.g. "conversations/searches/2026-04-13/foo-abc12345.md".
 export function computeSearchRelPath(inputs: SearchPathInputs): string {
   const slug = slugify(inputs.query, "search", MAX_QUERY_SLUG_CHARS);
   const hash = computeSearchHash(inputs.query, inputs.sessionId, inputs.ts);
