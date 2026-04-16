@@ -1,26 +1,32 @@
 // @package-contract — see ./types.ts
 //
 // Factory for the transport chat bridge. `createChatService(deps)`
-// returns an Express `Router` (HTTP transport, mounted via
-// `app.use`), an `attachSocket(httpServer)` helper (socket.io
-// transport, see #268 Phase A), and the shared `relay` function
-// both transports dispatch through. All host-app dependencies
-// arrive via `deps`; the module has no direct imports from
-// `../routes/…`, `../roles.js`, `../session-store/…`, or
-// `../logger/…` so it can be lifted into a standalone npm package
-// without internal edits. See #269 / #305 for the packaging
-// rationale.
+// returns:
+//   - an Express `Router` for the legacy HTTP transport
+//   - an `attachSocket(httpServer)` helper that mounts the socket.io
+//     transport at `/ws/chat` (Phase A of #268)
+//   - the shared `relay` function both transports dispatch through
+//   - `pushToBridge(transportId, chatId, message)` for server→bridge
+//     async push (Phase B of #268). Before `attachSocket` is called
+//     pushes go straight to the in-memory queue; once a bridge is
+//     connected they emit live and the queue drains on join.
+//
+// All host-app dependencies arrive via `deps`; the module has no
+// direct imports from `../routes/…`, `../roles.js`,
+// `../session-store/…`, or `../logger/…` so it can be lifted into a
+// standalone npm package without internal edits. See #269 / #305.
 
 import type http from "http";
 import { Router } from "express";
 import type { Request, Response } from "express";
-import type { Server as SocketServer } from "socket.io";
 import { API_ROUTES } from "../../src/config/apiRoutes.js";
 import { createChatStateStore } from "./chat-state.js";
 import { createCommandHandler } from "./commands.js";
 import { createRelay } from "./relay.js";
 import type { RelayFn } from "./relay.js";
+import { createPushQueue } from "./push-queue.js";
 import { attachChatSocket } from "./socket.js";
+import type { PushFn } from "./socket.js";
 import type { ChatServiceDeps } from "./types.js";
 
 // ── Types ────────────────────────────────────────────────────
@@ -49,7 +55,11 @@ export interface ChatService {
    *  or tests can share the same flow without going through HTTP. */
   relay: RelayFn;
   /** Mount the socket.io transport at `/ws/chat` on the host HTTP server. */
-  attachSocket(httpServer: http.Server): SocketServer;
+  attachSocket(httpServer: http.Server): void;
+  /** Server → bridge async push (Phase B of #268). Safe to call
+   *  before `attachSocket`: the message is queued and flushes on
+   *  the next bridge connection for that transport. */
+  pushToBridge: PushFn;
 }
 
 // Inlined (not imported from `../utils/httpError.js`) so the module
@@ -90,6 +100,27 @@ export function createChatService(deps: ChatServiceDeps): ChatService {
     defaultRoleId,
     logger,
   });
+  const queue = createPushQueue();
+
+  // Until `attachSocket` runs, `livePush` is null and pushes go
+  // straight to the queue. After attach, this reference flips to
+  // the real emitter so live bridges get the message immediately.
+  // The queue is shared with the socket layer so any pushes
+  // enqueued during the pre-attach window flush on first connect.
+  let livePush: PushFn | null = null;
+
+  const pushToBridge: PushFn = (transportId, chatId, message) => {
+    if (livePush) {
+      livePush(transportId, chatId, message);
+      return;
+    }
+    queue.enqueue(transportId, { chatId, message, enqueuedAt: Date.now() });
+    logger.info("chat-service", "push queued (socket not attached yet)", {
+      transportId,
+      chatId,
+      queueSize: queue.sizeFor(transportId),
+    });
+  };
 
   const router = Router();
 
@@ -155,8 +186,16 @@ export function createChatService(deps: ChatServiceDeps): ChatService {
   return {
     router,
     relay,
-    attachSocket: (httpServer) =>
-      attachChatSocket(httpServer, { relay, logger, tokenProvider }),
+    attachSocket: (httpServer) => {
+      const handle = attachChatSocket(httpServer, {
+        relay,
+        queue,
+        logger,
+        tokenProvider,
+      });
+      livePush = handle.pushToBridge;
+    },
+    pushToBridge,
   };
 }
 

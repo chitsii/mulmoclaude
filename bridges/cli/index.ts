@@ -37,6 +37,11 @@ function connect(token: string): Socket {
   });
 }
 
+interface PushEvent {
+  chatId: string;
+  message: string;
+}
+
 function installSocketLogging(socket: Socket): void {
   socket.on("connect", () => {
     console.log(`Connected (${socket.id}).`);
@@ -59,6 +64,13 @@ function installSocketLogging(socket: Socket): void {
       return;
     }
     console.error(`\nConnect error: ${msg}`);
+  });
+  // Server→bridge async push (Phase B of #268). Real bridges route
+  // the message into their platform's send API (Telegram
+  // sendMessage etc.); the CLI prints it so the human operator can
+  // see scheduled / event-driven messages arrive.
+  socket.on("push", (event: PushEvent) => {
+    console.log(`\n[push] ${event.chatId}: ${event.message}\n`);
   });
 }
 
