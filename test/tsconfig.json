@@ -25,6 +25,11 @@
     // compiler.
     "jsx": "preserve"
   },
-  "include": ["**/*.ts", "../src/**/*.ts", "../server/**/*.ts", "../bridges/**/*.ts"],
+  "include": [
+    "**/*.ts",
+    "../src/**/*.ts",
+    "../server/**/*.ts",
+    "../bridges/**/*.ts"
+  ],
   "exclude": ["../node_modules", "../dist"]
 }
