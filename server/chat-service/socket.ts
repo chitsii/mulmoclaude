@@ -1,41 +1,80 @@
 // @package-contract — see ./types.ts
 //
-// Socket.io transport for the bridge chat flow (Phase A of #268).
-// Sits next to the HTTP router at path `/ws/chat`. DI-pure — it
-// takes a `RelayFn`, a logger, and an optional bearer-token
-// validator through the factory so the package has no direct
-// imports from the host app.
+// Socket.io transport for the bridge chat flow.
 //
-// Client contract:
+// Phase A (#268) — bridge → server req/res:
 //   handshake.auth: { transportId: string; token?: string }
 //   emit("message", { externalChatId, text }, ack)
 //     ack receives { ok: true, reply }
 //                 | { ok: false, error, status? }
 //
-// Auth: when `tokenProvider` is supplied, the handshake is rejected
-// unless `auth.token` equals `tokenProvider()`. When it's omitted
-// (tests, unauth environments), the handshake is not checked for
-// auth — only `transportId` validation runs.
+// Phase B (#268) — server → bridge async push:
+//   Each connected bridge joins room `bridge:${transportId}`.
+//   Server emits `push` { chatId, message } to that room via the
+//   `pushToBridge(transportId, chatId, message)` helper this module
+//   returns. If no sockets are in the room at push time, the
+//   message goes to an in-memory queue; the next socket that joins
+//   the room drains its transport's queue on connect.
 //
-// Future phases (see plans/feat-chat-socketio.md):
-//   B — server→bridge push via rooms (#263)
+// Auth: when `tokenProvider` is supplied, the handshake is rejected
+// unless `auth.token` equals `tokenProvider()`. When omitted (tests,
+// unauth environments) only `transportId` is validated.
+//
+// Future phases:
 //   C — streaming text chunks via `reply.chunk`
 //   D — HTTP endpoint deprecation
+//
+// See plans/feat-chat-socketio.md and plans/feat-chat-socketio-phase-b.md.
 
 import type http from "http";
 import { Server as SocketServer } from "socket.io";
 import type { Socket } from "socket.io";
 import type { RelayFn } from "./relay.js";
+import type { PushQueue } from "./push-queue.js";
 import type { Logger } from "./types.js";
 
 export const CHAT_SOCKET_PATH = "/ws/chat";
 
+/**
+ * Custom socket.io events the chat transport defines. Keys mirror
+ * values so grep-and-rename is safe; the union type is what every
+ * on/emit site should reference instead of raw string literals.
+ * Socket.io built-ins (`connect`, `disconnect`, `connect_error`) are
+ * intentionally omitted — those are part of socket.io's own contract,
+ * not ours to rename.
+ */
+export const CHAT_SOCKET_EVENTS = {
+  /** bridge → server request (body: `{ externalChatId, text }`); ack
+   *  carries `{ ok, reply, error?, status? }`. */
+  message: "message",
+  /** server → bridge async push (Phase B of #268); body:
+   *  `{ chatId, message }`. */
+  push: "push",
+} as const;
+export type ChatSocketEvent =
+  (typeof CHAT_SOCKET_EVENTS)[keyof typeof CHAT_SOCKET_EVENTS];
+
+export type PushFn = (
+  transportId: string,
+  chatId: string,
+  message: string,
+) => void;
+
 export interface ChatSocketDeps {
   relay: RelayFn;
+  queue: PushQueue;
   logger: Logger;
   /** Current bearer token the handshake must carry. Null means
    *  bootstrap in progress — reject everything. Omit to disable. */
   tokenProvider?: () => string | null;
+}
+
+export interface ChatSocketHandle {
+  io: SocketServer;
+  /** Fire-and-forget push to every bridge in `bridge:${transportId}`.
+   *  If none are connected, the message is queued for the next
+   *  joiner. */
+  pushToBridge: PushFn;
 }
 
 interface HandshakeAuth {
@@ -60,11 +99,15 @@ type HandshakeResult =
   | { ok: true; transportId: string }
   | { ok: false; error: string };
 
+export function bridgeRoom(transportId: string): string {
+  return `bridge:${transportId}`;
+}
+
 export function attachChatSocket(
   server: http.Server,
   deps: ChatSocketDeps,
-): SocketServer {
-  const { relay, logger, tokenProvider } = deps;
+): ChatSocketHandle {
+  const { relay, queue, logger, tokenProvider } = deps;
 
   const io = new SocketServer(server, {
     path: CHAT_SOCKET_PATH,
@@ -85,6 +128,28 @@ export function attachChatSocket(
 
   io.on("connection", (socket: Socket) => {
     const transportId: string = socket.data.transportId;
+    const room = bridgeRoom(transportId);
+    socket.join(room);
+
+    // Flush any messages queued while this transport had no live
+    // socket. Emit only to *this* socket, not the room, so a
+    // second bridge joining seconds later doesn't re-receive the
+    // already-drained messages.
+    const queued = queue.drainFor(transportId);
+    if (queued.length > 0) {
+      logger.info("chat-service", "flushing push queue", {
+        socketId: socket.id,
+        transportId,
+        count: queued.length,
+      });
+      for (const item of queued) {
+        socket.emit(CHAT_SOCKET_EVENTS.push, {
+          chatId: item.chatId,
+          message: item.message,
+        });
+      }
+    }
+
     logger.info("chat-service", "socket connected", {
       socketId: socket.id,
       transportId,
@@ -99,7 +164,7 @@ export function attachChatSocket(
     });
 
     socket.on(
-      "message",
+      CHAT_SOCKET_EVENTS.message,
       async (payload: MessagePayload, ack?: (reply: MessageAck) => void) => {
         if (typeof ack !== "function") {
           logger.warn("chat-service", "socket message missing ack", {
@@ -130,7 +195,26 @@ export function attachChatSocket(
     );
   });
 
-  return io;
+  const pushToBridge: PushFn = (transportId, chatId, message) => {
+    const room = bridgeRoom(transportId);
+    // `io.sockets.adapter.rooms` is the authoritative view of which
+    // rooms have members right now. Using it here (vs. a separate
+    // membership counter we'd have to maintain) keeps us honest
+    // about what socket.io actually knows.
+    const hasLive = (io.sockets.adapter.rooms.get(room)?.size ?? 0) > 0;
+    if (hasLive) {
+      io.to(room).emit(CHAT_SOCKET_EVENTS.push, { chatId, message });
+      return;
+    }
+    queue.enqueue(transportId, { chatId, message, enqueuedAt: Date.now() });
+    logger.info("chat-service", "push queued (no live bridge)", {
+      transportId,
+      chatId,
+      queueSize: queue.sizeFor(transportId),
+    });
+  };
+
+  return { io, pushToBridge };
 }
 
 function validateHandshake(

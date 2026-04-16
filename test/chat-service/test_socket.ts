@@ -6,8 +6,10 @@ import { io as ioClient, Socket as ClientSocket } from "socket.io-client";
 import { Server as SocketServer } from "socket.io";
 import {
   attachChatSocket,
+  CHAT_SOCKET_EVENTS,
   CHAT_SOCKET_PATH,
 } from "../../server/chat-service/socket.ts";
+import { createPushQueue } from "../../server/chat-service/push-queue.ts";
 import type {
   RelayParams,
   RelayResult,
@@ -39,11 +41,12 @@ async function startHarness(opts: HarnessOpts = {}): Promise<Harness> {
   const relayCalls: RelayParams[] = [];
   let nextResult: RelayResult = { kind: "ok", reply: "default" };
 
-  const io = attachChatSocket(httpServer, {
+  const { io } = attachChatSocket(httpServer, {
     relay: async (params) => {
       relayCalls.push(params);
       return nextResult;
     },
+    queue: createPushQueue(),
     logger: silentLogger,
     tokenProvider: opts.tokenProvider,
   });
@@ -98,7 +101,7 @@ function emitMessage(
   payload: unknown,
 ): Promise<{ ok: boolean; reply?: string; error?: string; status?: number }> {
   return new Promise((resolve) => {
-    client.emit("message", payload, resolve);
+    client.emit(CHAT_SOCKET_EVENTS.message, payload, resolve);
   });
 }
 
