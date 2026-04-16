@@ -8,6 +8,7 @@ import { readManifest } from "../chat-index/indexer.js";
 import { resolveWithinRoot } from "../utils/fs.js";
 import type { ChatIndexEntry } from "../chat-index/types.js";
 import { markRead, getSession } from "../session-store/index.js";
+import { notFound } from "../utils/httpError.js";
 import { API_ROUTES } from "../../src/config/apiRoutes.js";
 import { EVENT_TYPES } from "../../src/types/events.js";
 import { env } from "../env.js";
@@ -240,7 +241,7 @@ router.get(
         : entries;
       res.json(result);
     } catch {
-      res.status(404).json({ error: "Session not found" });
+      notFound(res, "Session not found");
     }
   },
 );

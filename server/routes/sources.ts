@@ -40,6 +40,12 @@ import {
   type FetcherParams,
 } from "../sources/types.js";
 import { normalizeCategories, type CategorySlug } from "../sources/taxonomy.js";
+import {
+  badRequest,
+  conflict,
+  sendError,
+  serverError,
+} from "../utils/httpError.js";
 import { API_ROUTES } from "../../src/config/apiRoutes.js";
 
 const router = Router();
@@ -68,9 +74,7 @@ router.get(
       res.json({ sources });
     } catch (err) {
       log.warn("sources", "list failed", { error: String(err) });
-      res.status(500).json({
-        error: err instanceof Error ? err.message : "unknown error",
-      });
+      serverError(res, err instanceof Error ? err.message : "unknown error");
     }
   },
 );
@@ -106,12 +110,12 @@ router.post(
   ) => {
     const parsed = parseRegisterBody(req.body ?? {});
     if ("error" in parsed) {
-      res.status(parsed.status).json({ error: parsed.error });
+      sendError(res, parsed.status, parsed.error);
       return;
     }
     const existing = await readSource(workspacePath, parsed.slug);
     if (existing) {
-      res.status(409).json({ error: `source "${parsed.slug}" already exists` });
+      conflict(res, `source "${parsed.slug}" already exists`);
       return;
     }
     const { categories, rationale } = await resolveCategories(parsed);
@@ -130,9 +134,10 @@ router.post(
     try {
       await writeSource(workspacePath, source);
     } catch (err) {
-      res.status(500).json({
-        error: err instanceof Error ? err.message : "failed to write source",
-      });
+      serverError(
+        res,
+        err instanceof Error ? err.message : "failed to write source",
+      );
       return;
     }
     log.info("sources", "source registered", {
@@ -165,7 +170,7 @@ router.delete(
   ) => {
     const { slug } = req.params;
     if (!isValidSlug(slug)) {
-      res.status(400).json({ error: "invalid slug" });
+      badRequest(res, "invalid slug");
       return;
     }
     const removed = await deleteSource(workspacePath, slug);
@@ -191,9 +196,10 @@ router.post(
   ) => {
     const scheduleType = validateSchedule(req.body?.scheduleType, "daily");
     if (!scheduleType) {
-      res.status(400).json({
-        error: `scheduleType must be one of: ${[...SOURCE_SCHEDULES].join(", ")}`,
-      });
+      badRequest(
+        res,
+        `scheduleType must be one of: ${[...SOURCE_SCHEDULES].join(", ")}`,
+      );
       return;
     }
     try {
@@ -224,9 +230,7 @@ router.post(
       });
     } catch (err) {
       log.warn("sources", "rebuild failed", { error: String(err) });
-      res.status(500).json({
-        error: err instanceof Error ? err.message : "rebuild failed",
-      });
+      serverError(res, err instanceof Error ? err.message : "rebuild failed");
     }
   },
 );
@@ -281,9 +285,10 @@ router.post(
   ) => {
     const action = req.body?.action;
     if (typeof action !== "string" || !MANAGE_ACTIONS.has(action)) {
-      res.status(400).json({
-        error: `action must be one of: ${[...MANAGE_ACTIONS].join(", ")}`,
-      });
+      badRequest(
+        res,
+        `action must be one of: ${[...MANAGE_ACTIONS].join(", ")}`,
+      );
       return;
     }
     try {
@@ -303,9 +308,7 @@ router.post(
       }
     } catch (err) {
       log.warn("sources", "manage failed", { action, error: String(err) });
-      res.status(500).json({
-        error: err instanceof Error ? err.message : "manage failed",
-      });
+      serverError(res, err instanceof Error ? err.message : "manage failed");
     }
   },
 );
@@ -330,12 +333,12 @@ async function handleRegister(
 ): Promise<void> {
   const parsed = parseRegisterBody(body as RegisterSourceBody);
   if ("error" in parsed) {
-    res.status(parsed.status).json({ error: parsed.error });
+    sendError(res, parsed.status, parsed.error);
     return;
   }
   const existing = await readSource(workspacePath, parsed.slug);
   if (existing) {
-    res.status(409).json({ error: `source "${parsed.slug}" already exists` });
+    conflict(res, `source "${parsed.slug}" already exists`);
     return;
   }
   const { categories, rationale } = await resolveCategories(parsed);

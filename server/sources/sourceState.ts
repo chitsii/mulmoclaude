@@ -11,6 +11,7 @@
 import fsp from "node:fs/promises";
 import { defaultSourceState, type SourceState } from "./types.js";
 import { isValidSlug, sourceStatePath } from "./paths.js";
+import { errorMessage } from "../utils/errors.js";
 import { writeJsonAtomic } from "../utils/file.js";
 
 // Shallow-parse + type-guard one state record. Returns a
@@ -121,9 +122,7 @@ export async function writeManyStates(
       await writeSourceState(workspaceRoot, state);
       written++;
     } catch (err) {
-      errors.push(
-        `[sources/state] ${state.slug}: ${err instanceof Error ? err.message : String(err)}`,
-      );
+      errors.push(`[sources/state] ${state.slug}: ${errorMessage(err)}`);
     }
   }
   return { written, errors };

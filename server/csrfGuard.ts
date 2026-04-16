@@ -18,6 +18,7 @@
 
 import type { Request, Response, NextFunction } from "express";
 import { log } from "./logger/index.js";
+import { forbidden } from "./utils/httpError.js";
 
 const SAFE_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS"]);
 
@@ -84,5 +85,5 @@ export function requireSameOrigin(
     method: req.method,
     path: req.path,
   });
-  res.status(403).json({ error: "Forbidden: cross-origin request rejected" });
+  forbidden(res, "Forbidden: cross-origin request rejected");
 }

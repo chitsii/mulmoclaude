@@ -13,6 +13,7 @@
 import fsp from "node:fs/promises";
 import path from "node:path";
 import { archivePath, dailyNewsPath } from "../paths.js";
+import { errorMessage } from "../../utils/errors.js";
 import type { SourceItem } from "../types.js";
 import { writeFileAtomic } from "../../utils/file.js";
 
@@ -193,9 +194,7 @@ export async function appendItemsToArchives(
       await fsp.appendFile(target, body, "utf-8");
       writtenPaths.push(target);
     } catch (err) {
-      errors.push(
-        `[sources/archive] ${slug}/${month}: ${err instanceof Error ? err.message : String(err)}`,
-      );
+      errors.push(`[sources/archive] ${slug}/${month}: ${errorMessage(err)}`);
     }
   }
   return { writtenPaths, errors };

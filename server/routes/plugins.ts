@@ -13,6 +13,7 @@ import {
   isGeminiAvailable,
 } from "../utils/gemini.js";
 import { errorMessage } from "../utils/errors.js";
+import { badRequest, serverError } from "../utils/httpError.js";
 import { log } from "../logger/index.js";
 import { saveImage } from "../utils/image-store.js";
 import {
@@ -184,18 +185,18 @@ router.put(
     const relativePath = `markdowns/${req.params.filename}`;
     const { markdown } = req.body;
     if (!markdown) {
-      res.status(400).json({ error: "markdown is required" });
+      badRequest(res, "markdown is required");
       return;
     }
     if (!isMarkdownPath(relativePath)) {
-      res.status(400).json({ error: "invalid markdown path" });
+      badRequest(res, "invalid markdown path");
       return;
     }
     try {
       await overwriteMarkdown(relativePath, markdown);
       res.json({ path: relativePath });
     } catch (err) {
-      res.status(500).json({ error: errorMessage(err) });
+      serverError(res, errorMessage(err));
     }
   },
 );
@@ -242,18 +243,18 @@ router.put(
     const relativePath = `spreadsheets/${req.params.filename}`;
     const { sheets } = req.body;
     if (!Array.isArray(sheets)) {
-      res.status(400).json({ error: "sheets must be an array" });
+      badRequest(res, "sheets must be an array");
       return;
     }
     if (!isSpreadsheetPath(relativePath)) {
-      res.status(400).json({ error: "invalid spreadsheet path" });
+      badRequest(res, "invalid spreadsheet path");
       return;
     }
     try {
       await overwriteSpreadsheet(relativePath, sheets);
       res.json({ path: relativePath });
     } catch (err) {
-      res.status(500).json({ error: errorMessage(err) });
+      serverError(res, errorMessage(err));
     }
   },
 );

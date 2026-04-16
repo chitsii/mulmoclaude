@@ -11,6 +11,7 @@ import {
   type McpConfigFile,
   type McpServerEntry,
 } from "../config.js";
+import { badRequest, serverError } from "../utils/httpError.js";
 import { API_ROUTES } from "../../src/config/apiRoutes.js";
 
 // Public surface of /api/config. GET returns the full config tree so
@@ -45,20 +46,6 @@ function isMcpPutBody(value: unknown): value is { servers: McpServerEntry[] } {
   );
 }
 
-// Uniform error responder: prefer the exception's message (useful to
-// the client) and fall back to a static label. Used for every failure
-// path in this router to keep the JSON shape consistent.
-function sendError(
-  res: ConfigRes,
-  status: number,
-  err: unknown,
-  fallback: string,
-): void {
-  res.status(status).json({
-    error: err instanceof Error ? err.message : fallback,
-  });
-}
-
 // Parse an MCP payload through `fromMcpEntries` (which does the full
 // shape validation and throws on anything malformed). On failure,
 // respond 400 and return null so the caller can early-return.
@@ -69,7 +56,7 @@ function parseMcpPayloadOrFail(
   try {
     return fromMcpEntries(servers);
   } catch (err) {
-    sendError(res, 400, err, "invalid mcp entries");
+    badRequest(res, err instanceof Error ? err.message : "invalid mcp entries");
     return null;
   }
 }
@@ -86,7 +73,7 @@ function runSaveOrFail(
     save();
     return true;
   } catch (err) {
-    sendError(res, 500, err, fallback);
+    serverError(res, err instanceof Error ? err.message : fallback);
     return false;
   }
 }
@@ -121,7 +108,7 @@ router.put(
   (req: Request<unknown, unknown, PutConfigBody>, res: ConfigRes) => {
     const body = req.body;
     if (!isPutConfigBody(body)) {
-      res.status(400).json({ error: "Invalid config payload" });
+      badRequest(res, "Invalid config payload");
       return;
     }
     const mcpCfg = parseMcpPayloadOrFail(res, body.mcp.servers);
@@ -161,7 +148,7 @@ router.put(
   (req: Request<unknown, unknown, AppSettings>, res: ConfigRes) => {
     const body = req.body;
     if (!isAppSettings(body)) {
-      res.status(400).json({ error: "Invalid AppSettings payload" });
+      badRequest(res, "Invalid AppSettings payload");
       return;
     }
     if (!runSaveOrFail(res, () => saveSettings(body), "saveSettings failed")) {
@@ -179,7 +166,7 @@ router.put(
   ) => {
     const body = req.body;
     if (!isMcpPutBody(body)) {
-      res.status(400).json({ error: "Invalid mcp payload envelope" });
+      badRequest(res, "Invalid mcp payload envelope");
       return;
     }
     // fromMcpEntries rejects malformed client input (400). saveMcpConfig

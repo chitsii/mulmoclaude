@@ -22,6 +22,7 @@ import filesRoutes from "./routes/files.js";
 import configRoutes from "./routes/config.js";
 import skillsRoutes from "./routes/skills.js";
 import chatServiceRoutes from "./chat-service/index.js";
+import { serverError } from "./utils/httpError.js";
 import {
   mcpToolsRouter,
   mcpTools,
@@ -121,7 +122,7 @@ app.use((err: Error, _req: Request, res: Response, __next: NextFunction) => {
     error: err.message,
     stack: err.stack,
   });
-  res.status(500).json({ error: "Internal Server Error" });
+  serverError(res, "Internal Server Error");
 });
 
 function isPortFree(port: number): Promise<boolean> {

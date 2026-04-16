@@ -7,6 +7,7 @@
 import type { ToolDefinition } from "gui-chat-protocol";
 import { mcpTools, isMcpToolEnabled } from "./mcp-tools/index.js";
 import { TOOL_ENDPOINTS, PLUGIN_DEFS } from "./plugin-names.js";
+import { errorMessage } from "./utils/errors.js";
 import { API_ROUTES } from "../src/config/apiRoutes.js";
 import { env } from "./env.js";
 
@@ -133,8 +134,7 @@ async function postJson(
       },
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`Network error calling ${path}: ${message}`);
+    throw new Error(`Network error calling ${path}: ${errorMessage(err)}`);
   }
   if (!opts.allowHttpError && !res.ok) {
     const text = await res.text().catch(() => "");
@@ -165,9 +165,7 @@ async function fetchSkillsList(): Promise<{ name: string }[]> {
   try {
     res = await fetch(url);
   } catch (err) {
-    throw new Error(
-      `Network error calling /api/skills: ${err instanceof Error ? err.message : String(err)}`,
-    );
+    throw new Error(`Network error calling /api/skills: ${errorMessage(err)}`);
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -235,7 +233,7 @@ async function handleManageSkillsDelete(
     res = await fetch(`${BASE_URL}${url}`, { method: "DELETE" });
   } catch (err) {
     throw new Error(
-      `Network error calling DELETE ${url}: ${err instanceof Error ? err.message : String(err)}`,
+      `Network error calling DELETE ${url}: ${errorMessage(err)}`,
     );
   }
   if (!res.ok) {
