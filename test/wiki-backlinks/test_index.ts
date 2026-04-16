@@ -8,6 +8,7 @@ import {
   type WikiBacklinksDeps,
 } from "../../server/wiki-backlinks/index.js";
 import { BACKLINKS_MARKER } from "../../server/wiki-backlinks/sessionBacklinks.js";
+import { WORKSPACE_DIRS } from "../../server/workspace-paths.js";
 
 const SID = "3e0382cb-f02f-4f5b-a9a3-a71e50d7ad0c";
 
@@ -37,7 +38,7 @@ describe("maybeAppendWikiBacklinks (driver)", () => {
   });
 
   it("appends backlink to a page modified during the turn", async () => {
-    const pagesDir = path.join(workspaceRoot, "wiki", "pages");
+    const pagesDir = path.join(workspaceRoot, WORKSPACE_DIRS.wiki, "pages");
     await mkdir(pagesDir, { recursive: true });
 
     const filePath = path.join(pagesDir, "topic.md");
@@ -54,11 +55,11 @@ describe("maybeAppendWikiBacklinks (driver)", () => {
     const updated = await readFile(filePath, "utf-8");
     assert.ok(updated.includes(BACKLINKS_MARKER));
     assert.ok(updated.includes(`[session 3e0382cb]`));
-    assert.ok(updated.includes(`../../chat/${SID}.jsonl`));
+    assert.ok(updated.includes(`../../../conversations/chat/${SID}.jsonl`));
   });
 
   it("skips a page whose mtime is older than the turn start", async () => {
-    const pagesDir = path.join(workspaceRoot, "wiki", "pages");
+    const pagesDir = path.join(workspaceRoot, WORKSPACE_DIRS.wiki, "pages");
     await mkdir(pagesDir, { recursive: true });
 
     const oldPath = path.join(pagesDir, "old.md");
@@ -78,7 +79,7 @@ describe("maybeAppendWikiBacklinks (driver)", () => {
   });
 
   it("does not rewrite a file whose content is already up-to-date (dedupe)", async () => {
-    const pagesDir = path.join(workspaceRoot, "wiki", "pages");
+    const pagesDir = path.join(workspaceRoot, WORKSPACE_DIRS.wiki, "pages");
     await mkdir(pagesDir, { recursive: true });
 
     const filePath = path.join(pagesDir, "already.md");
@@ -115,7 +116,7 @@ describe("maybeAppendWikiBacklinks (driver)", () => {
   });
 
   it("continues past one failed file and updates the rest", async () => {
-    const pagesDir = path.join(workspaceRoot, "wiki", "pages");
+    const pagesDir = path.join(workspaceRoot, WORKSPACE_DIRS.wiki, "pages");
     await mkdir(pagesDir, { recursive: true });
 
     const okPath = path.join(pagesDir, "ok.md");
@@ -145,7 +146,7 @@ describe("maybeAppendWikiBacklinks (driver)", () => {
   });
 
   it("no-op on empty chatSessionId (defensive)", async () => {
-    const pagesDir = path.join(workspaceRoot, "wiki", "pages");
+    const pagesDir = path.join(workspaceRoot, WORKSPACE_DIRS.wiki, "pages");
     await mkdir(pagesDir, { recursive: true });
     const filePath = path.join(pagesDir, "defensive.md");
     await writeFile(filePath, "# Defensive\n", "utf-8");

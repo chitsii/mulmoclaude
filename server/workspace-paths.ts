@@ -1,14 +1,21 @@
 // Single source of truth for workspace directory / file names and
-// their absolute paths. Before this module, ~15 call sites each
-// wrote `path.join(workspacePath, "wiki")` / "markdowns" / etc. by
-// hand — renaming a directory meant grep-and-edit across the
-// server, with no typecheck help against typos.
+// their absolute paths. The record below uses workspace-relative
+// paths (possibly multi-segment, e.g. `config/roles`) as values; code
+// looks up via `WORKSPACE_PATHS.<key>` to get the absolute form.
 //
-// **This module does not change any paths.** Every name here is
-// the string that was previously baked into its call site, so
-// centralizing is a pure source-level refactor — no files move.
-// The layout rethink + migration that issue #284 proposes will
-// happen on top of this, by re-mapping the values below.
+// Layout grouping (issue #284):
+//
+//   config/          settings + roles + helps
+//   conversations/   chat + memory.md + summaries
+//   data/            user-managed (wiki, todos, calendar, contacts,
+//                    scheduler, sources, transports)
+//   artifacts/       LLM-generated (charts, html, images, documents,
+//                    spreadsheets, stories, news)
+//
+// Existing workspaces need the one-shot `scripts/migrate-workspace-284.ts`
+// script run before first startup with this code. `server/workspace.ts`
+// detects the pre-migration layout at boot and aborts with a pointer
+// to the script.
 //
 // When adding a new top-level directory: add the name to the
 // `WORKSPACE_DIRS` record below. The absolute path is derived
@@ -24,40 +31,47 @@ import path from "path";
 // callers that `import { workspacePath } from "./workspace.js"`.
 export const workspacePath = path.join(os.homedir(), "mulmoclaude");
 
-// Top-level directory *names*. Use these when you need the bare
-// name (e.g. a relative path in a response envelope): most code
-// should reach for `WORKSPACE_PATHS` instead.
+// Workspace-relative paths. Keys are the stable code-side identifiers
+// (e.g. `markdowns` — unchanged for call-site compatibility); values
+// are the on-disk paths, grouped per issue #284.
 export const WORKSPACE_DIRS = {
-  chat: "chat",
-  todos: "todos",
-  calendar: "calendar",
-  contacts: "contacts",
-  scheduler: "scheduler",
-  roles: "roles",
-  stories: "stories",
-  images: "images",
-  markdowns: "markdowns",
-  spreadsheets: "spreadsheets",
-  charts: "charts",
-  configs: "configs",
-  helps: "helps",
-  wiki: "wiki",
-  news: "news",
-  sources: "sources",
-  summaries: "summaries",
-  // presentHtml plugin writes here. Note the legacy capitalization
-  // — issue #284 will consider normalizing to lower-case `html/`.
-  htmls: "HTMLs",
-  // Distinct from `htmls` above: transient render output by the
-  // raw `html` route (server/routes/html.ts). Co-exists with
-  // `HTMLs/` on disk today.
-  html: "html",
-  transports: "transports",
+  // conversations/
+  chat: "conversations/chat",
+  summaries: "conversations/summaries",
+  // data/
+  wiki: "data/wiki",
+  todos: "data/todos",
+  calendar: "data/calendar",
+  contacts: "data/contacts",
+  scheduler: "data/scheduler",
+  sources: "data/sources",
+  transports: "data/transports",
+  // artifacts/
+  charts: "artifacts/charts",
+  // `markdowns` key preserved for call-site compatibility; on-disk
+  // name is `documents` for clarity.
+  markdowns: "artifacts/documents",
+  // `htmls` = `presentHtml` plugin output (many files, persistent).
+  // On-disk normalized to lowercase `html`.
+  htmls: "artifacts/html",
+  // Distinct from `htmls`: scratch buffer for the `/api/html`
+  // generate-and-preview route. One file (`current.html`), always
+  // overwritten. Kept separate so reloading a saved HTML artifact
+  // doesn't clobber the current preview.
+  html: "artifacts/html-scratch",
+  images: "artifacts/images",
+  spreadsheets: "artifacts/spreadsheets",
+  stories: "artifacts/stories",
+  news: "artifacts/news",
+  // config/
+  configs: "config",
+  roles: "config/roles",
+  helps: "config/helps",
 } as const;
 
 // File names at the workspace root (not under a subdirectory).
 export const WORKSPACE_FILES = {
-  memory: "memory.md",
+  memory: "conversations/memory.md",
   // Bearer auth token (#272). Written at server startup, mode 0600, read
   // by the Vite plugin (dev) / Express HTML serve (prod) to inject into
   // the `<meta name="mulmoclaude-auth">` tag, and by CLI bridges

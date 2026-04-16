@@ -98,7 +98,17 @@ async function processOneFile(
     if (st.mtimeMs < mtimeThreshold) return;
 
     const content = await deps.readFile(fullPath);
-    const linkHref = `../../chat/${sessionId}.jsonl`;
+    // Compute the relative path from the wiki page's directory to
+    // the chat jsonl. Layout grouped both under `data/wiki/pages/`
+    // and `conversations/chat/` post-#284, so the href is no longer
+    // a fixed `../../chat/…` — derive from the constants.
+    const workspaceRoot = path.resolve(pagesDir, "..", "..", "..");
+    const chatFileAbs = path.join(
+      workspaceRoot,
+      WORKSPACE_DIRS.chat,
+      `${sessionId}.jsonl`,
+    );
+    const linkHref = path.relative(path.dirname(fullPath), chatFileAbs);
     const updated = updateSessionBacklinks(content, sessionId, linkHref);
     if (updated === content) return;
 
