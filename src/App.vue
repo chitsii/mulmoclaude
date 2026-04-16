@@ -1110,6 +1110,7 @@ function createNewSession(roleId?: string): ActiveSession {
   navigateToSession(id, true);
   currentRoleId.value = rId;
   queriesExpanded.value = false;
+  nextTick(() => textareaRef.value?.focus());
   return sessionMap.get(id)!;
 }
 
