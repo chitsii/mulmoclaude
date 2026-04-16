@@ -189,7 +189,7 @@ Cross-module string literals (endpoint paths, tool names, role IDs, etc.) are de
 
 | Constant | Module | Consumers |
 |---|---|---|
-| `API_ROUTES` | `src/api-routes.ts` | Server route files (`router.post(API_ROUTES.todos.items, ...)`), frontend fetch calls (`fetch(API_ROUTES.todos.items)`), MCP bridge `postJson` calls |
+| `API_ROUTES` | `src/config/apiRoutes.ts` | Server route files (`router.post(API_ROUTES.todos.items, ...)`), frontend fetch calls (`fetch(API_ROUTES.todos.items)`), MCP bridge `postJson` calls |
 | `WORKSPACE_PATHS` / `WORKSPACE_DIRS` | `server/workspace-paths.ts` | Every server module that reads or writes workspace files |
 | `TOOL_NAMES` / `ToolName` | `src/config/toolNames.ts` | Role definitions (`availablePlugins`), plugin registry, session-store tool matching |
 | `BUILTIN_ROLE_IDS` / `BuiltInRoleId` | `src/config/roles.ts` | Anywhere a built-in role ID appears outside the role definition itself |

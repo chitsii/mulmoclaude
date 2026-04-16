@@ -98,7 +98,7 @@ URL-based navigation via `vue-router` (history mode — clean paths, no `#`). Th
 | `server/utils/` | Shared helpers: `fs.ts`, `errors.ts` |
 | `server/logger/` | Structured logger (console + rotating file + telemetry stub) |
 | `server/csrfGuard.ts` | CSRF origin-check middleware |
-| `src/api-routes.ts` | Central `/api/*` endpoint path constants (shared by server + frontend) |
+| `src/config/apiRoutes.ts` | Central `/api/*` endpoint path constants (shared by server + frontend) |
 | `src/config/roles.ts` | Role definitions |
 | `src/tools/index.ts` | Plugin registry |
 | `src/router/index.ts` | Vue-router setup (history mode, route definitions) |
@@ -119,11 +119,11 @@ Import the canonical `TOOL_DEFINITION` directly — **do not copy or re-type the
 3. `src/config/roles.ts` — add to relevant role's `availablePlugins`
 4. `server/agent.ts` — add to `MCP_PLUGINS`
 
-Route handler goes in `server/routes/plugins.ts`. Add the endpoint path to `src/api-routes.ts`.
+Route handler goes in `server/routes/plugins.ts`. Add the endpoint path to `src/config/apiRoutes.ts`.
 
 ### Adding a local plugin (`src/plugins/<name>/`)
 
-Local plugins import Vue components, so `toolDefinition` must be in a **separate file** (`definition.ts`) to allow server-side imports without pulling in Vue. Update **8 places**: `definition.ts`, `index.ts`, `server/routes/<name>.ts`, `server/mcp-server.ts`, `src/tools/index.ts`, `src/config/roles.ts`, `server/agent.ts`, `src/api-routes.ts`.
+Local plugins import Vue components, so `toolDefinition` must be in a **separate file** (`definition.ts`) to allow server-side imports without pulling in Vue. Update **8 places**: `definition.ts`, `index.ts`, `server/routes/<name>.ts`, `server/mcp-server.ts`, `src/tools/index.ts`, `src/config/roles.ts`, `server/agent.ts`, `src/config/apiRoutes.ts`.
 
 > If a plugin is in `availablePlugins` but absent from `MCP_PLUGINS` or `ALL_TOOLS`, it will be silently dropped.
 
@@ -150,13 +150,13 @@ String literals that form cross-module contracts (endpoint paths, event types, t
 
 | What | Source of truth | Pattern |
 |---|---|---|
-| API endpoint paths | `src/api-routes.ts` → `API_ROUTES` | `router.post(API_ROUTES.todos.items, ...)` / `fetch(API_ROUTES.todos.items)` |
+| API endpoint paths | `src/config/apiRoutes.ts` → `API_ROUTES` | `router.post(API_ROUTES.todos.items, ...)` / `fetch(API_ROUTES.todos.items)` |
 | Workspace directories | `server/workspace-paths.ts` → `WORKSPACE_PATHS` | `path.join(WORKSPACE_PATHS.wiki, "pages")` |
 | Tool names | `src/config/toolNames.ts` → `TOOL_NAMES` / `ToolName` | `availablePlugins: [TOOL_NAMES.manageTodoList, ...]` |
 | Built-in role IDs | `src/config/roles.ts` → `BUILTIN_ROLE_IDS` | `if (roleId === BUILTIN_ROLE_IDS.general)` |
 | Pub-sub channels | `src/config/pubsubChannels.ts` → `sessionChannel()` | `pubsub.publish(sessionChannel(id), event)` |
 
-**Adding a new endpoint**: add the path to `src/api-routes.ts` first, then reference `API_ROUTES.<group>.<name>` from both the router file and the frontend `fetch()` call. Routers register the full `/api/...` path directly (no mount prefix in `server/index.ts`).
+**Adding a new endpoint**: add the path to `src/config/apiRoutes.ts` first, then reference `API_ROUTES.<group>.<name>` from both the router file and the frontend `fetch()` call. Routers register the full `/api/...` path directly (no mount prefix in `server/index.ts`).
 
 ## Cross-platform considerations
 
@@ -210,7 +210,7 @@ Key shared helpers in this repo:
 
 | Helper | Location |
 |---|---|
-| `API_ROUTES` | `src/api-routes.ts` |
+| `API_ROUTES` | `src/config/apiRoutes.ts` |
 | `WORKSPACE_PATHS` / `WORKSPACE_DIRS` | `server/workspace-paths.ts` |
 | `TOOL_NAMES` / `ToolName` | `src/config/toolNames.ts` |
 | `BUILTIN_ROLE_IDS` / `BuiltInRoleId` | `src/config/roles.ts` |
