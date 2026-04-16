@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import fs from "fs";
 import path from "path";
 import { workspacePath } from "../workspace.js";
+import { WORKSPACE_PATHS } from "../workspace-paths.js";
 import {
   getFileObject,
   initializeContextFromFiles,
@@ -33,7 +34,7 @@ import {
 import { API_ROUTES } from "../../src/config/apiRoutes.js";
 
 const router = Router();
-const storiesDir = path.resolve(workspacePath, "stories");
+const storiesDir = path.resolve(WORKSPACE_PATHS.stories);
 
 // Lazily realpath the stories dir on first use. We can't realpath at
 // module load because the directory may not exist yet (it's created

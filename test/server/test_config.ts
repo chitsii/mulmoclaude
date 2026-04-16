@@ -281,7 +281,7 @@ describe("saveSettings", () => {
     fs.rmSync(mod.configsDir(), { recursive: true, force: true });
   });
 
-  it("creates configs/ if missing and writes JSON", () => {
+  it("creates config/ if missing and writes JSON", () => {
     mod.saveSettings({ extraAllowedTools: ["mcp__claude_ai_Gmail"] });
     const raw = fs.readFileSync(mod.settingsPath(), "utf-8");
     assert.deepEqual(JSON.parse(raw), {

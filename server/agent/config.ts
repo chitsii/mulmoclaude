@@ -36,7 +36,7 @@ export interface McpConfigParams {
   activePlugins: string[];
   roleIds: string[];
   useDocker?: boolean;
-  // User-defined MCP servers from <workspace>/configs/mcp.json.
+  // User-defined MCP servers from <workspace>/config/mcp.json.
   // Keys become the server id in the generated --mcp-config file;
   // values are the standard Claude CLI server spec (HTTP or stdio).
   userServers?: Record<string, McpServerSpec>;

@@ -54,9 +54,10 @@ export const DIR_MIGRATIONS: readonly DirMove[] = [
   { from: "configs", to: "config" },
   { from: "roles", to: "config/roles" },
   { from: "helps", to: "config/helps" },
-  // conversations/ — chat sessions + distilled memory + summaries
+  // conversations/ — chat sessions + distilled memory + summaries + trace
   { from: "chat", to: "conversations/chat" },
   { from: "summaries", to: "conversations/summaries" },
+  { from: "searches", to: "conversations/searches" },
   // data/ — user-managed content
   { from: "wiki", to: "data/wiki" },
   { from: "todos", to: "data/todos" },
@@ -75,7 +76,6 @@ export const DIR_MIGRATIONS: readonly DirMove[] = [
   { from: "stories", to: "artifacts/stories" },
   { from: "news", to: "artifacts/news" },
   { from: "scripts", to: "artifacts/scripts" },
-  { from: "searches", to: "artifacts/searches" },
 ];
 
 export const FILE_MIGRATIONS: readonly DirMove[] = [
@@ -173,7 +173,10 @@ export function rewriteJsonEntry(
     if (node && typeof node === "object") {
       const out: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
-        if ((k === "filePath" || k === "path") && typeof v === "string") {
+        if (
+          (k === "filePath" || k === "path" || k === "contentRef") &&
+          typeof v === "string"
+        ) {
           const next = rewritePathValue(v);
           if (next !== v) rewrites++;
           out[k] = next;

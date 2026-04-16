@@ -1,14 +1,14 @@
 import { Router, Request, Response } from "express";
 import path from "path";
 import fs from "fs";
-import os from "os";
 import { loadCustomRoles } from "../roles.js";
 import { BUILTIN_ROLES, type Role } from "../../src/config/roles.js";
 import { pushSessionEvent } from "../session-store/index.js";
 import { API_ROUTES } from "../../src/config/apiRoutes.js";
 import { EVENT_TYPES } from "../../src/types/events.js";
+import { WORKSPACE_PATHS } from "../workspace-paths.js";
 
-const rolesDir = path.join(os.homedir(), "mulmoclaude", "roles");
+const rolesDir = WORKSPACE_PATHS.roles;
 const BUILTIN_IDS = new Set(BUILTIN_ROLES.map((r) => r.id));
 
 const router = Router();

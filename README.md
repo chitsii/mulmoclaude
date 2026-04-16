@@ -325,10 +325,10 @@ Add external MCP servers without hand-editing JSON. Two types are supported:
 - **HTTP** — remote servers (e.g. `https://example.com/mcp`). Works in every mode; in Docker, `localhost` / `127.0.0.1` URLs are rewritten to `host.docker.internal` automatically.
 - **Stdio** — local subprocess, restricted to `npx` / `node` / `tsx` for safety. When Docker sandboxing is enabled, script paths must live under the workspace so they resolve inside the container.
 
-Configuration lives under `<workspace>/configs/`:
+Configuration lives under `<workspace>/config/`:
 
 ```text
-<workspace>/configs/
+<workspace>/config/
   settings.json    ← extra allowed tool names
   mcp.json         ← Claude CLI --mcp-config compatible
 ```

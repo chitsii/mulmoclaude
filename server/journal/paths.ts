@@ -3,11 +3,12 @@
 // string transformation so it can be exhaustively unit-tested.
 
 import path from "node:path";
+import { WORKSPACE_DIRS } from "../workspace-paths.js";
 
-// Directory layout under workspace/summaries/ is an implementation
-// detail of the journal module; keep it centralised here so tests
-// and callers all agree on the structure.
-export const SUMMARIES_DIR = "summaries";
+// Directory layout under workspace/conversations/summaries/ is an
+// implementation detail of the journal module; keep it centralised
+// here so tests and callers all agree on the structure.
+export const SUMMARIES_DIR = WORKSPACE_DIRS.summaries;
 export const STATE_FILE = "_state.json";
 export const INDEX_FILE = "_index.md";
 export const DAILY_DIR = "daily";

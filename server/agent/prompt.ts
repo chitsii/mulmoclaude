@@ -3,7 +3,7 @@ import { join } from "path";
 import type { Role } from "../../src/config/roles.js";
 import { mcpTools, isMcpToolEnabled } from "../mcp-tools/index.js";
 import { PLUGIN_DEFS } from "../plugin-names.js";
-import { WORKSPACE_FILES } from "../workspace-paths.js";
+import { WORKSPACE_DIRS, WORKSPACE_FILES } from "../workspace-paths.js";
 
 export const SYSTEM_PROMPT = `You are MulmoClaude, a versatile assistant app with rich visual output.
 
@@ -150,8 +150,8 @@ export function buildWikiContext(workspacePath: string): string | null {
 // Skipped entirely on fresh workspaces so we don't pay the prompt
 // cost until the feature is actually in use.
 export function buildSourcesContext(workspacePath: string): string | null {
-  const sourcesDir = join(workspacePath, "sources");
-  const newsDir = join(workspacePath, "news");
+  const sourcesDir = join(workspacePath, WORKSPACE_DIRS.sources);
+  const newsDir = join(workspacePath, WORKSPACE_DIRS.news);
   // Require both the registry and at least one brief — before a
   // rebuild has run the daily dir is empty and a pointer would
   // send Claude chasing nothing.
@@ -163,9 +163,9 @@ export function buildSourcesContext(workspacePath: string): string | null {
     "",
     '<reference type="sources">',
     "The workspace aggregates RSS / GitHub / arXiv feeds into a daily brief:",
-    "- `sources/<slug>.md` — source configs (YAML frontmatter + notes)",
-    "- `news/daily/YYYY/MM/DD.md` — today's and past daily briefs",
-    "- `news/archive/<slug>/YYYY/MM.md` — per-source monthly archive",
+    "- `data/sources/<slug>.md` — source configs (YAML frontmatter + notes)",
+    "- `artifacts/news/daily/YYYY/MM/DD.md` — today's and past daily briefs",
+    "- `artifacts/news/archive/<slug>/YYYY/MM.md` — per-source monthly archive",
     "",
     "When the user asks about recent news, tech headlines, AI papers,",
     "or references a specific feed they've registered, read these",

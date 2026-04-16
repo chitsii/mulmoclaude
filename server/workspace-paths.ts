@@ -38,6 +38,10 @@ export const WORKSPACE_DIRS = {
   // conversations/
   chat: "conversations/chat",
   summaries: "conversations/summaries",
+  // Tool-trace output for WebSearch (one .md per search, referenced
+  // from chat JSONL `contentRef`). Lives alongside chat/ so search
+  // trace and chat session share the same grouping.
+  searches: "conversations/searches",
   // data/
   wiki: "data/wiki",
   todos: "data/todos",
@@ -130,6 +134,7 @@ export const WORKSPACE_PATHS = {
   news: path.join(workspacePath, WORKSPACE_DIRS.news),
   sources: path.join(workspacePath, WORKSPACE_DIRS.sources),
   summaries: path.join(workspacePath, WORKSPACE_DIRS.summaries),
+  searches: path.join(workspacePath, WORKSPACE_DIRS.searches),
   htmls: path.join(workspacePath, WORKSPACE_DIRS.htmls),
   html: path.join(workspacePath, WORKSPACE_DIRS.html),
   transports: path.join(workspacePath, WORKSPACE_DIRS.transports),
