@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
-import { WORKSPACE_PATHS } from "../../workspace/paths.js";
-import { loadJsonFile, saveJsonFile } from "../../utils/files/index.js";
+import {
+  loadSchedulerItems,
+  saveSchedulerItems,
+} from "../../utils/files/scheduler-io.js";
 import {
   dispatchScheduler,
   type SchedulerActionInput,
@@ -21,14 +23,12 @@ export interface ScheduledItem {
   props: Record<string, string | number | boolean | null>;
 }
 
-const schedulerFile = () => WORKSPACE_PATHS.schedulerItems;
-
 function loadItems(): ScheduledItem[] {
-  return loadJsonFile<ScheduledItem[]>(schedulerFile(), []);
+  return loadSchedulerItems<ScheduledItem[]>([]);
 }
 
 function saveItems(items: ScheduledItem[]): void {
-  saveJsonFile(schedulerFile(), items);
+  saveSchedulerItems(items);
 }
 
 router.get(

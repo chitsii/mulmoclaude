@@ -15,6 +15,25 @@ import fs from "fs";
 import path from "path";
 import { workspacePath } from "../../workspace/paths.js";
 import { writeFileAtomic, writeFileAtomicSync } from "./atomic.js";
+import { log } from "../../system/logger/index.js";
+
+// Only ENOENT (file/dir doesn't exist) is silently swallowed.
+// EACCES, EPERM, EISDIR, and other unexpected errors are logged
+// and re-thrown so production failures are diagnosable.
+export function isEnoent(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code: string }).code === "ENOENT"
+  );
+}
+
+function rethrowUnexpected(err: unknown, context: string): null {
+  if (isEnoent(err)) return null;
+  log.error("workspace-io", context, { error: String(err) });
+  throw err;
+}
 
 // ── Path resolution ─────────────────────────────────────────────
 
@@ -31,26 +50,25 @@ export function resolveWorkspacePath(relPath: string): string {
 // ── Read ────────────────────────────────────────────────────────
 
 /**
- * Read a text file under the workspace. Returns null if the file
- * doesn't exist or is unreadable. Never throws.
+ * Read a text file under the workspace. Returns null on ENOENT;
+ * logs and re-throws unexpected errors (EACCES, EPERM, etc.).
  */
 export async function readWorkspaceText(
   relPath: string,
 ): Promise<string | null> {
   try {
     return await fs.promises.readFile(resolveWorkspacePath(relPath), "utf-8");
-  } catch {
-    return null;
+  } catch (err) {
+    return rethrowUnexpected(err, `readWorkspaceText(${relPath})`);
   }
 }
 
-/** Sync variant for startup / config paths that must complete
- *  before the next line executes. */
+/** Sync variant. Same ENOENT-only swallow contract. */
 export function readWorkspaceTextSync(relPath: string): string | null {
   try {
     return fs.readFileSync(resolveWorkspacePath(relPath), "utf-8");
-  } catch {
-    return null;
+  } catch (err) {
+    return rethrowUnexpected(err, `readWorkspaceTextSync(${relPath})`);
   }
 }
 
@@ -121,18 +139,127 @@ export async function writeWorkspaceJson(
   );
 }
 
+// ── Rooted variants (for DI / testable modules) ────────────────
+//
+// Modules that take `root` as a parameter (journal, sources, etc.)
+// use these instead of raw path.join + fs.*. Same contract as the
+// workspace-* helpers, but root is caller-supplied.
+//
+// **IMPORTANT — internal paths only.** These helpers do NOT guard
+// against `..` traversal. They are designed for domain I/O modules
+// that pass compile-time-fixed relative paths like
+// `${WORKSPACE_DIRS.chat}/${id}.json`. User-supplied or HTTP-body
+// paths MUST go through `resolveWithinRoot()` in `safe.ts` instead.
+
+/**
+ * Resolve root + relPath. Replaces raw `path.join(root, rel)`.
+ *
+ * For **internal fixed paths only** — never pass user input as
+ * `relPath`. Use `resolveWithinRoot()` for user-supplied paths.
+ */
+export function resolvePath(root: string, relPath: string): string {
+  return path.join(root, relPath);
+}
+
+/** Read text under an arbitrary root. Null on ENOENT; rethrows
+ *  unexpected errors. */
+export async function readTextUnder(
+  root: string,
+  relPath: string,
+): Promise<string | null> {
+  try {
+    return await fs.promises.readFile(path.join(root, relPath), "utf-8");
+  } catch (err) {
+    return rethrowUnexpected(err, `readTextUnder(${relPath})`);
+  }
+}
+
+/** Write atomically under an arbitrary root. */
+export async function writeTextUnder(
+  root: string,
+  relPath: string,
+  content: string,
+): Promise<void> {
+  await writeFileAtomic(path.join(root, relPath), content);
+}
+
+/** Sync read text under a root. Null on ENOENT. */
+export function readTextUnderSync(
+  root: string,
+  relPath: string,
+): string | null {
+  try {
+    return fs.readFileSync(path.join(root, relPath), "utf-8");
+  } catch (err) {
+    return rethrowUnexpected(err, `readTextUnderSync(${relPath})`);
+  }
+}
+
+/** Sync readdir under a root. Empty on ENOENT. */
+export function readdirUnderSync(root: string, relPath: string): string[] {
+  try {
+    return fs.readdirSync(path.join(root, relPath));
+  } catch (err) {
+    if (isEnoent(err)) return [];
+    log.error("workspace-io", `readdirUnderSync(${relPath})`, {
+      error: String(err),
+    });
+    throw err;
+  }
+}
+
+/** Readdir under a root. Empty on ENOENT; rethrows unexpected. */
+export async function readdirUnder(
+  root: string,
+  relPath: string,
+): Promise<string[]> {
+  try {
+    return await fs.promises.readdir(path.join(root, relPath));
+  } catch (err) {
+    if (isEnoent(err)) return [];
+    log.error("workspace-io", `readdirUnder(${relPath})`, {
+      error: String(err),
+    });
+    throw err;
+  }
+}
+
+/** Stat under a root. Null on ENOENT; rethrows unexpected. */
+export async function statUnder(
+  root: string,
+  relPath: string,
+): Promise<fs.Stats | null> {
+  try {
+    return await fs.promises.stat(path.join(root, relPath));
+  } catch (err) {
+    return rethrowUnexpected(err, `statUnder(${relPath})`);
+  }
+}
+
+/** Ensure a directory exists under a root. */
+export async function ensureDirUnder(
+  root: string,
+  relPath: string,
+): Promise<void> {
+  await fs.promises.mkdir(path.join(root, relPath), { recursive: true });
+}
+
 // ── Existence ───────────────────────────────────────────────────
 
 /**
  * Check whether a workspace-relative path exists on disk.
- * Never throws.
+ * Returns false on ENOENT; rethrows unexpected errors.
  */
 export function existsInWorkspace(relPath: string): boolean {
   try {
     fs.statSync(resolveWorkspacePath(relPath));
     return true;
-  } catch {
-    return false;
+  } catch (err) {
+    if (isEnoent(err)) return false;
+    log.error("workspace-io", `existsInWorkspace(${relPath})`, {
+      error: String(err),
+    });
+    throw err;
   }
 }
 

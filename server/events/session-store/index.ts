@@ -4,16 +4,14 @@
 // clients can subscribe to the same session channel and receive
 // identical events.
 
-import { appendFile, readFile } from "fs/promises";
-import { writeFileAtomic } from "../../utils/files/atomic.js";
-import path from "path";
+import { appendFile } from "fs/promises";
 import type { IPubSub } from "../pub-sub/index.js";
 import {
   PUBSUB_CHANNELS,
   sessionChannel,
 } from "../../../src/config/pubsubChannels.js";
 import { log } from "../../system/logger/index.js";
-import { WORKSPACE_PATHS } from "../../workspace/paths.js";
+import { updateHasUnread } from "../../utils/files/session-io.js";
 import { EVENT_TYPES } from "../../../src/types/events.js";
 
 // ── Types ──────────────────────────────────────────────────────
@@ -266,13 +264,16 @@ async function persistHasUnread(
   chatSessionId: string,
   hasUnread: boolean,
 ): Promise<void> {
-  const metaFilePath = path.join(WORKSPACE_PATHS.chat, `${chatSessionId}.json`);
   try {
-    const raw = await readFile(metaFilePath, "utf-8");
-    const meta = JSON.parse(raw);
-    await writeFileAtomic(metaFilePath, JSON.stringify({ ...meta, hasUnread }));
-  } catch {
-    // Meta file missing or malformed — nothing to persist into.
+    await updateHasUnread(chatSessionId, hasUnread);
+  } catch (err) {
+    // updateHasUnread already no-ops when meta is missing (ENOENT is
+    // handled internally). Any error reaching here is unexpected.
+    log.warn("session-store", "persistHasUnread failed", {
+      chatSessionId,
+      hasUnread,
+      error: String(err),
+    });
   }
 }
 

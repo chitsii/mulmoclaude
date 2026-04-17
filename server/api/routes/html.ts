@@ -1,14 +1,13 @@
 import { Router, Request, Response } from "express";
-import { readFile, mkdir } from "fs/promises";
-import path from "path";
-import { WORKSPACE_PATHS } from "../../workspace/paths.js";
-import { writeFileAtomic } from "../../utils/files/atomic.js";
+import {
+  readCurrentHtml,
+  writeCurrentHtml,
+} from "../../utils/files/html-io.js";
 import { getGeminiClient, isGeminiAvailable } from "../../utils/gemini.js";
 import { errorMessage } from "../../utils/errors.js";
 import { API_ROUTES } from "../../../src/config/apiRoutes.js";
 
 const router = Router();
-const HTML_FILE = () => path.join(WORKSPACE_PATHS.html, "current.html");
 
 async function callGemini(prompt: string): Promise<string> {
   const ai = getGeminiClient();
@@ -61,9 +60,8 @@ router.post(
     try {
       const fullPrompt = `Generate a complete, standalone HTML page based on this description: ${prompt}\n\nRequirements:\n- Self-contained with all CSS and JS inline\n- Use Tailwind CSS via CDN if needed\n- Return only the HTML code, no explanation`;
       const html = await callGemini(fullPrompt);
-      const htmlDir = WORKSPACE_PATHS.html;
-      await mkdir(htmlDir, { recursive: true });
-      await writeFileAtomic(HTML_FILE(), html);
+
+      await writeCurrentHtml(html);
       res.json({
         message: "HTML generation succeeded",
         instructions:
@@ -92,20 +90,18 @@ router.post(
       res.status(500).json({ message: "GEMINI_API_KEY is not set" });
       return;
     }
-    // eslint-disable-next-line no-useless-assignment
-    let existingHtml = "";
     try {
-      existingHtml = await readFile(HTML_FILE(), "utf-8");
-    } catch {
-      res.status(400).json({
-        message: "No HTML page has been generated yet. Use generateHtml first.",
-      });
-      return;
-    }
-    try {
+      const existingHtml = await readCurrentHtml();
+      if (!existingHtml?.trim()) {
+        res.status(400).json({
+          message:
+            "No HTML page has been generated yet. Use generateHtml first.",
+        });
+        return;
+      }
       const fullPrompt = `Modify the following HTML page based on this instruction: ${prompt}\n\nExisting HTML:\n${existingHtml}\n\nRequirements:\n- Return only the complete modified HTML, no explanation`;
       const html = await callGemini(fullPrompt);
-      await writeFileAtomic(HTML_FILE(), html);
+      await writeCurrentHtml(html);
       res.json({
         message: "HTML editing succeeded",
         instructions:
