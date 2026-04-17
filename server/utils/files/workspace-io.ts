@@ -20,7 +20,7 @@ import { log } from "../../system/logger/index.js";
 // Only ENOENT (file/dir doesn't exist) is silently swallowed.
 // EACCES, EPERM, EISDIR, and other unexpected errors are logged
 // and re-thrown so production failures are diagnosable.
-function isEnoent(err: unknown): boolean {
+export function isEnoent(err: unknown): boolean {
   return (
     typeof err === "object" &&
     err !== null &&

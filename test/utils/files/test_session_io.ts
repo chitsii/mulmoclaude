@@ -33,6 +33,12 @@ describe("readSessionMeta", () => {
     assert.equal(await readSessionMeta("nonexistent", root), null);
   });
 
+  it("returns null for corrupt JSON (not crash)", async () => {
+    const chatDir = path.join(root, WORKSPACE_DIRS.chat);
+    fs.writeFileSync(path.join(chatDir, "corrupt.json"), "{broken");
+    assert.equal(await readSessionMeta("corrupt", root), null);
+  });
+
   it("round-trips with writeSessionMeta", async () => {
     await writeSessionMeta("rw-test", { roleId: "general" }, root);
     const meta = await readSessionMeta("rw-test", root);

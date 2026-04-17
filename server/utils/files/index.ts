@@ -34,6 +34,7 @@ export {
 } from "./json.js";
 
 export {
+  isEnoent,
   resolveWorkspacePath,
   resolvePath,
   readWorkspaceText,

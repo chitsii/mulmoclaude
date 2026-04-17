@@ -37,6 +37,18 @@ describe("loadTodos / saveTodos", () => {
     assert.deepEqual(loadTodos([], freshRoot), [{ id: "2", text: "test" }]);
     fs.rmSync(freshRoot, { recursive: true, force: true });
   });
+
+  it("returns fallback on corrupt JSON (not crash)", () => {
+    const corruptRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "todos-corrupt-"),
+    );
+    const dir = path.join(corruptRoot, "data", "todos");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "todos.json"), "{broken json");
+    // Should NOT throw — returns fallback and logs
+    assert.deepEqual(loadTodos([], corruptRoot), []);
+    fs.rmSync(corruptRoot, { recursive: true, force: true });
+  });
 });
 
 describe("loadColumns / saveColumns", () => {

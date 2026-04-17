@@ -5,8 +5,9 @@
 
 import { WORKSPACE_DIRS, WORKSPACE_FILES } from "../../workspace/paths.js";
 import { workspacePath } from "../../workspace/paths.js";
-import { resolvePath } from "./workspace-io.js";
+import { resolvePath, isEnoent } from "./workspace-io.js";
 import { writeFileAtomicSync } from "./atomic.js";
+import { log } from "../../system/logger/index.js";
 import fs from "fs";
 
 const root = (r?: string) => r ?? workspacePath;
@@ -16,15 +17,12 @@ export function loadSchedulerItems<T>(fallback: T, r?: string): T {
   try {
     return JSON.parse(fs.readFileSync(p, "utf-8")) as T;
   } catch (err) {
-    if (
-      typeof err === "object" &&
-      err !== null &&
-      "code" in err &&
-      (err as { code: string }).code === "ENOENT"
-    ) {
-      return fallback;
-    }
-    throw err;
+    if (isEnoent(err)) return fallback;
+    log.error("scheduler-io", "failed to read items, using fallback", {
+      path: p,
+      error: String(err),
+    });
+    return fallback;
   }
 }
 

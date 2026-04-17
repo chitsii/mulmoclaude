@@ -5,12 +5,21 @@
 // All functions take optional `root` for test DI.
 
 import { appendFile } from "fs/promises";
+import path from "node:path";
 import { WORKSPACE_DIRS } from "../../workspace/paths.js";
 import { workspacePath } from "../../workspace/paths.js";
 import { readTextUnder, writeTextUnder, resolvePath } from "./workspace-io.js";
 
 const CHAT = WORKSPACE_DIRS.chat;
 const root = (r?: string) => r ?? workspacePath;
+
+function metaRel(id: string): string {
+  return path.posix.join(CHAT, `${id}.json`);
+}
+
+function jsonlRel(id: string): string {
+  return path.posix.join(CHAT, `${id}.jsonl`);
+}
 
 // ── Meta ────────────────────────────────────────────────────────
 
@@ -27,7 +36,7 @@ export async function readSessionMeta(
   id: string,
   r?: string,
 ): Promise<SessionMeta | null> {
-  const raw = await readTextUnder(root(r), `${CHAT}/${id}.json`);
+  const raw = await readTextUnder(root(r), metaRel(id));
   if (!raw) return null;
   try {
     return JSON.parse(raw) as SessionMeta;
@@ -41,11 +50,7 @@ export async function writeSessionMeta(
   meta: SessionMeta,
   r?: string,
 ): Promise<void> {
-  await writeTextUnder(
-    root(r),
-    `${CHAT}/${id}.json`,
-    JSON.stringify(meta, null, 2),
-  );
+  await writeTextUnder(root(r), metaRel(id), JSON.stringify(meta, null, 2));
 }
 
 export async function createSessionMeta(
@@ -104,14 +109,14 @@ export async function updateHasUnread(
 // ── Jsonl ───────────────────────────────────────────────────────
 
 export function sessionJsonlAbsPath(id: string, r?: string): string {
-  return resolvePath(root(r), `${CHAT}/${id}.jsonl`);
+  return resolvePath(root(r), jsonlRel(id));
 }
 
 export async function readSessionJsonl(
   id: string,
   r?: string,
 ): Promise<string | null> {
-  return readTextUnder(root(r), `${CHAT}/${id}.jsonl`);
+  return readTextUnder(root(r), jsonlRel(id));
 }
 
 /**
@@ -127,5 +132,5 @@ export async function appendSessionLine(
   r?: string,
 ): Promise<void> {
   const normalized = line.endsWith("\n") ? line : `${line}\n`;
-  await appendFile(resolvePath(root(r), `${CHAT}/${id}.jsonl`), normalized);
+  await appendFile(resolvePath(root(r), jsonlRel(id)), normalized);
 }
