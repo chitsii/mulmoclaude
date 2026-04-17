@@ -13,7 +13,7 @@ export async function saveMarkdown(content: string): Promise<string> {
     content,
     "utf-8",
   );
-  return `${WORKSPACE_DIRS.markdowns}/${filename}`;
+  return path.posix.join(WORKSPACE_DIRS.markdowns, filename);
 }
 
 /** Read a markdown file and return its content. */

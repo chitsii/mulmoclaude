@@ -44,7 +44,7 @@ export function computeSearchRelPath(inputs: SearchPathInputs): string {
   const slug = slugify(inputs.query, "search", MAX_QUERY_SLUG_CHARS);
   const hash = computeSearchHash(inputs.query, inputs.sessionId, inputs.ts);
   const dateDir = toUtcIsoDate(inputs.ts);
-  return `${SEARCHES_DIR}/${dateDir}/${slug}-${hash}.md`;
+  return path.posix.join(SEARCHES_DIR, dateDir, `${slug}-${hash}.md`);
 }
 
 export interface SearchContentInputs {

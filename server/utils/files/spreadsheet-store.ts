@@ -46,7 +46,7 @@ export async function saveSpreadsheet(sheets: unknown[]): Promise<string> {
     JSON.stringify(sheets),
     "utf-8",
   );
-  return `${WORKSPACE_DIRS.spreadsheets}/${filename}`;
+  return path.posix.join(WORKSPACE_DIRS.spreadsheets, filename);
 }
 
 /** Overwrite an existing spreadsheet file. */
