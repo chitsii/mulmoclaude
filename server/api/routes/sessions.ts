@@ -1,9 +1,15 @@
 import { Router, Request, Response } from "express";
 import fs from "fs";
-import { readdir, readFile, stat } from "fs/promises";
+import { readdir, stat } from "fs/promises";
+import { readTextSafe } from "../../utils/files/safe.js";
 import path from "path";
 import { workspacePath } from "../../workspace/workspace.js";
 import { WORKSPACE_PATHS } from "../../workspace/paths.js";
+import {
+  readSessionMeta as readSessionMetaIO,
+  readSessionJsonl,
+  sessionJsonlAbsPath,
+} from "../../utils/files/session-io.js";
 import { readManifest } from "../../workspace/chat-index/indexer.js";
 import { resolveWithinRoot } from "../../utils/files/safe.js";
 import type { ChatIndexEntry } from "../../workspace/chat-index/types.js";
@@ -26,29 +32,26 @@ interface SessionMeta {
 }
 
 async function readSessionMeta(
-  chatDir: string,
+  __chatDir: string,
   id: string,
 ): Promise<SessionMeta | null> {
-  // Try new-style .json file first
-  try {
-    const meta = JSON.parse(
-      await readFile(path.join(chatDir, `${id}.json`), "utf-8"),
-    );
-    if (meta.roleId && meta.startedAt) return meta;
-  } catch {
-    // fall through
+  // Try new-style .json meta first
+  const meta = await readSessionMetaIO(id);
+  if (meta?.roleId && meta?.startedAt) {
+    return meta as SessionMeta;
   }
   // Legacy: read first line of .jsonl
-  try {
-    const first = (await readFile(path.join(chatDir, `${id}.jsonl`), "utf-8"))
-      .split("\n")
-      .find(Boolean);
+  const jsonl = await readSessionJsonl(id);
+  if (jsonl) {
+    const first = jsonl.split("\n").find(Boolean);
     if (first) {
-      const meta = JSON.parse(first);
-      if (meta.roleId && meta.startedAt) return meta;
+      try {
+        const parsed = JSON.parse(first);
+        if (parsed.roleId && parsed.startedAt) return parsed;
+      } catch {
+        // ignore
+      }
     }
-  } catch {
-    // ignore
   }
   return null;
 }
@@ -118,7 +121,7 @@ async function loadAllSessions(): Promise<
       const id = file.replace(".jsonl", "");
       try {
         // stat only — no readFile on .jsonl content
-        const fileStat = await stat(path.join(chatDir, file));
+        const fileStat = await stat(sessionJsonlAbsPath(id));
         if (cutoff > 0 && fileStat.mtimeMs < cutoff) return null;
 
         const meta = await readSessionMeta(chatDir, id);
@@ -222,10 +225,13 @@ router.get(
   ) => {
     const { id } = req.params;
     const chatDir = WORKSPACE_PATHS.chat;
-    const filePath = path.join(chatDir, `${id}.jsonl`);
     try {
       const meta = await readSessionMeta(chatDir, id);
-      const content = await readFile(filePath, "utf-8");
+      const content = await readSessionJsonl(id);
+      if (!content) {
+        notFound(res, `Session ${id} not found`);
+        return;
+      }
       const entries = (
         await Promise.all(
           content
@@ -272,7 +278,7 @@ router.get(
                       relFromStories,
                     );
                     if (!scriptPath) return entry;
-                    const scriptJson = await readFile(scriptPath, "utf-8");
+                    const scriptJson = (await readTextSafe(scriptPath)) ?? "";
                     return {
                       ...entry,
                       result: {

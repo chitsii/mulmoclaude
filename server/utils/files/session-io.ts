@@ -8,10 +8,20 @@ import { appendFile } from "fs/promises";
 import path from "node:path";
 import { WORKSPACE_DIRS } from "../../workspace/paths.js";
 import { workspacePath } from "../../workspace/paths.js";
-import { readTextUnder, writeTextUnder, resolvePath } from "./workspace-io.js";
+import {
+  readTextUnder,
+  writeTextUnder,
+  resolvePath,
+  ensureWorkspaceDir,
+} from "./workspace-io.js";
 
 const CHAT = WORKSPACE_DIRS.chat;
 const root = (r?: string) => r ?? workspacePath;
+
+/** Ensure the chat directory exists. Called once at session start. */
+export function ensureChatDir(): void {
+  ensureWorkspaceDir(CHAT);
+}
 
 function metaRel(id: string): string {
   return path.posix.join(CHAT, `${id}.json`);
@@ -32,17 +42,33 @@ export interface SessionMeta {
   [key: string]: unknown;
 }
 
+export type ReadMetaResult =
+  | { kind: "missing" }
+  | { kind: "ok"; meta: SessionMeta }
+  | { kind: "corrupt"; raw: string };
+
+/** Read session metadata with full outcome discrimination. */
+export async function readSessionMetaFull(
+  id: string,
+  r?: string,
+): Promise<ReadMetaResult> {
+  const raw = await readTextUnder(root(r), metaRel(id));
+  if (raw === null) return { kind: "missing" };
+  try {
+    return { kind: "ok", meta: JSON.parse(raw) as SessionMeta };
+  } catch {
+    return { kind: "corrupt", raw };
+  }
+}
+
+/** Convenience: returns the meta or null. Treats corrupt as null
+ *  (callers that need to distinguish use readSessionMetaFull). */
 export async function readSessionMeta(
   id: string,
   r?: string,
 ): Promise<SessionMeta | null> {
-  const raw = await readTextUnder(root(r), metaRel(id));
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as SessionMeta;
-  } catch {
-    return null;
-  }
+  const result = await readSessionMetaFull(id, r);
+  return result.kind === "ok" ? result.meta : null;
 }
 
 export async function writeSessionMeta(

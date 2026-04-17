@@ -42,7 +42,7 @@ export async function saveImage(base64Data: string): Promise<string> {
   const filename = `${id}.png`;
   const absPath = path.join(IMAGES_DIR, filename);
   await fs.writeFile(absPath, Buffer.from(base64Data, "base64"));
-  return `${WORKSPACE_DIRS.images}/${filename}`;
+  return path.posix.join(WORKSPACE_DIRS.images, filename);
 }
 
 /** Overwrite an existing image file. The relativePath must start with "images/". */

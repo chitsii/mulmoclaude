@@ -7,10 +7,14 @@
 // All failures are caught and logged here; nothing ever bubbles
 // back to the request handler.
 
-import fsp from "node:fs/promises";
-import path from "node:path";
 import { workspacePath as defaultWorkspacePath } from "../workspace.js";
-import { writeFileAtomic } from "../../utils/files/atomic.js";
+import {
+  writeJournalIndex,
+  listTopicSlugs as listTopicSlugsIO,
+  readTopicFile,
+  listDailyFiles as listDailyFilesIO,
+  countArchivedTopics as countArchivedIO,
+} from "../../utils/files/journal-io.js";
 import {
   readState,
   writeState,
@@ -24,13 +28,6 @@ import {
   type IndexTopicEntry,
   type IndexDailyEntry,
 } from "./indexFile.js";
-import {
-  summariesRoot,
-  DAILY_DIR,
-  TOPICS_DIR,
-  ARCHIVE_DIR,
-  INDEX_FILE,
-} from "./paths.js";
 import {
   runClaudeCli,
   ClaudeCliNotFoundError,
@@ -171,96 +168,37 @@ async function runJournalPass(opts: MaybeRunJournalOptions): Promise<void> {
 
 async function rebuildIndex(workspaceRoot: string): Promise<void> {
   const topics = await walkTopics(workspaceRoot);
-  const days = await walkDailyFiles(workspaceRoot);
-  const archivedCount = await countArchivedTopics(workspaceRoot);
+  const dailyEntries = await listDailyFilesIO(workspaceRoot);
+  const days: IndexDailyEntry[] = dailyEntries.map((e) => ({
+    date: `${e.year}-${e.month}-${e.day}`,
+  }));
+  const archivedCount = await countArchivedIO(workspaceRoot);
   const md = buildIndexMarkdown({
     topics,
     days,
     archivedTopicCount: archivedCount,
     builtAtIso: new Date().toISOString(),
   });
-  const p = path.join(summariesRoot(workspaceRoot), INDEX_FILE);
-  await writeFileAtomic(p, md);
+  await writeJournalIndex(md, workspaceRoot);
 }
 
 async function walkTopics(workspaceRoot: string): Promise<IndexTopicEntry[]> {
-  const dir = path.join(summariesRoot(workspaceRoot), TOPICS_DIR);
-  let names: string[];
-  try {
-    names = await fsp.readdir(dir);
-  } catch {
-    return [];
-  }
+  const slugs = await listTopicSlugsIO(workspaceRoot);
   const out: IndexTopicEntry[] = [];
-  for (const name of names) {
-    if (!name.endsWith(".md")) continue;
-    const slug = name.replace(/\.md$/, "");
-    const full = path.join(dir, name);
-    try {
-      const [stat, content] = await Promise.all([
-        fsp.stat(full),
-        fsp.readFile(full, "utf-8"),
-      ]);
-      out.push({
-        slug,
-        title: extractFirstH1(content) ?? undefined,
-        lastUpdatedIso: new Date(stat.mtimeMs).toISOString(),
-      });
-    } catch {
-      out.push({ slug });
-    }
+  for (const slug of slugs) {
+    const content = await readTopicFile(slug, workspaceRoot);
+    out.push({
+      slug,
+      title: content ? (extractFirstH1(content) ?? undefined) : undefined,
+    });
   }
   return out;
 }
 
-// Returns the entries of `dir`, or [] if `dir` is missing / unreadable.
-// Centralizes the "missing parent directory is fine" idiom that the
-// daily-files walker leans on.
-async function safeReaddir(dir: string): Promise<string[]> {
-  try {
-    return await fsp.readdir(dir);
-  } catch {
-    return [];
-  }
-}
-
-const YEAR_PATTERN = /^\d{4}$/;
-const MONTH_PATTERN = /^\d{2}$/;
 const DAY_FILE_PATTERN = /^(\d{2})\.md$/;
 
 // Pure: returns the two-digit day if `name` matches `DD.md`, else null.
 export function parseDailyFilename(name: string): string | null {
   const match = DAY_FILE_PATTERN.exec(name);
   return match ? (match[1] ?? null) : null;
-}
-
-async function walkDailyFiles(
-  workspaceRoot: string,
-): Promise<IndexDailyEntry[]> {
-  const root = path.join(summariesRoot(workspaceRoot), DAILY_DIR);
-  const out: IndexDailyEntry[] = [];
-  const years = (await safeReaddir(root)).filter((y) => YEAR_PATTERN.test(y));
-  for (const y of years) {
-    const months = (await safeReaddir(path.join(root, y))).filter((m) =>
-      MONTH_PATTERN.test(m),
-    );
-    for (const m of months) {
-      const dayFiles = await safeReaddir(path.join(root, y, m));
-      for (const d of dayFiles) {
-        const day = parseDailyFilename(d);
-        if (day) out.push({ date: `${y}-${m}-${day}` });
-      }
-    }
-  }
-  return out;
-}
-
-async function countArchivedTopics(workspaceRoot: string): Promise<number> {
-  const dir = path.join(summariesRoot(workspaceRoot), ARCHIVE_DIR, TOPICS_DIR);
-  try {
-    const entries = await fsp.readdir(dir);
-    return entries.filter((e) => e.endsWith(".md")).length;
-  } catch {
-    return 0;
-  }
 }

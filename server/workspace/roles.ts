@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
   BUILTIN_ROLES,
   RoleSchema,
@@ -25,7 +26,7 @@ export function loadCustomRoles(): Role[] {
       try {
         const raw = readTextUnderSync(
           workspacePath,
-          `${WORKSPACE_DIRS.roles}/${f}`,
+          path.posix.join(WORKSPACE_DIRS.roles, f),
         );
         if (!raw) return [];
         return [withSwitchRole(RoleSchema.parse(JSON.parse(raw)))];

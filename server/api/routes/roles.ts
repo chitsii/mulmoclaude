@@ -1,15 +1,16 @@
 import { Router, Request, Response } from "express";
-import path from "path";
-import fs from "fs";
+import { getSessionQuery } from "../../utils/request.js";
 import { loadCustomRoles } from "../../workspace/roles.js";
 import { BUILTIN_ROLES, type Role } from "../../../src/config/roles.js";
 import { pushSessionEvent } from "../../events/session-store/index.js";
 import { API_ROUTES } from "../../../src/config/apiRoutes.js";
 import { EVENT_TYPES } from "../../../src/types/events.js";
-import { WORKSPACE_PATHS } from "../../workspace/paths.js";
-import { writeFileAtomicSync } from "../../utils/files/atomic.js";
+import {
+  roleExists,
+  deleteRole,
+  saveRole,
+} from "../../utils/files/roles-io.js";
 
-const rolesDir = WORKSPACE_PATHS.roles;
 const BUILTIN_IDS = new Set(BUILTIN_ROLES.map((r) => r.id));
 
 const router = Router();
@@ -21,7 +22,7 @@ router.get(API_ROUTES.roles.list, (_req: Request, res: Response<Role[]>) => {
 router.post(
   API_ROUTES.roles.manage,
   async (req: Request, res: Response<Record<string, unknown>>) => {
-    const session = String(req.query.session ?? "");
+    const session = getSessionQuery(req);
     const result = await executeManageRoles(req.body, session);
     res.json(result);
   },
@@ -68,11 +69,10 @@ export async function executeManageRoles(
     if (BUILTIN_IDS.has(id)) {
       return { success: false, error: "Cannot delete built-in roles." };
     }
-    const filePath = path.join(rolesDir, `${id}.json`);
-    if (!fs.existsSync(filePath)) {
+    if (!roleExists(id)) {
       return { success: false, error: `Role '${id}' not found.` };
     }
-    fs.unlinkSync(filePath);
+    deleteRole(id);
     notifyRolesUpdated(sessionId);
     return {
       success: true,
@@ -104,11 +104,7 @@ export async function executeManageRoles(
     availablePlugins: pluginsToSave.filter((p) => p !== "switchRole"),
   };
 
-  fs.mkdirSync(rolesDir, { recursive: true });
-  writeFileAtomicSync(
-    path.join(rolesDir, `${roleId2}.json`),
-    JSON.stringify(roleToSave, null, 2),
-  );
+  saveRole(roleId2, roleToSave);
   notifyRolesUpdated(sessionId);
   return {
     success: true,

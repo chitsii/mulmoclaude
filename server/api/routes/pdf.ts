@@ -5,9 +5,12 @@ import { marked } from "marked";
 import puppeteer from "puppeteer";
 import { errorMessage } from "../../utils/errors.js";
 import { badRequest, serverError } from "../../utils/httpError.js";
-import { workspacePath } from "../../workspace/workspace.js";
 import { WORKSPACE_DIRS } from "../../workspace/paths.js";
-import { resolveWithinRoot } from "../../utils/files/safe.js";
+import {
+  resolveWithinRoot,
+  readBinarySafeSync,
+} from "../../utils/files/safe.js";
+import { resolveWorkspacePath } from "../../utils/files/workspace-io.js";
 import { log } from "../../system/logger/index.js";
 import { API_ROUTES } from "../../../src/config/apiRoutes.js";
 
@@ -56,7 +59,7 @@ const MIME_BY_EXT: Record<string, string> = {
 // Realpath of the workspace, resolved once at module load. Used to
 // validate that image paths resolved relative to markdowns/ stay
 // inside the workspace after symlink resolution.
-const workspaceReal = fs.realpathSync(workspacePath);
+const workspaceReal = fs.realpathSync(resolveWorkspacePath(""));
 
 /**
  * Inline local images as base64 data URIs so Puppeteer can render them.
@@ -92,15 +95,14 @@ function inlineImages(html: string): string {
         log.warn("pdf", "image path rejected by safe-resolve", { src });
         return _match;
       }
-      try {
-        const buf = fs.readFileSync(abs);
-        const ext = path.extname(abs).toLowerCase();
-        const mime = MIME_BY_EXT[ext] ?? "application/octet-stream";
-        return `${before}data:${mime};base64,${buf.toString("base64")}${after}`;
-      } catch {
+      const buf = readBinarySafeSync(abs);
+      if (!buf) {
         log.warn("pdf", "could not read image", { abs });
         return _match;
       }
+      const ext = path.extname(abs).toLowerCase();
+      const mime = MIME_BY_EXT[ext] ?? "application/octet-stream";
+      return `${before}data:${mime};base64,${buf.toString("base64")}${after}`;
     },
   );
 }
