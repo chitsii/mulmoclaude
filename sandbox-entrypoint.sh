@@ -26,6 +26,13 @@ if ! getent passwd "$TARGET_UID" > /dev/null 2>&1; then
   echo "sandbox:x:${TARGET_UID}:${TARGET_GID}::/home/node:/bin/sh" >> /etc/passwd
 fi
 
+# 1b. Ensure /home/node is writable by the target user.
+#     The base image (node:22-slim) creates this directory owned by
+#     node:node (1000:1000). When running as a different UID (e.g. 501
+#     on macOS), Claude CLI and git/ssh can't create config files
+#     there (.ssh/, .gitconfig, etc.) without this chown.
+chown "$TARGET_UID:$TARGET_GID" /home/node 2>/dev/null || true
+
 # 2. Make the SSH agent socket accessible to the target user.
 #    Docker Desktop for Mac's magic socket (/run/host-services/
 #    ssh-auth.sock) is created as root:root mode 660. The target UID
