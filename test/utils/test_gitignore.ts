@@ -54,10 +54,7 @@ describe("GitignoreFilter.childForDir", () => {
     const parent = new GitignoreFilter("*.tmp\n");
     const childDir = path.join(tmpDir, "sub");
     fs.mkdirSync(childDir);
-    fs.writeFileSync(
-      path.join(childDir, ".gitignore"),
-      "node_modules/\n",
-    );
+    fs.writeFileSync(path.join(childDir, ".gitignore"), "node_modules/\n");
     const child = parent.childForDir(childDir);
     // Parent rule
     assert.equal(child.ignores("foo.tmp"), true);
