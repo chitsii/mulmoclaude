@@ -343,7 +343,12 @@ export async function buildTreeAsync(
   const entries = await readDirSafeAsync(absPath);
   // Pick up any .gitignore in this directory so its rules apply to
   // children. The filter chains: parent rules + local .gitignore.
-  const localFilter = gitFilter ? gitFilter.childForDir(absPath) : undefined;
+  // When gitFilter is undefined (workspace root), DON'T read the
+  // root .gitignore (it's for git, not the UI). Pass a fresh empty
+  // filter so children pick up THEIR .gitignore files.
+  const localFilter = gitFilter
+    ? gitFilter.childForDir(absPath)
+    : new GitignoreFilter();
   // Build every surviving child concurrently. Filter:
   // skip hidden dirs, sensitive files, symlinks, .gitignore matches,
   // and entries that fail to stat.
@@ -402,7 +407,12 @@ export async function listDirShallow(
     };
   }
   const entries = await readDirSafeAsync(absPath);
-  const localFilter = gitFilter ? gitFilter.childForDir(absPath) : undefined;
+  // When gitFilter is undefined (workspace root), DON'T read the
+  // root .gitignore (it's for git, not the UI). Pass a fresh empty
+  // filter so children pick up THEIR .gitignore files.
+  const localFilter = gitFilter
+    ? gitFilter.childForDir(absPath)
+    : new GitignoreFilter();
   const childPromises: Promise<TreeNode | null>[] = entries.map(
     async (entry): Promise<TreeNode | null> => {
       if (HIDDEN_DIRS.has(entry.name)) return null;
@@ -461,11 +471,9 @@ router.get(
       // is for git (excluding github/ from commits), NOT for the
       // Files UI. Only .gitignore files inside subdirectories (e.g.
       // github/mulmoclaude/.gitignore) are applied.
-      const tree = await buildTreeAsync(
-        workspaceReal,
-        "",
-        new GitignoreFilter(),
-      );
+      // Pass undefined = skip workspace root .gitignore (it's for
+      // git, not the UI). Sub-dir .gitignore files still apply.
+      const tree = await buildTreeAsync(workspaceReal, "");
       res.json(tree);
     } catch (err) {
       res
@@ -502,11 +510,10 @@ router.get(
       return;
     }
     try {
-      // Build the gitignore filter chain from workspace root down to
-      // the target directory. Start empty (workspace root .gitignore
-      // is for git, not the UI) — only subdirectory .gitignore files
-      // (e.g. inside cloned repos) are applied.
-      let filter: GitignoreFilter = new GitignoreFilter();
+      // Build the gitignore filter chain. Start undefined at root
+      // (workspace root .gitignore is for git, not the UI). Once we
+      // descend into a sub-dir, childForDir picks up local .gitignore.
+      let filter: GitignoreFilter | undefined;
       const segments = path
         .relative(workspaceReal, absPath)
         .split(path.sep)
@@ -514,7 +521,9 @@ router.get(
       let walkAbs = workspaceReal;
       for (const seg of segments) {
         walkAbs = path.join(walkAbs, seg);
-        filter = filter.childForDir(walkAbs);
+        filter = filter
+          ? filter.childForDir(walkAbs)
+          : new GitignoreFilter().childForDir(walkAbs);
       }
       const listing = await listDirShallow(
         absPath,
