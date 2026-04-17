@@ -94,6 +94,7 @@ Run `git diff --stat` and `git diff` first, then check every item below against 
 - [ ] `docs/manual-testing.md` updated if a scenario is deliberately left uncovered by E2E.
 - [ ] New plugins update all required places (see Plugin Development in CLAUDE.md — 4 places for package, 8 for local).
 - [ ] New endpoints added to `src/config/apiRoutes.ts` FIRST, then referenced.
+- [ ] If this PR completes work tracked by a plan file under `plans/`, move that file to `plans/done/` in the same PR.
 
 ## 11. Git Hygiene
 
