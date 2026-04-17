@@ -1222,6 +1222,26 @@ async function loadSession(id: string) {
   showHistory.value = false;
 }
 
+// Re-fetch the transcript from the server and patch any entries the
+// client missed (e.g. due to a pub-sub disconnect during a long
+// Docker build). Called on session_finished so the user sees the
+// full response even if mid-run events were lost. See issue #350.
+async function refreshSessionTranscript(sessionId: string): Promise<void> {
+  const session = sessionMap.get(sessionId);
+  if (!session) return;
+  const response = await apiGet<SessionEntry[]>(
+    API_ROUTES.sessions.detail.replace(":id", encodeURIComponent(sessionId)),
+  );
+  if (!response.ok) return;
+  const serverResults = parseSessionEntries(response.data);
+  // Only patch if the server knows more than we do — avoids
+  // replacing a richer in-flight state with a stale snapshot when
+  // session_finished races with the last few events.
+  if (serverResults.length > session.toolResults.length) {
+    session.toolResults = serverResults;
+  }
+}
+
 // Seed the session state for a fresh user turn. Not pure (mutates
 // session), but isolated so sendMessage doesn't have the init
 // pattern inline. Returns `runStartIndex` — the index into
@@ -1271,6 +1291,11 @@ function ensureSessionSubscription(
     // unsubscribe sessions the user is NOT currently viewing — the
     // watch(currentSessionId) handler cleans up when switching away.
     if (event.type === EVENT_TYPES.sessionFinished) {
+      // Recover any events lost due to pub-sub disconnects during
+      // long runs (e.g. Docker builds). Fire-and-forget; if the
+      // re-fetch fails the user still has whatever events arrived
+      // via the live stream + can reload manually. See #350.
+      refreshSessionTranscript(session.id);
       if (currentSessionId.value === session.id) {
         markSessionRead(session.id);
       } else {
