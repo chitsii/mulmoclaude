@@ -14,7 +14,14 @@
 
 set -e
 
-TARGET_UID="${HOST_UID:-1000}"
+# When HOST_UID is unset, the container was started with `--user`
+# (non-SSH mode). Skip all root setup and exec directly — we're
+# already running as the target user with zero capabilities.
+if [ -z "${HOST_UID:-}" ]; then
+  exec "$@"
+fi
+
+TARGET_UID="$HOST_UID"
 TARGET_GID="${HOST_GID:-1000}"
 
 # 1. Add a /etc/passwd entry for the target UID if it doesn't exist.

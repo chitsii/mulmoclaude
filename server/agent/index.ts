@@ -55,6 +55,7 @@ function spawnClaude(
     gid: process.getgid?.() ?? 1000,
     platform: process.platform,
     sandboxAuthArgs: sandboxAuth.args,
+    sshAgentForward: env.sandboxSshAgentForward,
   });
   return spawn("docker", dockerArgs, { stdio: ["pipe", "pipe", "pipe"] });
 }
