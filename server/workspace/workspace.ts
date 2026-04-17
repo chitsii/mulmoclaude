@@ -106,10 +106,9 @@ export function initWorkspace(): string {
   // Create .gitignore if missing. The workspace is a git repo for
   // version-tracking user data, but cloned dev repos under github/
   // have their own .git and shouldn't be committed (#256).
-  const gitignorePath = path.join(workspacePath, ".gitignore");
-  if (!fs.existsSync(gitignorePath)) {
-    fs.writeFileSync(
-      gitignorePath,
+  if (!existsInWorkspace(".gitignore")) {
+    writeWorkspaceTextSync(
+      ".gitignore",
       [
         "# Cloned repositories have their own .git — don't nest",
         "github/",

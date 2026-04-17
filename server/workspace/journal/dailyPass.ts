@@ -14,10 +14,17 @@ import { workspacePath as defaultWorkspacePath } from "../workspace.js";
 import { WORKSPACE_DIRS } from "../paths.js";
 import {
   writeDailySummary,
+  readDailySummary,
   readTopicFile,
   writeTopicFile,
   appendOrCreateTopic,
+  readAllTopicFiles,
 } from "../../utils/files/journal-io.js";
+import {
+  readSessionMeta as readSessionMetaIO,
+  readSessionJsonl as readSessionJsonlIO,
+} from "../../utils/files/session-io.js";
+import { statUnder } from "../../utils/files/workspace-io.js";
 import {
   type Summarize,
   type SessionExcerpt,
@@ -32,14 +39,7 @@ import {
   isDailyArchivistOutput,
   ClaudeCliNotFoundError,
 } from "./archivist.js";
-import {
-  summariesRoot,
-  dailyPathFor,
-  topicPathFor,
-  toIsoDate,
-  slugify,
-  TOPICS_DIR,
-} from "./paths.js";
+import { toIsoDate, slugify } from "./paths.js";
 import {
   findDirtySessions,
   applyProcessed,
@@ -47,7 +47,6 @@ import {
 } from "./diff.js";
 import { rewriteWorkspaceLinks } from "./linkRewrite.js";
 import { writeState, type JournalState } from "./state.js";
-import { readTextOrNull } from "../../utils/files/safe.js";
 import { log } from "../../system/logger/index.js";
 import { EVENT_TYPES } from "../../../src/types/events.js";
 
@@ -103,7 +102,11 @@ export async function runDailyPass(
   const { dirty } = findDirtySessions(eligible, state.processedSessions);
   if (dirty.length === 0) return { nextState: { ...state }, result };
 
-  const perSessionExcerpts = await loadDirtySessionExcerpts(chatDir, dirty);
+  const perSessionExcerpts = await loadDirtySessionExcerpts(
+    chatDir,
+    dirty,
+    workspaceRoot,
+  );
   const { dayBuckets, sessionToDays } = buildDayBuckets(perSessionExcerpts);
 
   // Note: we intentionally do NOT early-return when `dayBuckets` is
@@ -195,7 +198,7 @@ async function processOneDay(
   existingTopics: ExistingTopicSnapshot[],
   summarize: Summarize,
 ): Promise<DayOutcome> {
-  const existingDaily = await readTextOrNull(dailyPathFor(workspaceRoot, date));
+  const existingDaily = await readDailySummary(date, workspaceRoot);
   const input: DailyArchivistInput = {
     date,
     existingDailySummary: existingDaily,
@@ -324,7 +327,7 @@ async function refreshTopicSnapshot(
   slug: string,
   existingTopics: ExistingTopicSnapshot[],
 ): Promise<void> {
-  const newBody = await readTextOrNull(topicPathFor(workspaceRoot, slug));
+  const newBody = await readTopicFile(slug, workspaceRoot);
   if (newBody === null) return;
   const snapshot: ExistingTopicSnapshot = { slug, content: newBody };
   const idx = existingTopics.findIndex((t) => t.slug === slug);
@@ -488,11 +491,16 @@ export function advanceJournalState(
 async function loadDirtySessionExcerpts(
   chatDir: string,
   dirty: readonly string[],
+  workspaceRoot: string,
 ): Promise<Map<string, Map<string, SessionExcerpt>>> {
   const perSession = new Map<string, Map<string, SessionExcerpt>>();
   for (const sessionId of dirty) {
     try {
-      const excerpts = await loadSessionExcerptsByDate(chatDir, sessionId);
+      const excerpts = await loadSessionExcerptsByDate(
+        chatDir,
+        sessionId,
+        workspaceRoot,
+      );
       if (excerpts.size > 0) perSession.set(sessionId, excerpts);
     } catch (err) {
       log.warn("journal", "failed to load session", {
@@ -531,19 +539,17 @@ async function listSessionMetas(chatDir: string): Promise<SessionFileMeta[]> {
 async function loadSessionExcerptsByDate(
   chatDir: string,
   sessionId: string,
+  workspaceRoot: string,
 ): Promise<Map<string, SessionExcerpt>> {
-  const jsonlPath = path.join(chatDir, `${sessionId}.jsonl`);
-  const metaPath = path.join(chatDir, `${sessionId}.json`);
+  const roleId = await readRoleIdFromMeta(sessionId, workspaceRoot);
+  const raw = await readSessionJsonlIO(sessionId, workspaceRoot);
+  if (!raw) return new Map();
 
-  const roleId = await readRoleId(metaPath);
-  const raw = await fsp.readFile(jsonlPath, "utf-8");
-
-  // We don't have per-event timestamps in the legacy jsonl format,
-  // so fall back to the file's mtime for unscoped events. If the
-  // session spans midnight we still bucket everything into whichever
-  // date the mtime lands in — acceptable for a personal workspace
-  // where most sessions are short-lived.
-  const fallbackDate = toIsoDate((await fsp.stat(jsonlPath)).mtimeMs);
+  const stat = await statUnder(
+    workspaceRoot,
+    `${WORKSPACE_DIRS.chat}/${sessionId}.jsonl`,
+  );
+  const fallbackDate = toIsoDate(stat?.mtimeMs ?? Date.now());
 
   const parsedEvents = parseJsonlEvents(raw, MAX_EVENTS_PER_SESSION);
   return bucketParsedEvents(parsedEvents, sessionId, roleId, fallbackDate);
@@ -623,10 +629,13 @@ export function bucketParsedEvents(
   return buckets;
 }
 
-async function readRoleId(metaPath: string): Promise<string> {
+async function readRoleIdFromMeta(
+  sessionId: string,
+  workspaceRoot: string,
+): Promise<string> {
   try {
-    const meta = JSON.parse(await fsp.readFile(metaPath, "utf-8"));
-    if (typeof meta.roleId === "string") return meta.roleId;
+    const meta = await readSessionMetaIO(sessionId, workspaceRoot);
+    if (meta && typeof meta.roleId === "string") return meta.roleId;
   } catch {
     // ignore
   }
@@ -744,23 +753,10 @@ function truncate(s: string, max: number): string {
 async function readAllTopics(
   workspaceRoot: string,
 ): Promise<ExistingTopicSnapshot[]> {
-  const dir = path.join(summariesRoot(workspaceRoot), TOPICS_DIR);
-  let entries: string[];
-  try {
-    entries = await fsp.readdir(dir);
-  } catch {
-    return [];
-  }
+  const topicMap = await readAllTopicFiles(workspaceRoot);
   const out: ExistingTopicSnapshot[] = [];
-  for (const name of entries) {
-    if (!name.endsWith(".md")) continue;
-    const slug = name.replace(/\.md$/, "");
-    try {
-      const content = await fsp.readFile(path.join(dir, name), "utf-8");
-      out.push({ slug, content });
-    } catch {
-      // ignore
-    }
+  for (const [slug, content] of topicMap) {
+    out.push({ slug, content });
   }
   return out;
 }
