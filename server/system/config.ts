@@ -52,10 +52,13 @@ function isStringArray(value: unknown): value is string[] {
   );
 }
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
 export function isAppSettings(value: unknown): value is AppSettings {
-  if (typeof value !== "object" || value === null) return false;
-  const candidate = value as Record<string, unknown>;
-  return isStringArray(candidate.extraAllowedTools);
+  if (!isRecord(value)) return false;
+  return isStringArray(value.extraAllowedTools);
 }
 
 export function loadSettings(): AppSettings {
@@ -164,27 +167,31 @@ function isHttpUrl(value: string): boolean {
 }
 
 export function isMcpHttpSpec(value: unknown): value is McpHttpSpec {
-  if (typeof value !== "object" || value === null) return false;
-  const c = value as Record<string, unknown>;
-  if (c.type !== "http") return false;
-  if (typeof c.url !== "string" || !isHttpUrl(c.url)) return false;
-  if (c.headers !== undefined && !isStringRecord(c.headers)) return false;
-  if (c.enabled !== undefined && typeof c.enabled !== "boolean") return false;
+  if (!isRecord(value)) return false;
+
+  if (value.type !== "http") return false;
+  if (typeof value.url !== "string" || !isHttpUrl(value.url)) return false;
+  if (value.headers !== undefined && !isStringRecord(value.headers))
+    return false;
+  if (value.enabled !== undefined && typeof value.enabled !== "boolean")
+    return false;
   return true;
 }
 
 export function isMcpStdioSpec(value: unknown): value is McpStdioSpec {
-  if (typeof value !== "object" || value === null) return false;
-  const c = value as Record<string, unknown>;
-  if (c.type !== "stdio") return false;
-  if (typeof c.command !== "string" || c.command.length === 0) return false;
-  if (!STDIO_COMMAND_ALLOWLIST.has(c.command)) return false;
-  if (c.args !== undefined) {
-    if (!Array.isArray(c.args)) return false;
-    if (!c.args.every((a) => typeof a === "string")) return false;
+  if (!isRecord(value)) return false;
+
+  if (value.type !== "stdio") return false;
+  if (typeof value.command !== "string" || value.command.length === 0)
+    return false;
+  if (!STDIO_COMMAND_ALLOWLIST.has(value.command)) return false;
+  if (value.args !== undefined) {
+    if (!Array.isArray(value.args)) return false;
+    if (!value.args.every((a) => typeof a === "string")) return false;
   }
-  if (c.env !== undefined && !isStringRecord(c.env)) return false;
-  if (c.enabled !== undefined && typeof c.enabled !== "boolean") return false;
+  if (value.env !== undefined && !isStringRecord(value.env)) return false;
+  if (value.enabled !== undefined && typeof value.enabled !== "boolean")
+    return false;
   return true;
 }
 
@@ -201,9 +208,9 @@ export function isMcpServerId(value: unknown): value is string {
 }
 
 export function isMcpConfigFile(value: unknown): value is McpConfigFile {
-  if (typeof value !== "object" || value === null) return false;
-  const c = value as Record<string, unknown>;
-  const servers = c.mcpServers;
+  if (!isRecord(value)) return false;
+
+  const servers = value.mcpServers;
   if (typeof servers !== "object" || servers === null) return false;
   if (Array.isArray(servers)) return false;
   for (const [id, spec] of Object.entries(servers)) {
