@@ -2,51 +2,61 @@
 //   data/todos/todos.json     — items
 //   data/todos/columns.json   — status columns
 //
-// Sync API (existing callers are synchronous route handlers).
-// Optional `root` for test DI.
+// Sync API. Optional `root` for test DI.
 
-import { WORKSPACE_FILES } from "../../workspace/paths.js";
+import { WORKSPACE_DIRS, WORKSPACE_FILES } from "../../workspace/paths.js";
 import { workspacePath } from "../../workspace/paths.js";
 import { resolvePath } from "./workspace-io.js";
+import { writeFileAtomicSync } from "./atomic.js";
 import fs from "fs";
 
-const TODOS_DIR = "data/todos";
 const root = (r?: string) => r ?? workspacePath;
 
-export function loadTodos<T>(fallback: T, r?: string): T {
-  const p = resolvePath(root(r), WORKSPACE_FILES.todosItems);
+function readJsonOrFallback<T>(absPath: string, fallback: T): T {
   try {
-    if (!fs.existsSync(p)) return fallback;
-    return JSON.parse(fs.readFileSync(p, "utf-8")) as T;
-  } catch {
-    return fallback;
+    return JSON.parse(fs.readFileSync(absPath, "utf-8")) as T;
+  } catch (err) {
+    if (
+      typeof err === "object" &&
+      err !== null &&
+      "code" in err &&
+      (err as { code: string }).code === "ENOENT"
+    ) {
+      return fallback;
+    }
+    // JSON parse error or EACCES/EPERM — rethrow
+    throw err;
   }
+}
+
+export function loadTodos<T>(fallback: T, r?: string): T {
+  return readJsonOrFallback(
+    resolvePath(root(r), WORKSPACE_FILES.todosItems),
+    fallback,
+  );
 }
 
 export function saveTodos(items: unknown, r?: string): void {
-  const dir = resolvePath(root(r), TODOS_DIR);
+  const dir = resolvePath(root(r), WORKSPACE_DIRS.todos);
   fs.mkdirSync(dir, { recursive: true });
-  const p = resolvePath(root(r), WORKSPACE_FILES.todosItems);
-  const tmp = `${p}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(items, null, 2));
-  fs.renameSync(tmp, p);
+  writeFileAtomicSync(
+    resolvePath(root(r), WORKSPACE_FILES.todosItems),
+    JSON.stringify(items, null, 2),
+  );
 }
 
 export function loadColumns<T>(fallback: T, r?: string): T {
-  const p = resolvePath(root(r), WORKSPACE_FILES.todosColumns);
-  try {
-    if (!fs.existsSync(p)) return fallback;
-    return JSON.parse(fs.readFileSync(p, "utf-8")) as T;
-  } catch {
-    return fallback;
-  }
+  return readJsonOrFallback(
+    resolvePath(root(r), WORKSPACE_FILES.todosColumns),
+    fallback,
+  );
 }
 
 export function saveColumns(columns: unknown, r?: string): void {
-  const dir = resolvePath(root(r), TODOS_DIR);
+  const dir = resolvePath(root(r), WORKSPACE_DIRS.todos);
   fs.mkdirSync(dir, { recursive: true });
-  const p = resolvePath(root(r), WORKSPACE_FILES.todosColumns);
-  const tmp = `${p}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(columns, null, 2));
-  fs.renameSync(tmp, p);
+  writeFileAtomicSync(
+    resolvePath(root(r), WORKSPACE_FILES.todosColumns),
+    JSON.stringify(columns, null, 2),
+  );
 }

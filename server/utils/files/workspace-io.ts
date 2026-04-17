@@ -191,8 +191,11 @@ export async function readdirUnder(
   try {
     return await fs.promises.readdir(path.join(root, relPath));
   } catch (err) {
-    rethrowUnexpected(err, `readdirUnder(${relPath})`);
-    return [];
+    if (isEnoent(err)) return [];
+    log.error("workspace-io", `readdirUnder(${relPath})`, {
+      error: String(err),
+    });
+    throw err;
   }
 }
 

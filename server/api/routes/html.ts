@@ -90,14 +90,15 @@ router.post(
       res.status(500).json({ message: "GEMINI_API_KEY is not set" });
       return;
     }
-    const existingHtml = await readCurrentHtml();
-    if (!existingHtml?.trim()) {
-      res.status(400).json({
-        message: "No HTML page has been generated yet. Use generateHtml first.",
-      });
-      return;
-    }
     try {
+      const existingHtml = await readCurrentHtml();
+      if (!existingHtml?.trim()) {
+        res.status(400).json({
+          message:
+            "No HTML page has been generated yet. Use generateHtml first.",
+        });
+        return;
+      }
       const fullPrompt = `Modify the following HTML page based on this instruction: ${prompt}\n\nExisting HTML:\n${existingHtml}\n\nRequirements:\n- Return only the complete modified HTML, no explanation`;
       const html = await callGemini(fullPrompt);
       await writeCurrentHtml(html);

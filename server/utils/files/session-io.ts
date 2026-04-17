@@ -41,7 +41,11 @@ export async function writeSessionMeta(
   meta: SessionMeta,
   r?: string,
 ): Promise<void> {
-  await writeTextUnder(root(r), `${CHAT}/${id}.json`, JSON.stringify(meta));
+  await writeTextUnder(
+    root(r),
+    `${CHAT}/${id}.json`,
+    JSON.stringify(meta, null, 2),
+  );
 }
 
 export async function createSessionMeta(

@@ -266,8 +266,14 @@ async function persistHasUnread(
 ): Promise<void> {
   try {
     await updateHasUnread(chatSessionId, hasUnread);
-  } catch {
-    // Meta file missing or malformed — nothing to persist into.
+  } catch (err) {
+    // updateHasUnread already no-ops when meta is missing (ENOENT is
+    // handled internally). Any error reaching here is unexpected.
+    log.warn("session-store", "persistHasUnread failed", {
+      chatSessionId,
+      hasUnread,
+      error: String(err),
+    });
   }
 }
 
