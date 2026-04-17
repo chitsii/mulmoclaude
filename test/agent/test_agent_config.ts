@@ -589,7 +589,11 @@ describe("buildUserMessageLine", () => {
     const line = buildUserMessageLine("analyze", [
       { mimeType: "image/jpeg", data: "/9j/4AAQ" },
       { mimeType: "application/pdf", data: "JVBERi0x" },
-      { mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", data: "UEs=" },
+      {
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        data: "UEs=",
+      },
     ]);
     const parsed = JSON.parse(line.trimEnd());
     const blocks = parsed.message.content;
