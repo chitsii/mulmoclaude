@@ -126,8 +126,19 @@ export async function writeWorkspaceJson(
 // Modules that take `root` as a parameter (journal, sources, etc.)
 // use these instead of raw path.join + fs.*. Same contract as the
 // workspace-* helpers, but root is caller-supplied.
+//
+// **IMPORTANT — internal paths only.** These helpers do NOT guard
+// against `..` traversal. They are designed for domain I/O modules
+// that pass compile-time-fixed relative paths like
+// `${WORKSPACE_DIRS.chat}/${id}.json`. User-supplied or HTTP-body
+// paths MUST go through `resolveWithinRoot()` in `safe.ts` instead.
 
-/** Resolve root + relPath. Replaces raw `path.join(root, rel)`. */
+/**
+ * Resolve root + relPath. Replaces raw `path.join(root, rel)`.
+ *
+ * For **internal fixed paths only** — never pass user input as
+ * `relPath`. Use `resolveWithinRoot()` for user-supplied paths.
+ */
 export function resolvePath(root: string, relPath: string): string {
   return path.join(root, relPath);
 }

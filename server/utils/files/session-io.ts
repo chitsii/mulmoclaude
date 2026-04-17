@@ -110,6 +110,15 @@ export async function readSessionJsonl(
   return readTextUnder(root(r), `${CHAT}/${id}.jsonl`);
 }
 
+/**
+ * Append a single line to the session event log.
+ *
+ * **Caller provides the trailing `\n`.** This matches the existing
+ * convention (`JSON.stringify(obj) + "\n"`) and avoids double-newline
+ * if the function also appended one. If `line` is missing its `\n`,
+ * the next append will concatenate on the same line — breaking JSONL
+ * parsing.
+ */
 export async function appendSessionLine(
   id: string,
   line: string,
