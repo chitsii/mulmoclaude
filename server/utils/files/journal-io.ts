@@ -26,9 +26,21 @@ import {
   ARCHIVE_DIR,
 } from "../../workspace/journal/paths.js";
 
+import fs from "node:fs";
+
 const root = (r?: string) => r ?? workspacePath;
 
 // ── State ───────────────────────────────────────────────────────
+
+export function journalStateExists(r?: string): boolean {
+  const p = path.join(summariesRoot(root(r)), STATE_FILE);
+  try {
+    fs.statSync(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function readJournalState<T>(fallback: T, r?: string): Promise<T> {
   const p = path.join(summariesRoot(root(r)), STATE_FILE);

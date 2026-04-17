@@ -7,12 +7,11 @@
 // them without touching disk. Filesystem helpers at the bottom wrap
 // those pure functions with atomic read/write.
 
-import fs from "node:fs";
-import fsp from "node:fs/promises";
-import path from "node:path";
-import { summariesRoot, STATE_FILE } from "./paths.js";
-import { log } from "../../system/logger/index.js";
-import { writeJsonAtomic } from "../../utils/files/index.js";
+import {
+  readJournalState as readJournalStateRaw,
+  writeJournalState as writeJournalStateRaw,
+  journalStateExists as journalStateExistsRaw,
+} from "../../utils/files/journal-io.js";
 
 // Bump this when the schema changes in a backwards-incompatible way.
 // Older state files are treated as corrupted and replaced with a
@@ -122,51 +121,20 @@ export function isOptimizationDue(state: JournalState, nowMs: number): boolean {
   return nowMs - last >= intervalMs;
 }
 
-// --- Filesystem helpers --------------------------------------------
-
-export function statePathFor(workspaceRoot: string): string {
-  return path.join(summariesRoot(workspaceRoot), STATE_FILE);
-}
+// --- Filesystem helpers (delegated to journal-io) --------------------
 
 export async function readState(workspaceRoot: string): Promise<JournalState> {
-  const p = statePathFor(workspaceRoot);
-  try {
-    const raw = await fsp.readFile(p, "utf-8");
-    return parseState(JSON.parse(raw));
-  } catch (err) {
-    if (isFileNotFound(err)) {
-      return defaultState();
-    }
-    // Corrupted JSON or any other read error — fall back to defaults
-    // and log a warning. Better to rebuild from scratch than to
-    // crash the journal module.
-    log.warn("journal", "state file unreadable, using defaults", {
-      error: String(err),
-    });
-    return defaultState();
-  }
+  const raw = await readJournalStateRaw<unknown>(null, workspaceRoot);
+  return parseState(raw);
 }
 
-// Atomic write: write to a tmp file and rename, so a crash mid-write
-// can't leave a half-written state.json behind.
 export async function writeState(
   workspaceRoot: string,
   state: JournalState,
 ): Promise<void> {
-  await writeJsonAtomic(statePathFor(workspaceRoot), state);
+  await writeJournalStateRaw(state, workspaceRoot);
 }
 
-// Tiny helper so callers don't need to import `fs` directly just to
-// check if the state file exists yet.
 export function stateFileExists(workspaceRoot: string): boolean {
-  return fs.existsSync(statePathFor(workspaceRoot));
-}
-
-// Narrow an unknown error value into "is this an ENOENT?". Written
-// without the NodeJS.ErrnoException global so we don't depend on
-// @types/node globals from this file.
-function isFileNotFound(err: unknown): boolean {
-  if (!(err instanceof Error)) return false;
-  if (!("code" in err)) return false;
-  return (err as Error & { code?: unknown }).code === "ENOENT";
+  return journalStateExistsRaw(workspaceRoot);
 }
