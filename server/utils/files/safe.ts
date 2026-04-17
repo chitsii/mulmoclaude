@@ -18,9 +18,7 @@ export function statSafe(absPath: string): fs.Stats | null {
   }
 }
 
-export async function statSafeAsync(
-  absPath: string,
-): Promise<fs.Stats | null> {
+export async function statSafeAsync(absPath: string): Promise<fs.Stats | null> {
   try {
     return await fs.promises.stat(absPath);
   } catch {
@@ -36,9 +34,7 @@ export function readDirSafe(absPath: string): fs.Dirent[] {
   }
 }
 
-export async function readDirSafeAsync(
-  absPath: string,
-): Promise<fs.Dirent[]> {
+export async function readDirSafeAsync(absPath: string): Promise<fs.Dirent[]> {
   try {
     return await fs.promises.readdir(absPath, { withFileTypes: true });
   } catch {
@@ -46,9 +42,7 @@ export async function readDirSafeAsync(
   }
 }
 
-export async function readTextOrNull(
-  file: string,
-): Promise<string | null> {
+export async function readTextOrNull(file: string): Promise<string | null> {
   try {
     return await fs.promises.readFile(file, "utf-8");
   } catch {

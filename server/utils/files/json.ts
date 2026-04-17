@@ -41,9 +41,7 @@ export async function writeJsonAtomic(
  * Read a JSON file and parse it. Returns null if the file is missing,
  * unreadable, or malformed.
  */
-export async function readJsonOrNull<T>(
-  filePath: string,
-): Promise<T | null> {
+export async function readJsonOrNull<T>(filePath: string): Promise<T | null> {
   try {
     const content = await fs.promises.readFile(filePath, "utf-8");
     const parsed: T = JSON.parse(content);

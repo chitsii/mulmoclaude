@@ -72,10 +72,7 @@ describe("readJsonOrNull (async)", () => {
   });
 
   it("returns null for missing file", async () => {
-    assert.equal(
-      await readJsonOrNull(path.join(tmpDir, "nope.json")),
-      null,
-    );
+    assert.equal(await readJsonOrNull(path.join(tmpDir, "nope.json")), null);
   });
 
   it("returns null for malformed JSON", async () => {

@@ -87,9 +87,6 @@ describe("writeFileAtomicSync", () => {
     fs.mkdirSync(dir, { recursive: true });
     assert.throws(() => writeFileAtomicSync(dir, "content"));
     const siblings = fs.readdirSync(path.dirname(dir));
-    assert.equal(
-      siblings.filter((f) => f.endsWith(".tmp")).length,
-      0,
-    );
+    assert.equal(siblings.filter((f) => f.endsWith(".tmp")).length, 0);
   });
 });

@@ -38,10 +38,7 @@ export async function readWorkspaceText(
   relPath: string,
 ): Promise<string | null> {
   try {
-    return await fs.promises.readFile(
-      resolveWorkspacePath(relPath),
-      "utf-8",
-    );
+    return await fs.promises.readFile(resolveWorkspacePath(relPath), "utf-8");
   } catch {
     return null;
   }
@@ -75,10 +72,7 @@ export async function readWorkspaceJson<T>(
 }
 
 /** Sync variant of `readWorkspaceJson`. */
-export function readWorkspaceJsonSync<T>(
-  relPath: string,
-  fallback: T,
-): T {
+export function readWorkspaceJsonSync<T>(relPath: string, fallback: T): T {
   const text = readWorkspaceTextSync(relPath);
   if (text === null) return fallback;
   try {
