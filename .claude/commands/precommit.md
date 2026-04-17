@@ -4,11 +4,13 @@ Review ALL staged and unstaged changes against the project's coding standards be
 
 Run `git diff --stat` and `git diff` first, then check every item below against the actual changes. Report violations with file:line references. If everything passes, say "All checks passed — ready to commit."
 
-## 1. DRY — No Duplication
+## 1. DRY — No Duplication & Small Functions
 
 - [ ] No function or 3+ line block is copy-pasted across files. If the same logic appears twice, it MUST be extracted to a shared helper under `server/utils/` or `src/utils/`.
 - [ ] Utility functions are grouped by concern: file ops → `utils/files/`, dates → `utils/date.ts`, strings → `utils/slug.ts`, JSON → `utils/json.ts`, types → `utils/types.ts`, spawn → `utils/spawn.ts`, network → `utils/fetch.ts`, markdown → `utils/markdown.ts`, IDs → `utils/id.ts`, errors → `utils/errors.ts`.
 - [ ] No new `makeId()`, `isRecord()`, `formatSpawnFailure()`, `isValidSlug()`, `extractJsonObject()`, or similar that already exists in `server/utils/`.
+- [ ] **Functions are as small as possible.** Each function does one thing. If a function body exceeds ~20 lines, look for extractable sub-steps. Before writing a new helper, grep the codebase — it may already exist.
+- [ ] **Every new function MUST have a corresponding test.** No exceptions. If it's exported, it has a test file. If it's private but contains non-trivial logic, extract it as a testable exported pure function.
 
 ## 2. Tests
 
