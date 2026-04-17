@@ -20,7 +20,25 @@ export function isEnoent(err: unknown): boolean {
   );
 }
 
-/** Read a text file by absolute path. Null on ENOENT. */
+/** Read a binary file by absolute path. Null on ENOENT. */
+export function readBinarySafeSync(absPath: string): Buffer | null {
+  try {
+    return fs.readFileSync(absPath);
+  } catch {
+    return null;
+  }
+}
+
+/** Read a text file by absolute path (async). Null on ENOENT. */
+export async function readTextSafe(absPath: string): Promise<string | null> {
+  try {
+    return await fs.promises.readFile(absPath, "utf-8");
+  } catch {
+    return null;
+  }
+}
+
+/** Read a text file by absolute path (sync). Null on ENOENT. */
 export function readTextSafeSync(absPath: string): string | null {
   try {
     return fs.readFileSync(absPath, "utf-8");

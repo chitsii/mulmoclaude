@@ -1,8 +1,7 @@
 import { Router, Request, Response } from "express";
-import fsp from "node:fs/promises";
 import path from "path";
 import { WORKSPACE_PATHS } from "../../workspace/paths.js";
-import { readTextSafeSync } from "../../utils/files/safe.js";
+import { readTextSafeSync, readTextSafe } from "../../utils/files/safe.js";
 import { getPageIndex } from "./wiki/pageIndex.js";
 import { badRequest } from "../../utils/httpError.js";
 import { API_ROUTES } from "../../../src/config/apiRoutes.js";
@@ -348,9 +347,10 @@ async function collectLintIssues(): Promise<string[]> {
   // Parallel read: N small markdown files, ~50 KB each. Bounded by
   // the number of wiki pages, not by CPU.
   const contents = await Promise.all(
-    pageFiles.map((f) =>
-      fsp.readFile(path.join(dir, f), "utf-8").catch(() => ""),
-    ),
+    pageFiles.map(async (f) => {
+      const content = await readTextSafe(path.join(dir, f));
+      return content ?? "";
+    }),
   );
   for (let i = 0; i < pageFiles.length; i++) {
     issues.push(...findBrokenLinksInPage(pageFiles[i], contents[i], fileSlugs));

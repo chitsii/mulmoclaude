@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import fs from "fs";
-import { readdir, readFile, stat } from "fs/promises";
+import { readdir, stat } from "fs/promises";
+import { readTextSafe } from "../../utils/files/safe.js";
 import path from "path";
 import { workspacePath } from "../../workspace/workspace.js";
 import { WORKSPACE_PATHS } from "../../workspace/paths.js";
@@ -277,7 +278,7 @@ router.get(
                       relFromStories,
                     );
                     if (!scriptPath) return entry;
-                    const scriptJson = await readFile(scriptPath, "utf-8");
+                    const scriptJson = (await readTextSafe(scriptPath)) ?? "";
                     return {
                       ...entry,
                       result: {
