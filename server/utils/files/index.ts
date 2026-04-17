@@ -35,6 +35,7 @@ export {
 
 export {
   resolveWorkspacePath,
+  resolvePath,
   readWorkspaceText,
   readWorkspaceTextSync,
   readWorkspaceJson,
@@ -44,4 +45,15 @@ export {
   writeWorkspaceJson,
   existsInWorkspace,
   ensureWorkspaceDir,
+  readTextUnder,
+  writeTextUnder,
+  readdirUnder,
+  statUnder,
+  ensureDirUnder,
 } from "./workspace-io.js";
+
+// ── Domain I/O ──────────────────────────────────────────────────
+export * from "./session-io.js";
+export * from "./todos-io.js";
+export * from "./scheduler-io.js";
+export * from "./html-io.js";

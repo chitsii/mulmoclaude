@@ -121,6 +121,70 @@ export async function writeWorkspaceJson(
   );
 }
 
+// ── Rooted variants (for DI / testable modules) ────────────────
+//
+// Modules that take `root` as a parameter (journal, sources, etc.)
+// use these instead of raw path.join + fs.*. Same contract as the
+// workspace-* helpers, but root is caller-supplied.
+
+/** Resolve root + relPath. Replaces raw `path.join(root, rel)`. */
+export function resolvePath(root: string, relPath: string): string {
+  return path.join(root, relPath);
+}
+
+/** Read text under an arbitrary root. Null on ENOENT. */
+export async function readTextUnder(
+  root: string,
+  relPath: string,
+): Promise<string | null> {
+  try {
+    return await fs.promises.readFile(path.join(root, relPath), "utf-8");
+  } catch {
+    return null;
+  }
+}
+
+/** Write atomically under an arbitrary root. */
+export async function writeTextUnder(
+  root: string,
+  relPath: string,
+  content: string,
+): Promise<void> {
+  await writeFileAtomic(path.join(root, relPath), content);
+}
+
+/** Readdir under a root. Empty on ENOENT. */
+export async function readdirUnder(
+  root: string,
+  relPath: string,
+): Promise<string[]> {
+  try {
+    return await fs.promises.readdir(path.join(root, relPath));
+  } catch {
+    return [];
+  }
+}
+
+/** Stat under a root. Null on ENOENT. */
+export async function statUnder(
+  root: string,
+  relPath: string,
+): Promise<fs.Stats | null> {
+  try {
+    return await fs.promises.stat(path.join(root, relPath));
+  } catch {
+    return null;
+  }
+}
+
+/** Ensure a directory exists under a root. */
+export async function ensureDirUnder(
+  root: string,
+  relPath: string,
+): Promise<void> {
+  await fs.promises.mkdir(path.join(root, relPath), { recursive: true });
+}
+
 // ── Existence ───────────────────────────────────────────────────
 
 /**

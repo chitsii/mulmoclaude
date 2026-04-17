@@ -1,6 +1,10 @@
 import { Router, Request, Response } from "express";
-import { WORKSPACE_PATHS } from "../../workspace/paths.js";
-import { loadJsonFile, saveJsonFile } from "../../utils/files/index.js";
+import {
+  loadTodos as loadTodosRaw,
+  saveTodos as saveTodosRaw,
+  loadColumns as loadColumnsRaw,
+  saveColumns as saveColumnsRaw,
+} from "../../utils/files/todos-io.js";
 import { dispatchTodos, type TodosActionInput } from "./todosHandlers.js";
 import {
   type StatusColumn,
@@ -49,32 +53,22 @@ export interface TodoItem {
   order?: number; // sort key within the same status column
 }
 
-const todosFile = (): string => WORKSPACE_PATHS.todosItems;
-const columnsFile = (): string => WORKSPACE_PATHS.todosColumns;
-
 function loadColumns(): StatusColumn[] {
-  return normalizeColumns(
-    loadJsonFile<unknown>(columnsFile(), DEFAULT_COLUMNS),
-  );
+  return normalizeColumns(loadColumnsRaw<unknown>(DEFAULT_COLUMNS));
 }
 
 function saveColumns(columns: StatusColumn[]): void {
-  saveJsonFile(columnsFile(), columns);
+  saveColumnsRaw(columns);
 }
 
-// Reads todos.json and migrates the result so callers always see a
-// fully-populated TodoItem (status / order backfilled). Migration is
-// done on every read; we only persist the migrated form when an
-// action mutates state, which keeps the on-disk format unchanged
-// for users who never touch the kanban view.
 function loadTodos(): TodoItem[] {
-  const raw = loadJsonFile<TodoItem[]>(todosFile(), []);
+  const raw = loadTodosRaw<TodoItem[]>([]);
   const columns = loadColumns();
   return migrateItems(raw, columns);
 }
 
 function saveTodos(items: TodoItem[]): void {
-  saveJsonFile(todosFile(), items);
+  saveTodosRaw(items);
 }
 
 // ── GET /api/todos ───────────────────────────────────────────────
