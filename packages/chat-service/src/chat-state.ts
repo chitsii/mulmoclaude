@@ -6,8 +6,9 @@
 // package: the transports directory path and logger arrive via the
 // factory, never through a direct `../workspace-paths.js` import.
 
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, readFile } from "fs/promises";
 import path from "path";
+import { writeFileAtomic } from "./atomic-write.js";
 import type { Logger } from "./types.js";
 
 // ── Types ────────────────────────────────────────────────────
@@ -93,7 +94,7 @@ export function createChatStateStore(opts: {
       throw new Error("Invalid transport or chat ID");
     }
     await mkdir(transportDir(transportId), { recursive: true });
-    await writeFile(
+    await writeFileAtomic(
       statePath(transportId, state.externalChatId),
       JSON.stringify(state, null, 2),
     );
