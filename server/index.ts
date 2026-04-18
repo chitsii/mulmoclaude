@@ -33,7 +33,7 @@ import {
   mcpTools,
   isMcpToolEnabled,
 } from "./agent/mcp-tools/index.js";
-import { initWorkspace } from "./workspace/workspace.js";
+import { initWorkspace, workspacePath } from "./workspace/workspace.js";
 import { env, isGeminiAvailable } from "./system/env.js";
 import { buildSandboxStatus } from "./api/sandboxStatus.js";
 import fs from "fs";
@@ -61,6 +61,7 @@ import {
 } from "./api/auth/token.js";
 import { log } from "./system/logger/index.js";
 import { startChat } from "./api/routes/agent.js";
+import { registerScheduledSkills } from "./workspace/skills/scheduler.js";
 import { API_ROUTES } from "../src/config/apiRoutes.js";
 
 const HTML_TOKEN_PLACEHOLDER = "__MULMOCLAUDE_AUTH_TOKEN__";
@@ -390,6 +391,25 @@ function startRuntimeServices(httpServer: ReturnType<typeof app.listen>): void {
       error: String(err),
     });
   });
+
+  // Register skills with schedule: frontmatter as scheduled tasks.
+  // Fire-and-forget — skill scan errors are logged but don't block
+  // server startup.
+  registerScheduledSkills({
+    taskManager,
+    workspaceRoot: workspacePath,
+    startChat,
+  })
+    .then((count) => {
+      if (count > 0) {
+        log.info("skills", "scheduled skills registered", { count });
+      }
+    })
+    .catch((err) => {
+      log.warn("skills", "failed to register scheduled skills", {
+        error: String(err),
+      });
+    });
 
   taskManager.start();
 

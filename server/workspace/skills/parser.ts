@@ -7,9 +7,23 @@
 // mirrors the approach used by server/sources/registry.ts for source
 // frontmatter — no js-yaml, no ambiguity with multi-line scalars.
 
+export interface SkillSchedule {
+  /** "daily HH:MM" or "interval Ns/Nm/Nh" or "once YYYY-MM-DDTHH:MM" */
+  raw: string;
+  /** Parsed into task-manager-compatible shape */
+  parsed:
+    | { type: "daily"; time: string }
+    | { type: "interval"; intervalMs: number }
+    | null;
+}
+
 export interface ParsedSkill {
   description: string;
   body: string;
+  /** If present, this skill should be auto-scheduled */
+  schedule?: SkillSchedule;
+  /** Role to use when running the scheduled skill (default: "general") */
+  roleId?: string;
 }
 
 // Match a YAML scalar value on a single line:
@@ -31,6 +45,39 @@ function parseScalar(raw: string): string {
 }
 
 /**
+ * Parse schedule value from frontmatter.
+ * Supported formats:
+ *   "daily HH:MM"      → { type: "daily", time: "HH:MM" }
+ *   "interval 30m"     → { type: "interval", intervalMs: 1800000 }
+ *   "interval 2h"      → { type: "interval", intervalMs: 7200000 }
+ *   "interval 300s"    → { type: "interval", intervalMs: 300000 }
+ */
+function parseScheduleValue(raw: string): SkillSchedule["parsed"] {
+  const trimmed = raw.trim();
+
+  // daily HH:MM
+  const dailyMatch = trimmed.match(/^daily\s+(\d{2}:\d{2})$/);
+  if (dailyMatch) {
+    return { type: "daily", time: dailyMatch[1] };
+  }
+
+  // interval Ns / Nm / Nh
+  const intervalMatch = trimmed.match(/^interval\s+(\d+)([smh])$/);
+  if (intervalMatch) {
+    const value = Number(intervalMatch[1]);
+    const unit = intervalMatch[2];
+    const multipliers: Record<string, number> = {
+      s: 1_000,
+      m: 60_000,
+      h: 3_600_000,
+    };
+    return { type: "interval", intervalMs: value * multipliers[unit] };
+  }
+
+  return null;
+}
+
+/**
  * Parse a SKILL.md file. Returns null when:
  *  - the file has no frontmatter (no leading `---` fence)
  *  - the frontmatter is unterminated
@@ -38,11 +85,30 @@ function parseScalar(raw: string): string {
  *
  * An empty body is allowed (the skill may be just metadata for now).
  */
+// Extract key-value pairs from YAML frontmatter lines. Returns a
+// map of key → scalar value. Keeps parseSkillFrontmatter under the
+// cognitive-complexity threshold.
+function extractFrontmatterFields(
+  lines: string[],
+  startIdx: number,
+  endIdx: number,
+): Map<string, string> {
+  const fields = new Map<string, string>();
+  for (let i = startIdx; i < endIdx; i++) {
+    const line = lines[i];
+    const colonIdx = line.indexOf(":");
+    if (colonIdx === -1) continue;
+    const key = line.slice(0, colonIdx).trim();
+    const value = parseScalar(line.slice(colonIdx + 1));
+    fields.set(key, value);
+  }
+  return fields;
+}
+
 export function parseSkillFrontmatter(raw: string): ParsedSkill | null {
   const lines = raw.split(/\r?\n/);
   if (lines.length === 0 || lines[0].trim() !== "---") return null;
 
-  // Find the closing `---` fence. Skip index 0 (the opener).
   let closeIdx = -1;
   for (let i = 1; i < lines.length; i++) {
     if (lines[i].trim() === "---") {
@@ -52,20 +118,12 @@ export function parseSkillFrontmatter(raw: string): ParsedSkill | null {
   }
   if (closeIdx === -1) return null;
 
-  let description: string | null = null;
-  for (let i = 1; i < closeIdx; i++) {
-    const line = lines[i];
-    // Only the `description:` key matters in phase 0. Split on the
-    // FIRST colon so values containing ":" are preserved.
-    const colonIdx = line.indexOf(":");
-    if (colonIdx === -1) continue;
-    const key = line.slice(0, colonIdx).trim();
-    if (key !== "description") continue;
-    description = parseScalar(line.slice(colonIdx + 1));
-    break;
-  }
-
+  const fields = extractFrontmatterFields(lines, 1, closeIdx);
+  const description = fields.get("description") ?? null;
   if (description === null) return null;
+
+  const scheduleRaw = fields.get("schedule") ?? null;
+  const roleId = fields.get("roleId") ?? null;
 
   // Body starts after the closing fence. Trim leading blank lines so
   // the UI doesn't render an awkward gap above the first heading.
@@ -75,5 +133,13 @@ export function parseSkillFrontmatter(raw: string): ParsedSkill | null {
     .replace(/^(?:\s*\n)+/, "")
     .trimEnd();
 
-  return { description, body };
+  const result: ParsedSkill = { description, body };
+  if (scheduleRaw) {
+    result.schedule = {
+      raw: scheduleRaw,
+      parsed: parseScheduleValue(scheduleRaw),
+    };
+  }
+  if (roleId) result.roleId = roleId;
+  return result;
 }

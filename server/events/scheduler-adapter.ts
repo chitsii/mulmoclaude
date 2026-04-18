@@ -45,16 +45,16 @@ function logsDir(root = workspacePath): string {
 // ── I/O deps (real filesystem) ───────────────────────────────────
 
 const stateDeps: StateDeps = {
-  readFile: (p) => readFile(p, "utf-8"),
-  writeFileAtomic: (p, content) => writeFileAtomic(p, content),
+  readFile: (p: string) => readFile(p, "utf-8"),
+  writeFileAtomic: (p: string, content: string) => writeFileAtomic(p, content),
   exists: existsSync,
 };
 
 const logDeps: LogDeps = {
-  appendFile: (p, content) => appendFile(p, content),
-  readFile: (p) => readFile(p, "utf-8"),
+  appendFile: (p: string, content: string) => appendFile(p, content),
+  readFile: (p: string) => readFile(p, "utf-8"),
   exists: existsSync,
-  ensureDir: (p) => mkdir(p, { recursive: true }).then(() => {}),
+  ensureDir: (p: string) => mkdir(p, { recursive: true }).then(() => {}),
 };
 
 // ── System task registry ─────────────────────────────────────────
