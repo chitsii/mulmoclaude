@@ -89,7 +89,12 @@ function convertXlsx(data: string): string {
 const PPTX_MIME =
   "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
-async function isLibreOfficeAvailable(): Promise<boolean> {
+// LibreOffice runs inside the Docker sandbox image, not on the host.
+// We spin up a temporary container to do the conversion, mounting a
+// temp directory for input/output. On non-Docker hosts where
+// libreoffice is installed natively, the direct path also works.
+
+async function tryNativeLibreOffice(): Promise<boolean> {
   try {
     await execFileAsync("libreoffice", ["--version"], { timeout: 5000 });
     return true;
@@ -98,20 +103,56 @@ async function isLibreOfficeAvailable(): Promise<boolean> {
   }
 }
 
-async function convertPptxToPdf(data: string): Promise<Buffer | null> {
-  if (!(await isLibreOfficeAvailable())) return null;
+async function tryDockerLibreOffice(): Promise<boolean> {
+  try {
+    await execFileAsync("docker", ["image", "inspect", "mulmoclaude-sandbox"], {
+      timeout: 5000,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
+async function convertPptxToPdf(data: string): Promise<Buffer | null> {
   const tmpDir = await mkdtemp(path.join(os.tmpdir(), "pptx-"));
   const inputPath = path.join(tmpDir, "input.pptx");
   const outputPath = path.join(tmpDir, "input.pdf");
 
   try {
     await writeFile(inputPath, Buffer.from(data, "base64"));
-    await execFileAsync(
-      "libreoffice",
-      ["--headless", "--convert-to", "pdf", "--outdir", tmpDir, inputPath],
-      { timeout: 60_000 },
-    );
+
+    if (await tryNativeLibreOffice()) {
+      // Host has libreoffice installed natively
+      await execFileAsync(
+        "libreoffice",
+        ["--headless", "--convert-to", "pdf", "--outdir", tmpDir, inputPath],
+        { timeout: 60_000 },
+      );
+    } else if (await tryDockerLibreOffice()) {
+      // Use the sandbox Docker image for conversion
+      await execFileAsync(
+        "docker",
+        [
+          "run",
+          "--rm",
+          "-v",
+          `${tmpDir}:/data`,
+          "mulmoclaude-sandbox",
+          "libreoffice",
+          "--headless",
+          "--convert-to",
+          "pdf",
+          "--outdir",
+          "/data",
+          "/data/input.pptx",
+        ],
+        { timeout: 60_000 },
+      );
+    } else {
+      return null;
+    }
+
     return await readFile(outputPath);
   } catch {
     return null;
