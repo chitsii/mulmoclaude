@@ -16,10 +16,17 @@ import type {
 import { parseSkillFrontmatter } from "./parser.js";
 import { log } from "../../system/logger/index.js";
 import { readFileSync } from "fs";
+import { DEFAULT_ROLE_ID } from "../../../src/config/roles.js";
 
 interface SkillScheduleInfo {
   schedule: TaskSchedule;
   roleId: string;
+}
+
+interface StartChatResult {
+  kind: string;
+  error?: string;
+  status?: number;
 }
 
 export interface SkillSchedulerDeps {
@@ -29,7 +36,7 @@ export interface SkillSchedulerDeps {
     message: string;
     roleId: string;
     chatSessionId: string;
-  }) => Promise<{ kind: string }>;
+  }) => Promise<StartChatResult>;
 }
 
 const SKILL_TASK_PREFIX = "skill.";
@@ -107,6 +114,11 @@ async function doRegister(deps: SkillSchedulerDeps): Promise<number> {
           roleId,
           chatSessionId,
         });
+        if (result.kind === "error") {
+          throw new Error(
+            `scheduled skill failed: ${result.error ?? "unknown"}`,
+          );
+        }
         log.info("skills", "scheduled skill completed", {
           name: skill.name,
           kind: result.kind,
@@ -138,7 +150,7 @@ function readSkillScheduleInfo(skill: Skill): SkillScheduleInfo | null {
     if (!s) return null;
     return {
       schedule: s,
-      roleId: parsed?.roleId ?? "general",
+      roleId: parsed?.roleId ?? DEFAULT_ROLE_ID,
     };
   } catch {
     return null;

@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { parseSkillFrontmatter } from "../../server/workspace/skills/parser.ts";
+import { SCHEDULE_TYPES } from "@receptron/task-scheduler";
 
 describe("parseSkillFrontmatter — schedule", () => {
   it("parses daily HH:MM schedule", () => {
@@ -10,7 +11,7 @@ describe("parseSkillFrontmatter — schedule", () => {
     assert.ok(result);
     assert.deepEqual(result.schedule, {
       raw: "daily 08:00",
-      parsed: { type: "daily", time: "08:00" },
+      parsed: { type: SCHEDULE_TYPES.daily, time: "08:00" },
     });
   });
 
@@ -20,7 +21,7 @@ describe("parseSkillFrontmatter — schedule", () => {
     );
     assert.ok(result);
     assert.deepEqual(result.schedule?.parsed, {
-      type: "interval",
+      type: SCHEDULE_TYPES.interval,
       intervalMs: 1_800_000,
     });
   });
@@ -31,7 +32,7 @@ describe("parseSkillFrontmatter — schedule", () => {
     );
     assert.ok(result);
     assert.deepEqual(result.schedule?.parsed, {
-      type: "interval",
+      type: SCHEDULE_TYPES.interval,
       intervalMs: 7_200_000,
     });
   });
@@ -42,7 +43,7 @@ describe("parseSkillFrontmatter — schedule", () => {
     );
     assert.ok(result);
     assert.deepEqual(result.schedule?.parsed, {
-      type: "interval",
+      type: SCHEDULE_TYPES.interval,
       intervalMs: 300_000,
     });
   });
@@ -102,7 +103,7 @@ describe("parseSkillFrontmatter — schedule", () => {
     );
     assert.ok(result);
     assert.deepEqual(result.schedule?.parsed, {
-      type: "interval",
+      type: SCHEDULE_TYPES.interval,
       intervalMs: 10_000,
     });
   });
@@ -129,7 +130,7 @@ describe("parseSkillFrontmatter — schedule", () => {
     );
     assert.ok(result);
     assert.deepEqual(result.schedule?.parsed, {
-      type: "daily",
+      type: SCHEDULE_TYPES.daily,
       time: "23:59",
     });
   });

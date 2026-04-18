@@ -11,12 +11,14 @@ import path from "path";
 import { workspacePath } from "../workspace/workspace.js";
 import { writeFileAtomic } from "../utils/files/atomic.js";
 import { log } from "../system/logger/index.js";
+import { ONE_SECOND_MS } from "../utils/time.js";
 import type { ITaskManager, TaskDefinition } from "./task-manager/index.js";
 import {
   type TaskSchedule,
   type TaskExecutionState,
   type TaskLogEntry,
   type CatchUpTask,
+  type TaskTrigger,
   emptyState,
   computeCatchUpPlan,
   nextWindowAfter,
@@ -24,6 +26,10 @@ import {
   updateAndSave,
   appendLogEntry,
   queryLog,
+  SCHEDULE_TYPES,
+  TASK_RESULTS,
+  TASK_TRIGGERS,
+  MISSED_RUN_POLICIES,
   type StateMap,
   type StateDeps,
   type LogDeps,
@@ -64,7 +70,10 @@ export interface SystemTaskDef {
   name: string;
   description: string;
   schedule: TaskDefinition["schedule"];
-  missedRunPolicy: "skip" | "run-once" | "run-all";
+  missedRunPolicy:
+    | typeof MISSED_RUN_POLICIES.skip
+    | typeof MISSED_RUN_POLICIES.runOnce
+    | typeof MISSED_RUN_POLICIES.runAll;
   run: () => Promise<void>;
 }
 
@@ -113,7 +122,11 @@ export async function initScheduler(
     for (const run of plan.runs) {
       const task = tasks.find((t) => t.id === run.taskId);
       if (!task) continue;
-      await executeAndLog(task, run.context.scheduledFor, "catch-up");
+      await executeAndLog(
+        task,
+        run.context.scheduledFor,
+        TASK_TRIGGERS.catchUp,
+      );
     }
   }
 
@@ -125,7 +138,7 @@ export async function initScheduler(
       schedule: task.schedule,
       run: async () => {
         const windowIso = computeCurrentWindow(task);
-        await executeAndLog(task, windowIso, "scheduled");
+        await executeAndLog(task, windowIso, TASK_TRIGGERS.scheduled);
       },
     });
   }
@@ -169,7 +182,7 @@ export function getSchedulerTasks(): Array<{
 async function executeAndLog(
   task: SystemTaskDef,
   scheduledFor: string,
-  trigger: "scheduled" | "catch-up" | "manual",
+  trigger: TaskTrigger,
 ): Promise<void> {
   const startedAt = new Date().toISOString();
   const startMs = Date.now();
@@ -203,7 +216,7 @@ async function safePersist(
   scheduledFor: string,
   startedAt: string,
   durationMs: number,
-  trigger: "scheduled" | "catch-up" | "manual",
+  trigger: TaskTrigger,
   errorMessage: string | null,
 ): Promise<void> {
   const isSuccess = errorMessage === null;
@@ -215,7 +228,7 @@ async function safePersist(
       task.id,
       {
         lastRunAt: scheduledFor,
-        lastRunResult: isSuccess ? "success" : "error",
+        lastRunResult: isSuccess ? TASK_RESULTS.success : TASK_RESULTS.error,
         lastRunDurationMs: durationMs,
         lastErrorMessage: errorMessage,
         consecutiveFailures: isSuccess
@@ -241,7 +254,7 @@ async function safePersist(
         scheduledFor,
         startedAt,
         completedAt: new Date().toISOString(),
-        result: isSuccess ? "success" : "error",
+        result: isSuccess ? TASK_RESULTS.success : TASK_RESULTS.error,
         durationMs,
         trigger,
         ...(errorMessage !== null && { errorMessage }),
@@ -282,7 +295,9 @@ function computeCurrentWindow(task: SystemTaskDef): string {
   const windowMs = nextWindowAfter(
     coreSchedule,
     nowMs -
-      (coreSchedule.type === "interval" ? coreSchedule.intervalSec * 1000 : 0),
+      (coreSchedule.type === "interval"
+        ? coreSchedule.intervalSec * ONE_SECOND_MS
+        : 0),
   );
   return windowMs !== null && windowMs <= nowMs
     ? new Date(windowMs).toISOString()
@@ -296,10 +311,10 @@ function computeNextScheduled(task: SystemTaskDef): string | null {
 }
 
 function toCoreSchedule(schedule: TaskDefinition["schedule"]): TaskSchedule {
-  if (schedule.type === "interval") {
+  if (schedule.type === SCHEDULE_TYPES.interval) {
     return {
       type: "interval",
-      intervalSec: Math.round(schedule.intervalMs / 1000),
+      intervalSec: Math.round(schedule.intervalMs / ONE_SECOND_MS),
     };
   }
   return schedule;

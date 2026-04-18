@@ -6,14 +6,15 @@
 // pulling in a YAML parser we do line-by-line extraction.
 
 import { TIME_UNIT_MS } from "../../utils/time.js";
+import { SCHEDULE_TYPES } from "@receptron/task-scheduler";
 
 export interface SkillSchedule {
-  /** "daily HH:MM" or "interval Ns/Nm/Nh" or "once YYYY-MM-DDTHH:MM" */
+  /** "daily HH:MM" or "interval Ns/Nm/Nh" */
   raw: string;
   /** Parsed into task-manager-compatible shape */
   parsed:
-    | { type: "daily"; time: string }
-    | { type: "interval"; intervalMs: number }
+    | { type: typeof SCHEDULE_TYPES.daily; time: string }
+    | { type: typeof SCHEDULE_TYPES.interval; intervalMs: number }
     | null;
 }
 
@@ -64,7 +65,10 @@ function parseScheduleValue(raw: string): SkillSchedule["parsed"] {
     const hh = Number(dailyMatch[1]);
     const mm = Number(dailyMatch[2]);
     if (hh > 23 || mm > 59) return null;
-    return { type: "daily", time: `${dailyMatch[1]}:${dailyMatch[2]}` };
+    return {
+      type: SCHEDULE_TYPES.daily,
+      time: `${dailyMatch[1]}:${dailyMatch[2]}`,
+    };
   }
 
   // interval Ns / Nm / Nh — must be >= MIN_INTERVAL_MS
@@ -76,7 +80,7 @@ function parseScheduleValue(raw: string): SkillSchedule["parsed"] {
     if (!ms) return null;
     const intervalMs = value * ms;
     if (intervalMs < MIN_INTERVAL_MS) return null;
-    return { type: "interval", intervalMs };
+    return { type: SCHEDULE_TYPES.interval, intervalMs };
   }
 
   return null;
