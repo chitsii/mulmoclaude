@@ -33,7 +33,7 @@ import {
   mcpTools,
   isMcpToolEnabled,
 } from "./agent/mcp-tools/index.js";
-import { initWorkspace } from "./workspace/workspace.js";
+import { initWorkspace, workspacePath } from "./workspace/workspace.js";
 import { env, isGeminiAvailable } from "./system/env.js";
 import { buildSandboxStatus } from "./api/sandboxStatus.js";
 import fs from "fs";
@@ -61,7 +61,10 @@ import {
 } from "./api/auth/token.js";
 import { log } from "./system/logger/index.js";
 import { startChat } from "./api/routes/agent.js";
+import { registerScheduledSkills } from "./workspace/skills/scheduler.js";
 import { API_ROUTES } from "../src/config/apiRoutes.js";
+import { ONE_SECOND_MS, ONE_MINUTE_MS, ONE_HOUR_MS } from "./utils/time.js";
+import { SCHEDULE_TYPES, MISSED_RUN_POLICIES } from "@receptron/task-scheduler";
 
 const HTML_TOKEN_PLACEHOLDER = "__MULMOCLAUDE_AUTH_TOKEN__";
 
@@ -356,7 +359,7 @@ function startRuntimeServices(httpServer: ReturnType<typeof app.listen>): void {
 
   // --- Task Manager ---
   const taskManager = createTaskManager({
-    tickMs: debugMode ? 1_000 : 60_000,
+    tickMs: debugMode ? ONE_SECOND_MS : ONE_MINUTE_MS,
   });
 
   if (debugMode) {
@@ -372,16 +375,16 @@ function startRuntimeServices(httpServer: ReturnType<typeof app.listen>): void {
       id: "system:journal",
       name: "Journal daily pass",
       description: "Summarize recent chat sessions into daily + topic files",
-      schedule: { type: "interval", intervalMs: 3_600_000 }, // 1h
-      missedRunPolicy: "run-once",
+      schedule: { type: SCHEDULE_TYPES.interval, intervalMs: ONE_HOUR_MS },
+      missedRunPolicy: MISSED_RUN_POLICIES.runOnce,
       run: () => maybeRunJournal({}),
     },
     {
       id: "system:chat-index",
       name: "Chat index backfill",
       description: "Generate AI titles + summaries for un-indexed sessions",
-      schedule: { type: "interval", intervalMs: 3_600_000 },
-      missedRunPolicy: "run-once",
+      schedule: { type: SCHEDULE_TYPES.interval, intervalMs: ONE_HOUR_MS },
+      missedRunPolicy: MISSED_RUN_POLICIES.runOnce,
       run: () => backfillAllSessions().then(() => {}),
     },
   ];
@@ -390,6 +393,25 @@ function startRuntimeServices(httpServer: ReturnType<typeof app.listen>): void {
       error: String(err),
     });
   });
+
+  // Register skills with schedule: frontmatter as scheduled tasks.
+  // Fire-and-forget — skill scan errors are logged but don't block
+  // server startup.
+  registerScheduledSkills({
+    taskManager,
+    workspaceRoot: workspacePath,
+    startChat,
+  })
+    .then((count) => {
+      if (count > 0) {
+        log.info("skills", "scheduled skills registered", { count });
+      }
+    })
+    .catch((err) => {
+      log.warn("skills", "failed to register scheduled skills", {
+        error: String(err),
+      });
+    });
 
   taskManager.start();
 
@@ -458,7 +480,7 @@ function registerDebugTasks(taskManager: ITaskManager, pubsub: IPubSub) {
     id: "debug.auto-chat",
     description:
       "Debug — toggles title color 10 times then starts a General-mode chat, then self-removes",
-    schedule: { type: "interval", intervalMs: 1_000 },
+    schedule: { type: SCHEDULE_TYPES.interval, intervalMs: ONE_SECOND_MS },
     run: async () => {
       tick++;
       const last = tick === 10;
