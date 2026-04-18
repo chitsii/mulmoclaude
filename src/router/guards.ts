@@ -57,7 +57,7 @@ export function installGuards(router: Router): void {
       }
 
       // ?path= without ?view=files → auto-add view=files so FilesView mounts.
-      if (to.query.view !== "files") {
+      if (view !== "files") {
         return { ...to, query: { ...to.query, view: "files" }, replace: true };
       }
     }

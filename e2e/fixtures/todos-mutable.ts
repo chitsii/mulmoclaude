@@ -20,6 +20,7 @@
 import { createHash } from "node:crypto";
 import type { Page, Route } from "@playwright/test";
 import { TODO_COLUMNS, TODO_ITEMS, type TodoFixture } from "./todos";
+import { WORKSPACE_FILES } from "../../src/config/workspacePaths";
 
 export interface StatusColumnFixture {
   id: string;
@@ -155,16 +156,19 @@ export async function setupMutableTodoMocks(
   );
 
   // File-explorer wiring so the TodoExplorer view can actually mount
-  // when navigated via `?path=data/todos/todos.json`.
+  // when navigated via deep-link `?path=data/todos/todos.json`.
+  // Only /api/files/content and /api/files/tree are mocked here —
+  // /api/files/dir (lazy-expand) is intentionally not mocked because
+  // todo tests deep-link straight into the content view.
   await page.route(
     (url) =>
       url.pathname === "/api/files/content" &&
-      url.searchParams.get("path") === "data/todos/todos.json",
+      url.searchParams.get("path") === WORKSPACE_FILES.todosItems,
     (route: Route) =>
       route.fulfill({
         json: {
           kind: "text",
-          path: "data/todos/todos.json",
+          path: WORKSPACE_FILES.todosItems,
           content: JSON.stringify(state.items),
           size: 500,
           modifiedMs: Date.now(),
@@ -192,7 +196,7 @@ export async function setupMutableTodoMocks(
                   children: [
                     {
                       name: "todos.json",
-                      path: "data/todos/todos.json",
+                      path: WORKSPACE_FILES.todosItems,
                       type: "file",
                       size: 500,
                     },
