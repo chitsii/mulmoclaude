@@ -27,7 +27,7 @@ import {
   type StateMap,
   type StateDeps,
   type LogDeps,
-} from "@mulmobridge/scheduler";
+} from "@receptron/task-scheduler";
 
 // ── Paths ────────────────────────────────────────────────────────
 

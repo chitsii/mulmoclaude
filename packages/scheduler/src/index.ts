@@ -1,16 +1,25 @@
-// Scheduler library — public API surface.
-// Zero dependencies on MulmoClaude internals. The integration
-// adapter in server/events/scheduler-adapter.ts wires this to the app.
+// @receptron/task-scheduler — public API surface.
+// Pure library, zero host dependencies.
 
 export type {
+  ScheduleType,
   TaskSchedule,
   MissedRunPolicy,
   TaskOrigin,
+  TaskResult,
+  TaskTrigger,
   TaskRunContext,
   TaskExecutionState,
   TaskLogEntry,
 } from "./types.js";
-export { emptyState } from "./types.js";
+export {
+  SCHEDULE_TYPES,
+  MISSED_RUN_POLICIES,
+  TASK_RESULTS,
+  TASK_TRIGGERS,
+  TASK_ORIGINS,
+  emptyState,
+} from "./types.js";
 
 export {
   nextWindowAfter,

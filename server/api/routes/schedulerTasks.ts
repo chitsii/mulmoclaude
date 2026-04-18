@@ -10,7 +10,7 @@ import {
   getSchedulerTasks,
   getSchedulerLogs,
 } from "../../events/scheduler-adapter.js";
-import type { TaskLogEntry } from "@mulmobridge/scheduler";
+import type { TaskLogEntry } from "@receptron/task-scheduler";
 
 const router = Router();
 

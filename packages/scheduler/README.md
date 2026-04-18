@@ -1,4 +1,4 @@
-# @mulmobridge/scheduler
+# @receptron/task-scheduler
 
 Persistent task scheduler with catch-up recovery. Schedule recurring tasks, survive process restarts, and automatically recover missed runs.
 
@@ -16,7 +16,7 @@ Designed for AI agent backends that need reliable background tasks (journal summ
 ## Install
 
 ```bash
-npm install @mulmobridge/scheduler
+npm install @receptron/task-scheduler
 ```
 
 ## Usage
@@ -31,7 +31,7 @@ import {
   type CatchUpTask,
   type StateDeps,
   type LogDeps,
-} from "@mulmobridge/scheduler";
+} from "@receptron/task-scheduler";
 
 // Define tasks
 const tasks: CatchUpTask[] = [
@@ -93,7 +93,7 @@ const next = nextWindowAfter(
 
 ## Ecosystem
 
-Part of the `@mulmobridge/*` package family, but works standalone with any Node.js application.
+Standalone package from [Receptron](https://github.com/receptron). Works with any Node.js application.
 
 ## License
 

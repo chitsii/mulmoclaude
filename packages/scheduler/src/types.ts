@@ -1,29 +1,62 @@
-// Scheduler type definitions. Zero dependencies on MulmoClaude —
-// this module is a pure library that can be tested in isolation.
+// Scheduler type definitions. Pure library — zero external dependencies.
+
+// ── Constants ────────────────────────────────────────────────────
+
+export const SCHEDULE_TYPES = {
+  interval: "interval",
+  daily: "daily",
+  weekly: "weekly",
+  once: "once",
+} as const;
+export type ScheduleType = (typeof SCHEDULE_TYPES)[keyof typeof SCHEDULE_TYPES];
+
+export const MISSED_RUN_POLICIES = {
+  skip: "skip",
+  runOnce: "run-once",
+  runAll: "run-all",
+} as const;
+
+export const TASK_RESULTS = {
+  success: "success",
+  error: "error",
+  skipped: "skipped",
+} as const;
+export type TaskResult = (typeof TASK_RESULTS)[keyof typeof TASK_RESULTS];
+
+export const TASK_TRIGGERS = {
+  scheduled: "scheduled",
+  catchUp: "catch-up",
+  manual: "manual",
+} as const;
+export type TaskTrigger = (typeof TASK_TRIGGERS)[keyof typeof TASK_TRIGGERS];
+
+export const TASK_ORIGINS = {
+  system: "system",
+  skill: "skill",
+  user: "user",
+} as const;
 
 // ── Schedule ─────────────────────────────────────────────────────
 
 /** When a task should fire. All times are UTC. */
 export type TaskSchedule =
-  | { type: "interval"; intervalSec: number }
-  | { type: "daily"; time: string } // "HH:MM" UTC
-  | { type: "weekly"; daysOfWeek: number[]; time: string } // 0=Sun..6=Sat
-  | { type: "once"; at: string }; // ISO 8601 UTC
+  | { type: typeof SCHEDULE_TYPES.interval; intervalSec: number }
+  | { type: typeof SCHEDULE_TYPES.daily; time: string } // "HH:MM" UTC
+  | { type: typeof SCHEDULE_TYPES.weekly; daysOfWeek: number[]; time: string } // 0=Sun..6=Sat
+  | { type: typeof SCHEDULE_TYPES.once; at: string }; // ISO 8601 UTC
 
 // ── Missed-run policy ────────────────────────────────────────────
 
 /** What to do when the scheduler discovers missed windows. */
 export type MissedRunPolicy =
-  | "skip" // time-sensitive — discard silently
-  | "run-once" // catch up with one run (latest missed window)
-  | "run-all"; // catch up with min(N, MAX_CATCHUP) runs
+  (typeof MISSED_RUN_POLICIES)[keyof typeof MISSED_RUN_POLICIES];
 
 // ── Task origin ──────────────────────────────────────────────────
 
 export type TaskOrigin =
-  | { kind: "system"; module: string }
-  | { kind: "skill"; skillPath: string }
-  | { kind: "user" };
+  | { kind: typeof TASK_ORIGINS.system; module: string }
+  | { kind: typeof TASK_ORIGINS.skill; skillPath: string }
+  | { kind: typeof TASK_ORIGINS.user };
 
 // ── Execution context ────────────────────────────────────────────
 
@@ -31,7 +64,7 @@ export type TaskOrigin =
  *  running for (critical for run-all catch-up). */
 export interface TaskRunContext {
   scheduledFor: string; // ISO 8601 UTC — the window this run targets
-  trigger: "scheduled" | "catch-up" | "manual";
+  trigger: TaskTrigger;
 }
 
 // ── Persisted task state ─────────────────────────────────────────
@@ -39,7 +72,7 @@ export interface TaskRunContext {
 export interface TaskExecutionState {
   taskId: string;
   lastRunAt: string | null; // ISO UTC — null = never run
-  lastRunResult: "success" | "error" | "skipped" | null;
+  lastRunResult: TaskResult | null;
   lastRunDurationMs: number | null;
   lastErrorMessage: string | null;
   consecutiveFailures: number;
@@ -68,9 +101,9 @@ export interface TaskLogEntry {
   scheduledFor: string;
   startedAt: string;
   completedAt: string;
-  result: "success" | "error" | "skipped";
+  result: TaskResult;
   durationMs: number;
-  trigger: "scheduled" | "catch-up" | "manual";
+  trigger: TaskTrigger;
   errorMessage?: string;
   chatSessionId?: string;
 }
