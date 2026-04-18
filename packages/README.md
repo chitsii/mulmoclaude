@@ -18,6 +18,7 @@ Your personal computer is becoming your most powerful AI assistant. It runs loca
 │  ...             │                   │         ↓                 │
 └─────────────────┘                    │  Your files, tools, data  │
                                        └──────────────────────────┘
+
 ```
 
 A **bridge** is a tiny process (~100 lines) that translates between a messaging platform's API and the MulmoBridge socket.io protocol. The `@mulmobridge/client` library handles all the socket.io boilerplate — writing a new bridge is just writing the platform adapter.
