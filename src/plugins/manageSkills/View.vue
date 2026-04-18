@@ -13,6 +13,14 @@
       </div>
     </div>
 
+    <!-- List load error (standalone mode) -->
+    <div
+      v-if="listError"
+      class="px-6 py-3 text-sm text-red-600 bg-red-50 border-b border-red-100"
+    >
+      {{ listError }}
+    </div>
+
     <div class="flex-1 min-h-0 flex overflow-hidden">
       <!-- Left: skill list -->
       <div
@@ -214,6 +222,8 @@ watch(
   },
 );
 
+const listError = ref<string | null>(null);
+
 // Standalone mode: if no selectedResult was passed, fetch the skill
 // list from the API on mount so the view is populated.
 onMounted(async () => {
@@ -221,7 +231,11 @@ onMounted(async () => {
   const response = await apiGet<{ skills: SkillSummary[] }>(
     API_ROUTES.skills.list,
   );
-  if (response.ok && Array.isArray(response.data.skills)) {
+  if (!response.ok) {
+    listError.value = `Failed to load skills: ${response.error}`;
+    return;
+  }
+  if (Array.isArray(response.data.skills)) {
     skills.value = response.data.skills;
     selectedName.value = skills.value[0]?.name ?? null;
   }

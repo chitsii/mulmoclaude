@@ -891,6 +891,9 @@ const {
 } = useCanvasViewMode({ isRunning });
 const rightSidebarRef = ref<InstanceType<typeof RightSidebar> | null>(null);
 
+// Kept for potential future "invoke" launcher targets. Currently all
+// launcher buttons use kind:"view", so this block is dormant.
+//
 // Default HTTP call (endpoint + body + resulting toolName) for each
 // "invoke" launcher target. Mirrors what each plugin's `execute()`
 // does — duplicated here intentionally so the launcher doesn't drag

@@ -1,4 +1,4 @@
-// E2E for the Cmd/Ctrl + 1–5 canvas view-mode shortcut wired via
+// E2E for the Cmd/Ctrl + 1–8 canvas view-mode shortcut wired via
 // useEventListeners (window keydown). Cmd on macOS, Ctrl elsewhere —
 // Playwright's `page.keyboard.press("Meta+2")` targets Meta which
 // Vue's handleViewModeShortcut treats the same as Ctrl.
@@ -9,7 +9,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { mockAllApis } from "../fixtures/api";
 
-async function pressViewShortcut(page: Page, key: "1" | "2" | "3" | "4" | "5") {
+async function pressViewShortcut(page: Page, key: string) {
   await page.keyboard.press(`Meta+${key}`);
 }
 
@@ -50,6 +50,32 @@ test.describe("view-mode keyboard shortcuts (useEventListeners)", () => {
 
     await pressViewShortcut(page, "5");
     await expect(page).toHaveURL(/[?&]view=scheduler/);
+  });
+
+  test("Cmd/Ctrl+6 switches to wiki view (?view=wiki)", async ({ page }) => {
+    await page.goto("/chat");
+    await expect(page.getByText("MulmoClaude")).toBeVisible();
+
+    await pressViewShortcut(page, "6");
+    await expect(page).toHaveURL(/[?&]view=wiki/);
+  });
+
+  test("Cmd/Ctrl+7 switches to skills view (?view=skills)", async ({
+    page,
+  }) => {
+    await page.goto("/chat");
+    await expect(page.getByText("MulmoClaude")).toBeVisible();
+
+    await pressViewShortcut(page, "7");
+    await expect(page).toHaveURL(/[?&]view=skills/);
+  });
+
+  test("Cmd/Ctrl+8 switches to roles view (?view=roles)", async ({ page }) => {
+    await page.goto("/chat");
+    await expect(page.getByText("MulmoClaude")).toBeVisible();
+
+    await pressViewShortcut(page, "8");
+    await expect(page).toHaveURL(/[?&]view=roles/);
   });
 
   test("Cmd/Ctrl+1 returns to single view (?view= removed)", async ({

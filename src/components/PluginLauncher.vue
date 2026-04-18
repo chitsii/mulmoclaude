@@ -31,10 +31,10 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue";
 
-// Quick-access toolbar sitting above the canvas. Each button either
-// invokes a plugin locally (no LLM round-trip) and surfaces its
-// native View, or — for "files" — switches the canvas to the
-// workspace file tree.
+// Quick-access toolbar sitting above the canvas. Each button
+// switches the canvas to a dedicated view mode via URL
+// (?view=todos, ?view=wiki, etc.). The "invoke" kind is kept in
+// the union for future use but currently all targets use "view".
 //
 // First slice of issue #253. The list of targets is declared here so
 // the launcher can be swapped for a customisable per-role palette
@@ -117,8 +117,8 @@ const TARGETS: PluginLauncherTarget[] = [
 const SEPARATOR_AFTER_INDEX = 3;
 
 // Map launcher key → the toolName the corresponding plugin
-// uses in its ToolResult. Used to match the active (selected)
-// result against the launcher buttons.
+// uses in its ToolResult. Kept for future "invoke" kind targets —
+// currently all targets use "view" so this map is unused.
 const KEY_TO_TOOL_NAME: Record<string, string> = {
   todos: "manageTodoList",
   scheduler: "manageScheduler",
