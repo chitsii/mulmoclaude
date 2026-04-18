@@ -53,7 +53,7 @@ const defaultLog = {
   error: (m: string) => console.error(m),
 };
 
-interface PhotoResult {
+interface AttachmentResult {
   attachments: Attachment[];
   failed: boolean;
 }
@@ -120,23 +120,53 @@ export function createMessageRouter(deps: RouterDeps): MessageRouter {
     }
   }
 
-  async function tryDownloadPhoto(msg: TelegramMessage): Promise<PhotoResult> {
-    const hasPhoto = Array.isArray(msg.photo) && msg.photo.length > 0;
-    if (!hasPhoto) return { attachments: [], failed: false };
-    const largest = msg.photo![msg.photo!.length - 1];
-    try {
-      const dataUrl = await api.downloadPhoto(largest.file_id);
-      const parsed = parseDataUrl(dataUrl);
-      if (parsed) {
-        return {
-          attachments: [{ mimeType: parsed.mimeType, data: parsed.data }],
-          failed: false,
-        };
+  // Download all media from a message. Telegram messages are usually
+  // exclusive (photo OR document), but forwarded messages or future
+  // API changes could carry both. We collect all available attachments
+  // rather than picking one.
+  async function tryDownloadAttachments(
+    msg: TelegramMessage,
+  ): Promise<AttachmentResult> {
+    const attachments: Attachment[] = [];
+    let anyFailed = false;
+
+    if (Array.isArray(msg.photo) && msg.photo.length > 0) {
+      const largest = msg.photo[msg.photo.length - 1];
+      try {
+        const dataUrl = await api.downloadFile(largest.file_id, "image/jpeg");
+        const parsed = parseDataUrl(dataUrl);
+        if (parsed) {
+          attachments.push({ mimeType: parsed.mimeType, data: parsed.data });
+        }
+      } catch (err) {
+        log.error(`[telegram] photo download failed: ${String(err)}`);
+        anyFailed = true;
       }
-    } catch (err) {
-      log.error(`[telegram] photo download failed: ${String(err)}`);
     }
-    return { attachments: [], failed: true };
+
+    if (msg.document) {
+      const doc = msg.document;
+      const fallbackMime = doc.mime_type ?? "application/octet-stream";
+      try {
+        const dataUrl = await api.downloadFile(doc.file_id, fallbackMime);
+        const parsed = parseDataUrl(dataUrl);
+        if (parsed) {
+          attachments.push({
+            mimeType: parsed.mimeType,
+            data: parsed.data,
+            filename: doc.file_name,
+          });
+        }
+      } catch (err) {
+        log.error(`[telegram] document download failed: ${String(err)}`);
+        anyFailed = true;
+      }
+    }
+
+    if (attachments.length === 0 && anyFailed) {
+      return { attachments: [], failed: true };
+    }
+    return { attachments, failed: false };
   }
 
   async function sendReply(chatId: number, ack: MessageAck): Promise<void> {
@@ -155,28 +185,31 @@ export function createMessageRouter(deps: RouterDeps): MessageRouter {
   async function handleAllowed(msg: TelegramMessage): Promise<void> {
     const chatId = msg.chat.id;
     const text = msg.text ?? msg.caption ?? "";
-    const hasPhoto = Array.isArray(msg.photo) && msg.photo.length > 0;
-    if (text.trim().length === 0 && !hasPhoto) return;
+    const hasMedia =
+      (Array.isArray(msg.photo) && msg.photo.length > 0) ||
+      msg.document !== undefined;
+    if (text.trim().length === 0 && !hasMedia) return;
 
+    const mediaLabel = buildMediaLabel(msg);
     log.info(
-      `[telegram] accepted chat=${chatId} user=@${userLabel(msg)} len=${text.length}${hasPhoto ? " +photo" : ""}`,
+      `[telegram] accepted chat=${chatId} user=@${userLabel(msg)} len=${text.length}${mediaLabel}`,
     );
 
-    const { attachments, failed } = await tryDownloadPhoto(msg);
+    const { attachments, failed } = await tryDownloadAttachments(msg);
 
-    // Photo-only message where download failed: bail out instead
-    // of sending "What is this image?" without the actual image.
+    // Attachment-only message where download failed: bail out instead
+    // of sending a query without the actual file.
     if (failed && text.trim().length === 0) {
       await api
         .sendMessage(
           chatId,
-          "Sorry, I could not download the photo. Please try again.",
+          "Sorry, I could not download the attachment. Please try again.",
         )
         .catch(() => {});
       return;
     }
 
-    // Surface the photo-drop so the user knows the image was lost.
+    // Surface the attachment failure so the user knows the file was lost.
     const messageText = resolveMessageText(text, failed);
 
     // Start streaming: chunks will arrive via handleTextChunk and
@@ -276,13 +309,22 @@ async function sendChunked(
   }
 }
 
-function resolveMessageText(text: string, photoFailed: boolean): string {
+function resolveMessageText(text: string, attachmentFailed: boolean): string {
   const hasText = text.trim().length > 0;
-  if (photoFailed && hasText) {
-    return `${text}\n\n(note: attached photo could not be downloaded)`;
+  if (attachmentFailed && hasText) {
+    return `${text}\n\n(note: attached file could not be downloaded)`;
   }
   if (hasText) return text;
-  return "What is this image?";
+  return "Describe / analyze this file.";
+}
+
+function buildMediaLabel(msg: TelegramMessage): string {
+  if (msg.document) {
+    const hint = msg.document.file_name ?? msg.document.mime_type ?? "unknown";
+    return ` +file(${hint})`;
+  }
+  if (Array.isArray(msg.photo) && msg.photo.length > 0) return " +photo";
+  return "";
 }
 
 function userLabel(msg: TelegramMessage): string {
