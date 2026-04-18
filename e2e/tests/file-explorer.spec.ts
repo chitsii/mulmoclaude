@@ -49,7 +49,7 @@ async function mockFileTree(page: Page) {
             children: [
               {
                 name: "todos.json",
-                path: "todos/todos.json",
+                path: "data/todos/todos.json",
                 type: "file",
                 size: 100,
               },

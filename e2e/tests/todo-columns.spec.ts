@@ -43,7 +43,7 @@ test.describe("Todo column management", () => {
   });
 
   test("+ Column button opens add-column dialog", async ({ page }) => {
-    await page.goto("/chat?view=files&path=todos/todos.json");
+    await page.goto("/chat?view=files&path=data/todos/todos.json");
     await expect(page.getByText("Todo").first()).toBeVisible({
       timeout: 5000,
     });
@@ -53,7 +53,7 @@ test.describe("Todo column management", () => {
   });
 
   test("column header menu opens on click", async ({ page }) => {
-    await page.goto("/chat?view=files&path=todos/todos.json");
+    await page.goto("/chat?view=files&path=data/todos/todos.json");
     await expect(page.getByText("Todo").first()).toBeVisible({
       timeout: 5000,
     });
@@ -66,7 +66,7 @@ test.describe("Todo column management", () => {
   });
 
   test("Escape closes the add-column dialog", async ({ page }) => {
-    await page.goto("/chat?view=files&path=todos/todos.json");
+    await page.goto("/chat?view=files&path=data/todos/todos.json");
     await expect(page.getByText("Todo").first()).toBeVisible({
       timeout: 5000,
     });
@@ -78,7 +78,7 @@ test.describe("Todo column management", () => {
   });
 
   test("all 4 kanban columns are rendered", async ({ page }) => {
-    await page.goto("/chat?view=files&path=todos/todos.json");
+    await page.goto("/chat?view=files&path=data/todos/todos.json");
     await expect(page.getByText("Todo").first()).toBeVisible({
       timeout: 5000,
     });
@@ -99,7 +99,7 @@ test.describe("Todo column management", () => {
   });
 
   test("menu shows Mark as done column option", async ({ page }) => {
-    await page.goto("/chat?view=files&path=todos/todos.json");
+    await page.goto("/chat?view=files&path=data/todos/todos.json");
     await expect(page.getByText("Todo").first()).toBeVisible({
       timeout: 5000,
     });
@@ -111,7 +111,7 @@ test.describe("Todo column management", () => {
   });
 
   test("done column's menu shows Already done column", async ({ page }) => {
-    await page.goto("/chat?view=files&path=todos/todos.json");
+    await page.goto("/chat?view=files&path=data/todos/todos.json");
     await expect(page.getByText("Todo").first()).toBeVisible({
       timeout: 5000,
     });
@@ -122,7 +122,7 @@ test.describe("Todo column management", () => {
   });
 
   test("adds a column with a Japanese label (#161)", async ({ page }) => {
-    await page.goto("/chat?view=files&path=todos/todos.json");
+    await page.goto("/chat?view=files&path=data/todos/todos.json");
     await expect(page.getByText("Todo").first()).toBeVisible({
       timeout: 5000,
     });
@@ -140,7 +140,7 @@ test.describe("Todo column management", () => {
   test("two distinct Japanese labels produce two distinct columns (#161)", async ({
     page,
   }) => {
-    await page.goto("/chat?view=files&path=todos/todos.json");
+    await page.goto("/chat?view=files&path=data/todos/todos.json");
     await expect(page.getByText("Todo").first()).toBeVisible({
       timeout: 5000,
     });

@@ -155,16 +155,16 @@ export async function setupMutableTodoMocks(
   );
 
   // File-explorer wiring so the TodoExplorer view can actually mount
-  // when navigated via `?path=todos/todos.json`.
+  // when navigated via `?path=data/todos/todos.json`.
   await page.route(
     (url) =>
       url.pathname === "/api/files/content" &&
-      url.searchParams.get("path") === "todos/todos.json",
+      url.searchParams.get("path") === "data/todos/todos.json",
     (route: Route) =>
       route.fulfill({
         json: {
           kind: "text",
-          path: "todos/todos.json",
+          path: "data/todos/todos.json",
           content: JSON.stringify(state.items),
           size: 500,
           modifiedMs: Date.now(),
@@ -181,15 +181,22 @@ export async function setupMutableTodoMocks(
           type: "dir",
           children: [
             {
-              name: "todos",
-              path: "todos",
+              name: "data",
+              path: "data",
               type: "dir",
               children: [
                 {
-                  name: "todos.json",
-                  path: "todos/todos.json",
-                  type: "file",
-                  size: 500,
+                  name: "todos",
+                  path: "data/todos",
+                  type: "dir",
+                  children: [
+                    {
+                      name: "todos.json",
+                      path: "data/todos/todos.json",
+                      type: "file",
+                      size: 500,
+                    },
+                  ],
                 },
               ],
             },

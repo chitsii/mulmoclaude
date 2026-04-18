@@ -116,7 +116,7 @@ async function openTodoExplorer(page: Page): Promise<void> {
   // selected — matches the URL pattern the rest of the todo-e2e
   // suite uses (#108 router). Faster + less flaky than clicking
   // through the tree.
-  await page.goto("/chat?view=files&path=todos/todos.json");
+  await page.goto("/chat?view=files&path=data/todos/todos.json");
   await expect(page.getByTestId("todo-add-btn")).toBeVisible();
 }
 
