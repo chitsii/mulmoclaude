@@ -13,6 +13,10 @@ interface LineWebhookBody {
   events: LineEvent[];
 }
 
+// LINE reply API: max 5 message objects per request
+const MAX_LINE_MESSAGES_PER_REQUEST = 5;
+const MAX_LINE_TEXT = 5000;
+
 export async function handleLineWebhook(
   request: Request,
   channelSecret: string,
@@ -20,19 +24,8 @@ export async function handleLineWebhook(
   const body = await request.text();
   const signature = request.headers.get("x-line-signature") ?? "";
 
-  // LINE uses base64-encoded HMAC-SHA256
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(channelSecret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
-  const expected = btoa(String.fromCharCode(...new Uint8Array(sig)));
-
-  if (expected !== signature) {
+  const isValid = await verifyLineSignature(channelSecret, body, signature);
+  if (!isValid) {
     throw new Error("LINE signature verification failed");
   }
 
@@ -63,19 +56,47 @@ export async function handleLineWebhook(
   return messages;
 }
 
+// Timing-safe LINE signature verification (base64 HMAC-SHA256)
+async function verifyLineSignature(
+  secret: string,
+  body: string,
+  signature: string,
+): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
+  const expected = btoa(String.fromCharCode(...new Uint8Array(sig)));
+
+  // Constant-time comparison
+  if (expected.length !== signature.length) return false;
+  let result = 0;
+  for (let i = 0; i < expected.length; i++) {
+    result |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+  }
+  return result === 0;
+}
+
+function chunkText(text: string): string[] {
+  const chunks: string[] = [];
+  for (let i = 0; i < text.length; i += MAX_LINE_TEXT) {
+    chunks.push(text.slice(i, i + MAX_LINE_TEXT));
+  }
+  // LINE allows max 5 messages per request
+  return chunks.slice(0, MAX_LINE_MESSAGES_PER_REQUEST);
+}
+
 export async function sendLineReply(
   replyToken: string,
   text: string,
   accessToken: string,
 ): Promise<void> {
-  // Chunk long messages (LINE max is 5000 chars)
-  const MAX_LINE_TEXT = 5000;
-  const chunks: string[] = [];
-  for (let i = 0; i < text.length; i += MAX_LINE_TEXT) {
-    chunks.push(text.slice(i, i + MAX_LINE_TEXT));
-  }
-
-  await fetch("https://api.line.me/v2/bot/message/reply", {
+  const response = await fetch("https://api.line.me/v2/bot/message/reply", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -83,9 +104,12 @@ export async function sendLineReply(
     },
     body: JSON.stringify({
       replyToken,
-      messages: chunks.map((t) => ({ type: "text", text: t })),
+      messages: chunkText(text).map((t) => ({ type: "text", text: t })),
     }),
   });
+  if (!response.ok) {
+    throw new Error(`LINE reply failed: ${response.status}`);
+  }
 }
 
 export async function sendLinePush(
@@ -93,13 +117,7 @@ export async function sendLinePush(
   text: string,
   accessToken: string,
 ): Promise<void> {
-  const MAX_LINE_TEXT = 5000;
-  const chunks: string[] = [];
-  for (let i = 0; i < text.length; i += MAX_LINE_TEXT) {
-    chunks.push(text.slice(i, i + MAX_LINE_TEXT));
-  }
-
-  await fetch("https://api.line.me/v2/bot/message/push", {
+  const response = await fetch("https://api.line.me/v2/bot/message/push", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -107,7 +125,10 @@ export async function sendLinePush(
     },
     body: JSON.stringify({
       to: chatId,
-      messages: chunks.map((t) => ({ type: "text", text: t })),
+      messages: chunkText(text).map((t) => ({ type: "text", text: t })),
     }),
   });
+  if (!response.ok) {
+    throw new Error(`LINE push failed: ${response.status}`);
+  }
 }

@@ -14,10 +14,10 @@ With the relay:
 
 ## Architecture
 
-```
+```text
 LINE ─────→ /webhook/line ─────┐
 Telegram ─→ /webhook/telegram ─┼→ Durable Object → WS → MulmoClaude
-Slack ────→ /webhook/slack ────┘   (queue if offline)    (home PC)
+(future) ─→ /webhook/...  ────┘   (queue if offline)    (home PC)
 ```
 
 ## Setup
@@ -66,7 +66,7 @@ curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<name>.workers.
 ### 4. Connect MulmoClaude
 
 Add to `.env`:
-```
+```dotenv
 RELAY_URL=wss://<name>.workers.dev/ws
 RELAY_TOKEN=<same token as step 2>
 ```

@@ -38,7 +38,7 @@ export default {
       return new Response("Method not allowed", { status: 405 });
     }
 
-    // Body size check
+    // Body size check (header + actual body)
     const contentLength = request.headers.get("content-length");
     if (contentLength && parseInt(contentLength, 10) > MAX_BODY_SIZE) {
       return new Response("Payload too large", { status: 413 });
@@ -63,6 +63,16 @@ export default {
   },
 };
 
+// ── Body reader with size limit ──────────────────────────────
+
+async function readBodyWithLimit(request: Request): Promise<string> {
+  const body = await request.text();
+  if (body.length > MAX_BODY_SIZE) {
+    throw new Error("Payload too large");
+  }
+  return body;
+}
+
 // ── Webhook handlers ─────────────────────────────────────────
 
 async function handleLine(request: Request, env: Env): Promise<Response> {
@@ -71,7 +81,6 @@ async function handleLine(request: Request, env: Env): Promise<Response> {
   }
 
   const messages = await handleLineWebhook(request, env.LINE_CHANNEL_SECRET);
-
   await enqueueMessages(messages, env);
   return new Response("ok", { status: 200 });
 }
@@ -81,7 +90,7 @@ async function handleTelegram(request: Request, env: Env): Promise<Response> {
     return new Response("Telegram not configured", { status: 404 });
   }
 
-  const body = await request.text();
+  const body = await readBodyWithLimit(request);
   const headerSecret = request.headers.get("x-telegram-bot-api-secret-token");
   const messages = handleTelegramWebhook(
     body,
@@ -100,7 +109,7 @@ async function enqueueMessages(
   env: Env,
 ): Promise<void> {
   for (const msg of messages) {
-    await forwardToDurableObject(
+    const response = await forwardToDurableObject(
       new Request("https://internal/enqueue", {
         method: "POST",
         body: JSON.stringify(msg),
@@ -108,6 +117,9 @@ async function enqueueMessages(
       env,
       "/enqueue",
     );
+    if (!response.ok) {
+      throw new Error(`enqueue failed: ${response.status}`);
+    }
   }
 }
 

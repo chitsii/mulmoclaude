@@ -4,15 +4,9 @@
 // platforms, and sends responses back. Auto-reconnects on
 // disconnect with exponential backoff.
 //
-// Usage:
-//   import { createRelayClient } from "@mulmobridge/relay/client";
-//   const client = createRelayClient({
-//     url: "wss://xxx.workers.dev/ws",
-//     token: "...",
-//     onMessage: (msg) => { /* handle */ },
-//   });
-//   client.connect();
-//   // Later: client.send({ platform, chatId, text });
+// The bearer token is sent as a query parameter (?token=...)
+// because the browser WebSocket API does not support custom
+// Authorization headers.
 
 import type { RelayMessage, RelayResponse } from "./types.js";
 
@@ -42,19 +36,23 @@ export function createRelayClient(opts: RelayClientOptions): RelayClient {
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let intentionalClose = false;
 
+  function buildUrl(): string {
+    const url = new URL(opts.url);
+    url.searchParams.set("token", opts.token);
+    return url.toString();
+  }
+
   function connect(): void {
     intentionalClose = false;
     try {
-      ws = new WebSocket(opts.url, {
-        headers: { Authorization: `Bearer ${opts.token}` },
-      } as never);
+      ws = new WebSocket(buildUrl());
 
       ws.onopen = () => {
         backoffMs = INITIAL_BACKOFF_MS;
         opts.onConnect?.();
       };
 
-      ws.onmessage = (event) => {
+      ws.onmessage = (event: MessageEvent) => {
         if (typeof event.data !== "string") return;
         try {
           const msg: RelayMessage = JSON.parse(event.data);

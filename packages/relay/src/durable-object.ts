@@ -45,9 +45,9 @@ export class RelayDurableObject implements DurableObject {
       return new Response("Expected WebSocket", { status: 426 });
     }
 
-    // Auth check
-    const authHeader = request.headers.get("Authorization") ?? "";
-    const token = authHeader.replace("Bearer ", "");
+    // Auth: token from query param (WS API can't set headers)
+    const url = new URL(request.url);
+    const token = url.searchParams.get("token") ?? "";
     if (!token || token !== this.env.RELAY_TOKEN) {
       return new Response("Unauthorized", { status: 401 });
     }
@@ -75,24 +75,44 @@ export class RelayDurableObject implements DurableObject {
   }
 
   async webSocketMessage(
-    ws: WebSocket,
+    _ws: WebSocket,
     message: string | ArrayBuffer,
   ): Promise<void> {
     if (typeof message !== "string") return;
 
+    let response: RelayResponse;
     try {
-      const response: RelayResponse = JSON.parse(message);
-      await this.handleResponse(response);
+      response = JSON.parse(message);
     } catch {
-      // ignore malformed messages
+      return; // malformed JSON — skip
+    }
+
+    try {
+      await this.handleResponse(response);
+    } catch (err) {
+      // Platform delivery failed — send error back to MulmoClaude
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      this.ws?.send(
+        JSON.stringify({
+          type: "error",
+          platform: response.platform,
+          chatId: response.chatId,
+          error: errorMsg,
+        }),
+      );
     }
   }
 
-  async webSocketClose(): Promise<void> {
+  async webSocketClose(
+    __ws: WebSocket,
+    __code: number,
+    __reason: string,
+    __wasClean: boolean,
+  ): Promise<void> {
     this.ws = null;
   }
 
-  async webSocketError(): Promise<void> {
+  async webSocketError(__ws: WebSocket, __error: unknown): Promise<void> {
     this.ws = null;
   }
 
