@@ -40,6 +40,7 @@ When creating a release (tagging a version, `gh release create`, npm publish):
 - NEVER use the app tag (`v*`) for individual package releases — each package gets its own `@scope/name@version` tag
 - One `gh release create` per tag — title matches the tag name
 - Published packages with changes since last publish get a **patch bump**; new packages ship at `0.1.0`
+- Version bumps and publish changes MUST go through a feature branch + PR — NEVER push directly to main
 
 ## GitHub posts (gh pr comment / gh issue comment / PR body / issue body)
 
