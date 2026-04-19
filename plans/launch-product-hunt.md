@@ -83,10 +83,10 @@ A PH viewer skims for ~10 seconds and remembers one idea. So we drop to **five**
 ## 5. Product Hunt Listing Copy
 
 ### Headline (60 char max)
-`MulmoClaude — Docs, decks, spreadsheets, videos from Claude Code`
+`MulmoClaude — Docs, decks, sheets, videos from Claude Code` *(58 chars)*
 
 ### Tagline (60 char max)
-`Parallel sessions. Personal wiki. Phone bridges. Sandboxed.`
+`Parallel sessions. Personal wiki. Phone bridges. Sandboxed.` *(58 chars)*
 
 ### First comment (the maker post — pinned)
 
