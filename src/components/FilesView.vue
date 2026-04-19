@@ -42,13 +42,15 @@
           {{ mdRawMode ? "Rendered" : "Raw" }}
         </button>
         <button
+          type="button"
           class="shrink-0 px-1 py-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100"
           :class="{ 'ml-auto': !isMarkdown }"
           title="Close file"
+          aria-label="Close file"
           data-testid="close-file-btn"
           @click="deselectFile"
         >
-          <span class="material-icons text-base">close</span>
+          <span class="material-icons text-base" aria-hidden="true">close</span>
         </button>
       </div>
       <div class="flex-1 overflow-auto min-h-0">
@@ -634,8 +636,11 @@ function selectFile(filePath: string): void {
 }
 
 function deselectFile(): void {
+  contentAbort?.abort();
+  contentAbort = null;
   selectedPath.value = null;
   content.value = null;
+  contentLoading.value = false;
   contentError.value = null;
   // Remove ?path= from URL for a clean state on reload.
   const { path: __path, ...restQuery } = route.query;
