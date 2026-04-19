@@ -41,6 +41,15 @@
         >
           {{ mdRawMode ? "Rendered" : "Raw" }}
         </button>
+        <button
+          class="shrink-0 px-1 py-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+          :class="{ 'ml-auto': !isMarkdown }"
+          title="Close file"
+          data-testid="close-file-btn"
+          @click="deselectFile"
+        >
+          <span class="material-icons text-base">close</span>
+        </button>
       </div>
       <div class="flex-1 overflow-auto min-h-0">
         <div
@@ -622,6 +631,19 @@ function selectFile(filePath: string): void {
         console.error("[selectFile] navigation failed:", err);
       }
     });
+}
+
+function deselectFile(): void {
+  selectedPath.value = null;
+  content.value = null;
+  contentError.value = null;
+  // Remove ?path= from URL for a clean state on reload.
+  const { path: __path, ...restQuery } = route.query;
+  router.replace({ query: restQuery }).catch((err: unknown) => {
+    if (!isNavigationFailure(err)) {
+      console.error("[deselectFile] navigation failed:", err);
+    }
+  });
 }
 
 // When the user clicks an <a> inside a rendered markdown body, check
