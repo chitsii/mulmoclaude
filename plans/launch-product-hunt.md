@@ -10,14 +10,14 @@
 
 ### Primary tagline (Product Hunt hero line)
 
-> **MulmoClaude — Give Claude Code a canvas and a memory.**
+> **MulmoClaude — Claude Code, multi-modal. Many sessions, one browser, every device.**
 
 ### Supporting taglines (A/B candidates for social + hero imagery)
 
-1. *Chat with Claude. Get documents, charts, mind maps, and memory back.*
-2. *The local-first GUI for Claude Code — your files stay yours, your agent gets smarter.*
-3. *Claude Code meets a real UI. And a personal wiki that never forgets.*
-4. *Stop screenshotting Claude's answers. Start saving them.*
+1. *Chat with Claude. Get documents, charts, spreadsheets, slide decks, and narrated videos back.*
+2. *The multi-modal GUI for Claude Code — multiple parallel sessions, sandboxed, local-first.*
+3. *Claude Code meets a real UI, a personal wiki that never forgets, and a bridge to your phone.*
+4. *Run five Claude agents in one browser tab. Message them from Telegram. Get a video back.*
 
 ### Category pick
 
@@ -28,7 +28,7 @@ Developer Tools gets us the Claude Code / Cursor / Cline audience; Productivity 
 
 ## 2. The One-Sentence Pitch
 
-**MulmoClaude turns Claude Code into a visual, memory-equipped personal agent:** you chat, it replies with interactive documents, spreadsheets, charts, mind maps, images, and scheduled tasks — all stored as plain Markdown files you own, indexed by a wiki Claude maintains itself.
+**MulmoClaude turns Claude Code into a multi-modal personal agent:** you chat, it replies with interactive documents, spreadsheets, charts, narrated slide decks, and AI-generated videos — you can run many sessions side-by-side in one browser, reach the same agent from your phone (Telegram, Slack, LINE, WhatsApp), and it all runs sandboxed in Docker so Claude can't touch anything outside your workspace.
 
 ---
 
@@ -47,74 +47,97 @@ Product Hunt voters reward three things: **a clear "aha"**, **a short demo**, an
 
 ## 4. Key Messages (use across all surfaces)
 
-Rank-ordered. Message #1 is in every asset; #2 and #3 appear where space allows.
+Rank-ordered. Messages #1–#3 appear in every asset; the rest where space allows.
 
-1. **Claude Code gets a GUI.** Replies aren't walls of text — they're interactive documents, spreadsheets, ECharts dashboards, mind maps, images, and 3D scenes.
-2. **Long-term memory that's actually yours.** A personal wiki grows from every conversation, stored as plain Markdown. Claude reads and maintains it automatically.
-3. **Your files are the database.** Todos, calendar, contacts, charts — everything is a Markdown file in `~/mulmoclaude/`. Git-friendly. Dropbox-friendly. Yours.
-4. **Roles, not modes.** Swap between General, Office, Guide & Planner, Artist, Tutor, Storyteller — each with its own persona and tool palette. Context resets, focus sharpens.
-5. **Skills you already have, one click away.** Your Claude Code skills (`~/.claude/skills/`) show up in a sidebar with a Run button. Schedule them with a frontmatter line.
-6. **Bridges everywhere.** Message your agent from Telegram, Slack, Discord, LINE, WhatsApp, Matrix, IRC, Messenger, Google Chat — same workspace, any surface.
-7. **Sandboxed by default.** Docker detection is automatic — Claude sees your workspace and its own config, nothing else.
+1. **Multi-modal Claude Code, via GUI Chat Protocol.** Claude doesn't reply with text — it calls tools that render interactive **documents, spreadsheets, ECharts dashboards, images, forms, 3D scenes, and full narrated presentations**. GUI Chat Protocol is the open standard that makes this possible, and it's the unique heart of this product.
+2. **Run many Claude Code sessions at once, in one browser tab.** Open parallel sessions in separate roles, kick off long tasks in one, keep chatting in another. While one session is generating a video, another is refactoring your code. **Claude Code is no longer single-threaded.**
+3. **Your phone is a Claude Code client.** Message your agent from **Telegram, Slack, LINE, Discord, WhatsApp, Matrix**, and more — same workspace, same memory, same skills. Send a photo, get a document back. Ask for a chart on your commute.
+4. **Real presentations and videos, not bullet points.** The `presentMulmoScript` plugin (MulmoScript / MulmoCast engine) generates **slide decks with audio narration and AI-generated video clips** (Gemini image + Veo 3.1 video). Ship a narrated explainer without opening Keynote, Premiere, or a browser tab to ElevenLabs.
+5. **Long-term memory that's actually yours.** A personal wiki grows from every conversation, stored as plain Markdown. Claude reads, cross-links, and maintains it itself — Karpathy's LLM Knowledge Bases idea, shipped.
+6. **Docker-sandboxed by default.** Claude Code can read and write files. That's the whole point — and the whole danger. MulmoClaude **auto-detects Docker and runs Claude in a container** where only your workspace is visible. Your SSH keys, your `.env` files, your home directory — invisible. No configuration. Compare this to tools that run Claude directly against your filesystem.
+7. **Your files are the database.** Todos, calendar, contacts, charts — all Markdown files in `~/mulmoclaude/`. Git-friendly. Dropbox-friendly. Grep-friendly. Yours forever.
+8. **Roles, not modes.** Swap between General, Office, Guide & Planner, Artist, Tutor, Storyteller, MulmoCaster — each a different persona + tool palette. Context resets on switch, focus sharpens.
+9. **Skills you already have, one click away.** Your `~/.claude/skills/` show up in a sidebar with a Run button. Schedule them with one line of SKILL.md frontmatter.
 
 ---
 
 ## 5. Product Hunt Listing Copy
 
 ### Headline (60 char max)
-`MulmoClaude — Claude Code with a canvas and a memory`
+`MulmoClaude — Multi-modal, multi-session GUI for Claude Code`
 
 ### Tagline (60 char max)
-`Visual GUI + personal wiki for Claude Code. Files stay yours.`
+`Parallel sessions, narrated videos, phone bridges, sandboxed.`
 
 ### First comment (the maker post — pinned)
 
 ```
 Hi Product Hunt! 👋
 
-I'm Satoshi, the creator of MulmoClaude. A year ago I built MulmoChat — a
-voice-first agent on OpenAI Realtime. It was fun, but two things kept
-bugging me:
+I'm Satoshi, the creator of MulmoClaude. I love Claude Code — but every
+time I used it I hit the same four walls:
 
-1. Text answers scroll away. I wanted Claude to *show* me things —
-   documents, charts, mind maps — that I could keep.
-2. Every conversation started from zero. I wanted an agent that
-   remembered what we'd figured out last week.
+1. **It only talks in text.** I wanted Claude to *show* me things —
+   real documents, charts, spreadsheets, narrated slide decks.
+2. **One session at a time.** While Claude was thinking, I was waiting.
+3. **Only on my laptop.** I wanted to kick off a task from my phone
+   during a commute and see the result when I got home.
+4. **It has full access to my filesystem.** Fine for a pro user, scary
+   for everyone else.
 
-MulmoClaude is my answer. It sits on top of Claude Code (so it uses your
-existing auth, your filesystem, and all your skills) and gives it:
+MulmoClaude fixes all four.
 
-• A **visual canvas** — replies render as interactive documents,
-  spreadsheets, ECharts charts, mind maps, images, forms, 3D scenes.
-• A **personal wiki** — inspired by @karpathy's LLM Knowledge Bases post.
-  Every ingested article, every decision, every fact Claude finds becomes
-  a Markdown page it can search and cross-reference later.
-• A **workspace-as-database** — todos, calendar, contacts, charts,
-  documents all live as plain files in ~/mulmoclaude/. Version them with
-  git. Sync them with iCloud. Grep them with ripgrep.
-• A **skills launcher** — your ~/.claude/skills/ show up with one-click
-  Run buttons, and you can schedule them from SKILL.md frontmatter.
-• **Bridges** to Telegram, Slack, Discord, LINE, WhatsApp, and 8 other
-  platforms — same workspace, any surface.
+🎨 **Multi-modal via GUI Chat Protocol.** Claude doesn't answer with
+   text — it calls tools that render interactive documents, ECharts
+   dashboards, spreadsheets, images, forms, 3D scenes. The protocol is
+   open and extensible; anyone can write a plugin.
 
-It's open source (AGPL), local-first, and runs sandboxed in Docker by
-default.
+🎬 **Presentations and videos, for real.** The built-in MulmoScript /
+   MulmoCast engine generates full slide decks with audio narration and
+   AI-generated video clips (Gemini image + Veo 3.1 video). Ask for a
+   3-minute explainer on stellar evolution — you get a narrated video.
+
+🧵 **Many Claude Code sessions, one browser tab.** Open parallel sessions
+   in different roles. One session generates a 5-minute video while
+   another refactors your code and a third drafts an email. Claude Code
+   is no longer single-threaded.
+
+📱 **Your phone is a Claude Code client.** Bridges to Telegram, Slack,
+   LINE, Discord, WhatsApp, Matrix, and more — same agent, same
+   workspace, same memory. Send a photo from your phone, get a document
+   back on your laptop.
+
+🔒 **Sandboxed by default.** Claude runs inside a Docker container that
+   only sees your workspace. Your SSH keys, your .env files, your home
+   directory — invisible. Auto-detected on launch. No configuration.
+
+🧠 **Personal wiki that grows with you.** Inspired by @karpathy's LLM
+   Knowledge Bases post — every ingested article and every decision
+   becomes a cross-linked Markdown page Claude can search and reuse.
+
+📁 **Your files are the database.** Todos, calendar, contacts, charts —
+   all plain Markdown in ~/mulmoclaude/. Git it, Dropbox it, grep it.
+
+Open source (AGPL), local-first.
 
 Would love your feedback — especially if you're already a Claude Code
-user and have opinions about what "a GUI for Claude" should feel like.
+user and have opinions about what "a real UI for Claude" should feel
+like.
 
 — Satoshi
 ```
 
 ### Description / gallery captions (one per screenshot)
 
-1. **Hero shot** — "Ask Claude anything. Get a document, a chart, a mind map back."
-2. **Wiki view** — "Ingest an article. Claude writes it into your personal wiki, with cross-links."
-3. **Roles launcher** — "Swap personas and tool palettes in one click."
-4. **Charts** — "‘Chart last quarter's revenue by region' — ECharts, PNG-exportable."
-5. **Skills** — "Your Claude Code skills, one click away. Schedule them with a frontmatter line."
-6. **Bridges** — "Same agent, same workspace — from Telegram, Slack, Discord, WhatsApp."
-7. **Workspace** — "Everything is a Markdown file in `~/mulmoclaude/`. Yours forever."
+1. **Hero shot — multi-session** — "Three Claude Code sessions running in parallel, one browser tab. One renders a spreadsheet, one generates a narrated video, one drafts email."
+2. **MulmoCast presentation** — "Ask for a 3-minute narrated explainer. Get a slide deck with AI-generated video clips and voice. Zero other tools opened."
+3. **GUI Chat Protocol canvas** — "Claude's answer isn't text. It's an interactive document, spreadsheet, or chart you can keep."
+4. **Mobile bridges** — "Message Claude from Telegram, Slack, LINE, WhatsApp. Send a photo, get a document back on your laptop."
+5. **Docker sandbox banner** — "Claude can't see outside your workspace. SSH keys, .env files, home directory — all invisible."
+6. **Wiki cross-links** — "Ingest an article. Claude writes it into your personal wiki and cross-links it to what you already know."
+7. **Charts** — "‘Chart AAPL's last 30 days as a candlestick' — ECharts, PNG-exportable."
+8. **Skills launcher** — "Your ~/.claude/skills/ with a Run button. Schedule with a frontmatter line."
+9. **Workspace** — "Everything is a Markdown file in `~/mulmoclaude/`. Yours forever."
 
 ---
 
@@ -125,32 +148,33 @@ Three videos — each serves a different channel. **Always record silent first; 
 ### Video A — The 60-second hero (Product Hunt gallery + Twitter/X)
 
 - **Goal:** earn one upvote per viewer. No feature-listing.
+- **The single moment we must land:** split-screen with three Claude Code sessions running simultaneously, one of them producing a narrated MulmoCast video while the others do real work. Nothing else on the market shows this.
 - **Structure:**
-  - 0:00–0:05 — Cold open: hand typing "plan a 3-day Kyoto trip" into MulmoClaude. No logo, no title card.
-  - 0:05–0:20 — Canvas fills with a rich trip-planner document: map, day-by-day schedule, inline images, restaurant cards.
-  - 0:20–0:30 — Quick cut: "summarize my todos for this week" → Kanban board rendering.
-  - 0:30–0:40 — Quick cut: "chart AAPL's last 30 days" → candlestick with PNG export button highlighted.
+  - 0:00–0:05 — Cold open: browser tab, three sessions stacked. All three get prompts typed into them in 3 seconds.
+  - 0:05–0:20 — Session 1: "make a narrated 90s explainer on the water cycle" → MulmoCast renders a slide deck with voice + video clips. Session 2 (visible on the side): building a spreadsheet from a pasted CSV. Session 3: chart AAPL candlestick appears. **All at the same time, no cuts.**
+  - 0:20–0:30 — Phone appears on-screen: a Telegram message sent to the same workspace → laptop canvas updates live. Narrator: *"Your phone is a Claude Code client now."*
+  - 0:30–0:40 — Zoom to Docker sandbox banner in the UI. Narrator: *"Claude can only see your workspace. Nothing else."*
   - 0:40–0:55 — "Ingest this article" drops a URL → wiki page appears, cross-linked to an existing entry. Narrator: *"Every conversation makes the next one smarter."*
-  - 0:55–1:00 — Logo + `npx create-mulmoclaude` style hook (or `yarn dev` if simpler) + github URL.
+  - 0:55–1:00 — Logo + github URL + one-line install.
 - **Production notes:** 1080p screen capture, 24fps, no zoom transitions, monospace captions. Music: one royalty-free lo-fi track at 40% — cut it at 0:55.
 
 ### Video B — The 3-minute deep-dive (YouTube + landing page)
 
 - **Goal:** convert a developer watcher into a `git clone`.
 - **Outline:**
-  - 0:00–0:20 — Problem framing: "Claude Code is incredible, but its answers live in a terminal. Here's what I wanted instead."
-  - 0:20–1:00 — Install, `yarn dev`, first chat. Show the **Office role** building a real spreadsheet from a CSV paste.
-  - 1:00–1:40 — Role switch to **Guide & Planner**. Build the Kyoto trip. Show the file explorer — point out that everything is `.md` on disk.
-  - 1:40–2:20 — Wiki demo. Ingest two articles on the same topic. Show backlinks appearing. Search the wiki across sessions.
-  - 2:20–2:40 — Skills. Run `/my-skill`. Show scheduling via SKILL.md frontmatter.
-  - 2:40–3:00 — Bridges. Message from Telegram, watch the desktop canvas update live.
-  - 3:00 — "It's open source, AGPL, Docker-sandboxed. Link in description."
+  - 0:00–0:20 — Problem framing: "Claude Code is incredible, but it only talks in text, it's single-threaded, and it's tethered to your laptop. Here's what I wanted instead."
+  - 0:20–0:50 — Install, `yarn dev`, first chat. Show the **Office role** building a real spreadsheet from a CSV paste. Call out: **GUI Chat Protocol** turns Claude's answer into an interactive artifact.
+  - 0:50–1:30 — Open a second session in parallel. Kick off a **MulmoCast narrated video** (slide deck + voice + Veo 3.1 video clips). While it renders, continue working in the first session. Call out: "one browser tab, many Claude Code workers."
+  - 1:30–2:00 — Role switch to **Guide & Planner**. Build a Kyoto trip doc. Show the file explorer — point out that everything is `.md` on disk.
+  - 2:00–2:25 — Wiki demo. Ingest two articles on the same topic. Show backlinks appearing.
+  - 2:25–2:45 — Bridges. Message from **Telegram** and **LINE**; show desktop canvas updating live. Same memory, same workspace.
+  - 2:45–3:00 — Docker sandbox: show the container isolating Claude from the host filesystem. Frame this against tools that run Claude directly on `~/`. "It's open source, AGPL, Docker-sandboxed. Link in description."
 - **Production notes:** talking-head inset bottom-right for the first 20 seconds, then pure screencast.
 
 ### Video C — The 15-second loop (Instagram, LinkedIn, PH gallery motion)
 
 - Single prompt → single rich visual result → fade to logo. Meant to be muted.
-- Shoot 3 variants: document, chart, wiki page. Pick the strongest for PH; post the other two on launch day.
+- Shoot 3 variants: **(a)** three parallel sessions running at once, **(b)** a full MulmoCast narrated video rendering, **(c)** Telegram-to-canvas round trip. Pick the strongest for PH; post the other two on launch day.
 
 ### Filming checklist (applies to all)
 
@@ -208,15 +232,16 @@ Three videos — each serves a different channel. **Always record silent first; 
 
 ### X / Twitter
 
-**Launch thread (7 tweets) — drafts:**
+**Launch thread (8 tweets) — drafts:**
 
-1. *MulmoClaude is live on Product Hunt today. It's what I wanted Claude Code to feel like: a real UI, a real memory, and every file stays on my machine. 🧵*
-2. *Ask Claude anything → it replies with a document, a chart, a mind map, a spreadsheet, a form. Not a wall of text. [15s video]*
-3. *Every conversation builds a personal wiki. Ingest an article, Claude cross-links it to what you already know. Karpathy's LLM Knowledge Bases idea, shipped. [wiki gif]*
-4. *Your files are the database. `~/mulmoclaude/` is all plain Markdown. Git it. Dropbox it. Grep it. [file tree screenshot]*
-5. *Your ~/.claude/skills/ show up with one-click Run buttons. Add `schedule: daily 08:00` to SKILL.md and Claude runs it every morning. [skills screenshot]*
-6. *Same agent, same workspace — from Telegram, Slack, Discord, WhatsApp, LINE, Matrix, IRC, and 5 more. [bridges gif]*
-7. *Open source (AGPL), Docker-sandboxed by default. One upvote on PH costs you nothing and means everything to us today: [link]*
+1. *MulmoClaude is live on Product Hunt today. It's what I wanted Claude Code to feel like: multi-modal, multi-session, accessible from my phone, and sandboxed so it can't torch my laptop. 🧵*
+2. *Claude Code answers with interactive documents, spreadsheets, ECharts dashboards, images, forms, 3D scenes — not walls of text. The GUI Chat Protocol makes this possible and it's the heart of the app. [15s video]*
+3. *"Make me a 3-minute narrated explainer on the water cycle." MulmoCast builds a slide deck with AI voice + Veo 3.1 video clips. Zero other tools opened. [video]*
+4. *Three Claude Code sessions running in parallel, one browser tab. One generates a video, one writes code, one drafts an email. Claude Code is no longer single-threaded. [multi-session gif]*
+5. *Your phone is a Claude Code client now. Telegram, Slack, LINE, WhatsApp, Discord, Matrix — same agent, same workspace, same wiki memory. [bridges gif]*
+6. *Claude runs in a Docker sandbox by default. It can only see your workspace. SSH keys, .env files, home directory — invisible. Auto-detected. No configuration. [sandbox screenshot]*
+7. *Every conversation builds a personal wiki. Karpathy's LLM Knowledge Bases idea, shipped — all plain Markdown in `~/mulmoclaude/`. Git it. Dropbox it. Grep it. [wiki gif]*
+8. *Open source, AGPL. One upvote on PH costs you nothing and means everything to us today: [link]*
 
 ### Hacker News
 
@@ -284,7 +309,7 @@ Satoshi has a strong JP audience. Ship a Japanese version of the maker post and 
 
 ## 12. The Single Bet
 
-If we can only execute one thing well, it's this: **make the hero video land the "wiki that grows with you" moment in under 20 seconds.** Everything else — roles, bridges, skills, charts — is confirmation bias for a viewer who already believes. That first 20 seconds is what earns the upvote.
+If we can only execute one thing well, it's this: **make the hero video land the "three Claude Code sessions running in parallel, one of them generating a narrated video" moment in under 20 seconds.** That single shot is the entire pitch — multi-session + multi-modal + MulmoCast — in one frame. Nothing else on the market looks like it. Bridges, wiki, sandbox, roles are confirmation bias for a viewer who already believes. That first 20 seconds is what earns the upvote.
 
 Everything in this plan should be read through that lens. Cut anything that doesn't serve it.
 
