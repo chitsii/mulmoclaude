@@ -464,6 +464,7 @@ import {
   NOTIFICATION_VIEWS,
   type NotificationAction,
 } from "./types/notification";
+import { CANVAS_VIEW } from "./utils/canvas/viewMode";
 import ChatAttachmentPreview from "./components/ChatAttachmentPreview.vue";
 import type { SseEvent } from "./types/sse";
 import {
@@ -625,11 +626,11 @@ function handleNotificationNavigate(action: NotificationAction): void {
   if (action.view === NOTIFICATION_VIEWS.chat) {
     if (action.sessionId) navigateToSession(action.sessionId);
   } else if (action.view === NOTIFICATION_VIEWS.todos) {
-    setCanvasViewMode("todos");
+    setCanvasViewMode(CANVAS_VIEW.todos);
   } else if (action.view === NOTIFICATION_VIEWS.scheduler) {
-    setCanvasViewMode("scheduler");
+    setCanvasViewMode(CANVAS_VIEW.scheduler);
   } else if (action.view === NOTIFICATION_VIEWS.files) {
-    setCanvasViewMode("files");
+    setCanvasViewMode(CANVAS_VIEW.files);
   }
 }
 
@@ -1042,7 +1043,7 @@ async function onPluginNavigate(target: PluginLauncherTarget): Promise<void> {
     session.selectedResultUuid = result.uuid;
     // Single view so the plugin's View takes the full canvas —
     // stack view would bury the fresh result below older entries.
-    setCanvasViewMode("single");
+    setCanvasViewMode(CANVAS_VIEW.single);
   } catch (err) {
     pushErrorMessage(session, err instanceof Error ? err.message : String(err));
   }
@@ -1233,8 +1234,8 @@ function handleUpdateResult(updatedResult: ToolResultComplete) {
 // actually shows up in the canvas.
 function onSidebarItemClick(uuid: string) {
   selectedResultUuid.value = uuid;
-  if (canvasViewMode.value === "files") {
-    setCanvasViewMode("single");
+  if (canvasViewMode.value === CANVAS_VIEW.files) {
+    setCanvasViewMode(CANVAS_VIEW.single);
   }
 }
 
@@ -1247,8 +1248,8 @@ function onFilesViewLoadSession(sessionId: string): void {
   // Set view mode BEFORE loading session so that navigateToSession
   // (called inside loadSession) picks up the updated canvasViewMode
   // in its query — avoids a race where two router.push calls fight.
-  if (canvasViewMode.value === "files") {
-    setCanvasViewMode("single");
+  if (canvasViewMode.value === CANVAS_VIEW.files) {
+    setCanvasViewMode(CANVAS_VIEW.single);
   }
   loadSession(sessionId);
 }
