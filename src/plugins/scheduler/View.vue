@@ -396,7 +396,25 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ updateResult: [result: ToolResultComplete] }>();
 
-const activeTab = ref<"calendar" | "tasks">("calendar");
+function detectInitialTab(
+  result?: ToolResultComplete<SchedulerData>,
+): "calendar" | "tasks" {
+  const data = result?.data as Record<string, unknown> | undefined;
+  if (
+    data &&
+    ("task" in data ||
+      "tasks" in data ||
+      "triggered" in data ||
+      "deleted" in data)
+  ) {
+    return "tasks";
+  }
+  return "calendar";
+}
+
+const activeTab = ref<"calendar" | "tasks">(
+  detectInitialTab(props.selectedResult),
+);
 const items = ref<ScheduledItem[]>(props.selectedResult?.data?.items ?? []);
 
 const { refresh } = useFreshPluginData<ScheduledItem[]>({
@@ -413,6 +431,7 @@ const { refresh } = useFreshPluginData<ScheduledItem[]>({
 watch(
   () => props.selectedResult?.uuid,
   () => {
+    activeTab.value = detectInitialTab(props.selectedResult);
     items.value = props.selectedResult?.data?.items ?? [];
     void refresh();
   },
