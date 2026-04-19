@@ -34,10 +34,7 @@ const emit = defineEmits<{
 watch(
   () => props.forceClose,
   (v) => {
-    if (v && open.value) {
-      open.value = false;
-      emit("update:open", false);
-    }
+    if (v && open.value) close();
   },
 );
 

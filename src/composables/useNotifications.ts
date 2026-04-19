@@ -1,27 +1,65 @@
 // Web-side subscriber for the `notifications` pub-sub channel.
 // Stores incoming NotificationPayloads for the bell badge + panel.
+//
+// Uses a singleton subscription pattern: the first component that
+// calls useNotifications() subscribes to the pub-sub channel; the
+// last one to unmount unsubscribes. All consumers share the same
+// module-level state (notifications + readAt).
 
 import { onUnmounted, ref, computed, type Ref, type ComputedRef } from "vue";
 import { PUBSUB_CHANNELS } from "../config/pubsubChannels";
 import { usePubSub } from "./usePubSub";
+import { NOTIFICATION_KINDS } from "../types/notification";
 import type { NotificationPayload } from "../types/notification";
 
 const MAX_RECENT = 50;
 
+const VALID_KINDS = new Set<string>(Object.values(NOTIFICATION_KINDS));
+
 function isNotificationPayload(value: unknown): value is NotificationPayload {
   if (value === null || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
-  return (
-    typeof v.id === "string" &&
-    typeof v.kind === "string" &&
-    typeof v.title === "string" &&
-    typeof v.firedAt === "string"
-  );
+  if (typeof v.id !== "string") return false;
+  if (typeof v.kind !== "string" || !VALID_KINDS.has(v.kind)) return false;
+  if (typeof v.title !== "string") return false;
+  if (typeof v.firedAt !== "string") return false;
+  if (!isValidAction(v.action)) return false;
+  return true;
+}
+
+function isValidAction(action: unknown): boolean {
+  if (action === null || typeof action !== "object") return false;
+  const a = action as Record<string, unknown>;
+  return typeof a.type === "string";
 }
 
 // Module-level state so all components share the same list.
 const notifications = ref<NotificationPayload[]>([]);
 const readAt = ref<string | null>(null);
+
+// Singleton subscription — ref-counted across consumers.
+let subscriberCount = 0;
+let unsubscribeFn: (() => void) | null = null;
+
+function ensureSubscribed(
+  subscribe: ReturnType<typeof usePubSub>["subscribe"],
+): void {
+  subscriberCount++;
+  if (unsubscribeFn) return; // already listening
+  unsubscribeFn = subscribe(PUBSUB_CHANNELS.notifications, (data) => {
+    if (!isNotificationPayload(data)) return;
+    notifications.value = [data, ...notifications.value].slice(0, MAX_RECENT);
+  });
+}
+
+function releaseSubscription(): void {
+  subscriberCount--;
+  if (subscriberCount <= 0 && unsubscribeFn) {
+    unsubscribeFn();
+    unsubscribeFn = null;
+    subscriberCount = 0;
+  }
+}
 
 export function useNotifications(): {
   notifications: Ref<NotificationPayload[]>;
@@ -31,14 +69,8 @@ export function useNotifications(): {
   dismiss: (id: string) => void;
 } {
   const { subscribe } = usePubSub();
-  const unsubscribe = subscribe(PUBSUB_CHANNELS.notifications, (data) => {
-    if (!isNotificationPayload(data)) return;
-    notifications.value = [data, ...notifications.value].slice(0, MAX_RECENT);
-  });
-
-  onUnmounted(() => {
-    unsubscribe();
-  });
+  ensureSubscribed(subscribe);
+  onUnmounted(releaseSubscription);
 
   const latest = computed(() => notifications.value[0] ?? null);
 

@@ -139,7 +139,11 @@ export function endRun(chatSessionId: string): void {
   });
   notifySessionsChanged();
 
-  // P0 trigger: agent completed → notification
+  // P0 trigger: agent completed → notification.
+  // Fires for all sessions (web UI + bridge-initiated). Bridge users
+  // benefit from the bell notification when they later open the web UI
+  // to review agent output. publishNotification is try-catch wrapped,
+  // so failures here never break the session lifecycle.
   publishNotification({
     kind: NOTIFICATION_KINDS.agent,
     title: `Session completed (${session.roleId})`,
