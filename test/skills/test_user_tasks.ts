@@ -5,10 +5,10 @@ import path from "path";
 import os from "os";
 import {
   loadUserTasks,
-  saveUserTasks,
   validateAndCreate,
   applyUpdate,
 } from "../../server/workspace/skills/user-tasks.ts";
+import { saveUserTasks } from "../../server/utils/files/user-tasks-io.ts";
 import { SCHEDULE_TYPES, MISSED_RUN_POLICIES } from "@receptron/task-scheduler";
 
 function tmpRoot(): string {

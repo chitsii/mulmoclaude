@@ -8,8 +8,8 @@
 // trigger a refresh that unregisters old tasks and registers new ones.
 
 import {
-  loadUserTasks as loadUserTasksRaw,
-  saveUserTasks as saveUserTasksRaw,
+  loadUserTasks as loadRaw,
+  saveUserTasks,
 } from "../../utils/files/user-tasks-io.js";
 import type { MissedRunPolicy } from "@receptron/task-scheduler";
 import { SCHEDULE_TYPES, MISSED_RUN_POLICIES } from "@receptron/task-scheduler";
@@ -33,25 +33,8 @@ export interface PersistedUserTask {
   updatedAt: string;
 }
 
-export interface UserTaskInput {
-  name: string;
-  description?: string;
-  schedule: LocalTaskSchedule;
-  missedRunPolicy?: MissedRunPolicy;
-  roleId?: string;
-  prompt: string;
-}
-
-// Typed wrappers around the generic I/O module.
 export function loadUserTasks(r?: string): PersistedUserTask[] {
-  return loadUserTasksRaw<PersistedUserTask>(r);
-}
-
-export async function saveUserTasks(
-  tasks: PersistedUserTask[],
-  r?: string,
-): Promise<void> {
-  return saveUserTasksRaw(tasks, r);
+  return loadRaw<PersistedUserTask>(r);
 }
 
 // ── Validation ──────────────────────────────────────────────────
