@@ -69,7 +69,8 @@ irc.on(
     // Ignore our own messages
     if (event.nick === nick) return;
 
-    const isChannel = event.target.startsWith("#");
+    // IRC channel prefixes: #, &, +, ! (RFC 2812 §1.3)
+    const isChannel = /^[#&+!]/.test(event.target);
     const chatId = isChannel ? event.target : event.nick;
     const text = event.message.trim();
     if (!text) return;

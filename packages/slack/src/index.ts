@@ -72,15 +72,23 @@ socketMode.on("message", async ({ event, ack }) => {
     `[slack] message channel=${channelId} user=${event.user} len=${text.length}`,
   );
 
-  const ackResult = await client.send(channelId, text);
-  if (ackResult.ok) {
-    await sendChunked(channelId, ackResult.reply ?? "");
-  } else {
-    const status = ackResult.status ? ` (${ackResult.status})` : "";
-    await web.chat.postMessage({
-      channel: channelId,
-      text: `Error${status}: ${ackResult.error ?? "unknown"}`,
-    });
+  try {
+    const ackResult = await client.send(channelId, text);
+    if (ackResult.ok) {
+      await sendChunked(channelId, ackResult.reply ?? "");
+    } else {
+      const status = ackResult.status ? ` (${ackResult.status})` : "";
+      await web.chat
+        .postMessage({
+          channel: channelId,
+          text: `Error${status}: ${ackResult.error ?? "unknown"}`,
+        })
+        .catch((err) =>
+          console.error(`[slack] error notification failed: ${err}`),
+        );
+    }
+  } catch (err) {
+    console.error(`[slack] message handling failed: ${err}`);
   }
 });
 
@@ -103,7 +111,8 @@ async function sendChunked(channel: string, text: string): Promise<void> {
 async function main(): Promise<void> {
   // Get bot user ID
   const authResult = await web.auth.test();
-  botUserId = (authResult.user_id as string) ?? null;
+  const rawUserId = authResult.user_id;
+  botUserId = typeof rawUserId === "string" ? rawUserId : null;
 
   console.log("MulmoClaude Slack bridge");
   console.log(

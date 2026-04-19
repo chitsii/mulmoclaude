@@ -56,6 +56,7 @@ async function pushMessage(userId: string, text: string): Promise<void> {
           to: userId,
           messages: messages.slice(i, i + 5),
         }),
+        signal: AbortSignal.timeout(30_000),
       });
       if (!res.ok) {
         const body = await res.text().catch(() => "");
@@ -81,11 +82,12 @@ function chunkText(text: string, max = 5000): string[] {
 // ── Signature verification ──────────────────────────────────────
 
 function verifySignature(body: string, signature: string): boolean {
-  const hash = crypto
+  const expected = crypto
     .createHmac("SHA256", channelSecret!)
     .update(body)
     .digest("base64");
-  return hash === signature;
+  if (expected.length !== signature.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 
 // ── Webhook server ──────────────────────────────────────────────
@@ -128,15 +130,16 @@ app.post("/webhook", async (req: Request, res: Response) => {
 
     console.log(`[line] message user=${userId} len=${text.length}`);
 
-    // Reply token expires in 1 minute. Since agent can take longer,
-    // use push messages for the actual reply. The reply token is
-    // used only for a quick "thinking..." indicator if desired.
-    const ack = await client.send(userId, text);
-    if (ack.ok) {
-      await pushMessage(userId, ack.reply ?? "");
-    } else {
-      const status = ack.status ? ` (${ack.status})` : "";
-      await pushMessage(userId, `Error${status}: ${ack.error ?? "unknown"}`);
+    try {
+      const ack = await client.send(userId, text);
+      if (ack.ok) {
+        await pushMessage(userId, ack.reply ?? "");
+      } else {
+        const status = ack.status ? ` (${ack.status})` : "";
+        await pushMessage(userId, `Error${status}: ${ack.error ?? "unknown"}`);
+      }
+    } catch (err) {
+      console.error(`[line] message handling failed: ${err}`);
     }
   }
 });

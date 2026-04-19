@@ -70,9 +70,10 @@ const matrixClient: MatrixClient = createClient({
 
     const content = event.getContent();
     if (content.msgtype !== "m.text") return;
+    if (typeof content.body !== "string") return;
 
     const roomId = room.roomId;
-    const text = (content.body as string) ?? "";
+    const text = content.body;
     if (!text.trim()) return;
 
     if (!allowAll && !allowedRooms.has(roomId)) return;
@@ -81,15 +82,19 @@ const matrixClient: MatrixClient = createClient({
       `[matrix] message room=${roomId} sender=${event.getSender()} len=${text.length}`,
     );
 
-    const ack = await mulmo.send(roomId, text);
-    if (ack.ok) {
-      await sendChunked(roomId, ack.reply ?? "");
-    } else {
-      const status = ack.status ? ` (${ack.status})` : "";
-      await matrixClient.sendTextMessage(
-        roomId,
-        `Error${status}: ${ack.error ?? "unknown"}`,
-      );
+    try {
+      const ack = await mulmo.send(roomId, text);
+      if (ack.ok) {
+        await sendChunked(roomId, ack.reply ?? "");
+      } else {
+        const status = ack.status ? ` (${ack.status})` : "";
+        await matrixClient.sendTextMessage(
+          roomId,
+          `Error${status}: ${ack.error ?? "unknown"}`,
+        );
+      }
+    } catch (err) {
+      console.error(`[matrix] message handling failed: ${err}`);
     }
   },
 );

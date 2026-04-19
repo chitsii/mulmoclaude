@@ -10,7 +10,7 @@
 //   MULMOCLAUDE_AUTH_TOKEN   — bearer token (or read from workspace)
 
 import "dotenv/config";
-import { Client, GatewayIntentBits, type Message } from "discord.js";
+import { Client, GatewayIntentBits, Partials, type Message } from "discord.js";
 import { createBridgeClient } from "@mulmobridge/client";
 
 const TRANSPORT_ID = "discord";
@@ -39,6 +39,9 @@ const discord = new Client({
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
   ],
+  // Partials.Channel is required to receive DM messageCreate events —
+  // DM channels are not cached by default in discord.js v14.
+  partials: [Partials.Channel],
 });
 
 const mulmo = createBridgeClient({ transportId: TRANSPORT_ID });
@@ -49,9 +52,8 @@ mulmo.onPush(async (ev) => {
       discord.channels.cache.get(ev.chatId) ??
       (await discord.channels.fetch(ev.chatId).catch(() => null));
     if (channel?.isTextBased() && "send" in channel) {
-      await (channel as { send: (text: string) => Promise<unknown> }).send(
-        ev.message,
-      );
+      const sendable = channel as { send: (t: string) => Promise<unknown> };
+      await sendChunkedToSendable(sendable, ev.message);
     } else {
       console.warn(
         `[discord] push: channel ${ev.chatId} not found or not text-based`,
@@ -63,25 +65,26 @@ mulmo.onPush(async (ev) => {
 });
 
 discord.on("messageCreate", async (msg: Message) => {
-  // Ignore bots (including ourselves)
   if (msg.author.bot) return;
-
   const channelId = msg.channelId;
   const text = msg.content.trim();
   if (!text) return;
-
   if (!allowAll && !allowedChannels.has(channelId)) return;
 
   console.log(
     `[discord] message channel=${channelId} user=${msg.author.tag} len=${text.length}`,
   );
 
-  const ack = await mulmo.send(channelId, text);
-  if (ack.ok) {
-    await sendChunked(msg, ack.reply ?? "");
-  } else {
-    const status = ack.status ? ` (${ack.status})` : "";
-    await msg.reply(`Error${status}: ${ack.error ?? "unknown"}`);
+  try {
+    const ack = await mulmo.send(channelId, text);
+    if (ack.ok) {
+      await sendChunked(msg, ack.reply ?? "");
+    } else {
+      const status = ack.status ? ` (${ack.status})` : "";
+      await msg.reply(`Error${status}: ${ack.error ?? "unknown"}`);
+    }
+  } catch (err) {
+    console.error(`[discord] message handling failed: ${err}`);
   }
 });
 
@@ -94,11 +97,21 @@ async function sendChunked(msg: Message, text: string): Promise<void> {
     const chunk = text.slice(i, i + MAX_DISCORD_LENGTH);
     if (i === 0) {
       await msg.reply(chunk);
-    } else {
-      if ("send" in msg.channel) {
-        await msg.channel.send(chunk);
-      }
+    } else if ("send" in msg.channel) {
+      await (msg.channel as { send: (t: string) => Promise<unknown> }).send(
+        chunk,
+      );
     }
+  }
+}
+
+async function sendChunkedToSendable(
+  channel: { send: (t: string) => Promise<unknown> },
+  text: string,
+): Promise<void> {
+  const content = text.length === 0 ? "(empty reply)" : text;
+  for (let i = 0; i < content.length; i += MAX_DISCORD_LENGTH) {
+    await channel.send(content.slice(i, i + MAX_DISCORD_LENGTH));
   }
 }
 
