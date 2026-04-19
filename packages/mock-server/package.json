@@ -1,17 +1,12 @@
 {
-  "name": "@mulmobridge/client",
+  "name": "@mulmobridge/mock-server",
   "version": "0.1.0",
-  "description": "Socket.io client library for MulmoBridge — shared by all bridge implementations",
+  "description": "Mock MulmoClaude server for testing MulmoBridge bridges — no Claude API key needed",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
-      "default": "./dist/index.js"
-    }
+  "bin": {
+    "mulmobridge-mock-server": "dist/index.js"
   },
   "files": [
     "dist",
@@ -22,15 +17,18 @@
     "prepack": "yarn build",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test test/test_*.ts",
-    "lint": "eslint src test"
+    "lint": "eslint src test",
+    "start": "tsx src/index.ts"
   },
   "license": "MIT",
   "author": "Receptron Team",
   "dependencies": {
-    "@mulmobridge/protocol": "^0.1.0",
-    "socket.io-client": "^4.0.0"
+    "@mulmobridge/protocol": "^0.1.1",
+    "express": "^5.1.0",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "@types/node": "^25.6.0",
     "typescript": "^6.0.3"
   }
