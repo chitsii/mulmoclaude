@@ -2,7 +2,9 @@
 
 **Owner:** CMO (strategy), Engineering (demo assets), Community (day-of ops)
 **Target launch:** Tuesday, one week out — 12:01 AM PT kickoff
-**Positioning one-liner:** *Claude Code, but it draws you back.*
+**Positioning one-liner:** *Claude Code that produces real artifacts — and remembers everything.*
+**Core thesis (the story behind the product):** This is the first visible surface of an AI-native operating system. Claude Code is the kernel; MulmoClaude is the shell, the compositor, and the filesystem users actually see.
+**Target early adopter (one audience, not four):** Claude Code power users who have already hit the limits of the terminal. Everyone else — productivity users, knowledge workers, AI enthusiasts — is phase 2 and will come via these users, not in parallel to them.
 
 ---
 
@@ -10,25 +12,35 @@
 
 ### Primary tagline (Product Hunt hero line)
 
-> **MulmoClaude — Claude Code, multi-modal. Many sessions, one browser, every device.**
+> **MulmoClaude — Claude Code that produces real artifacts and remembers everything.**
+
+This one sentence is the whole product. Every surface — hero video, PH headline, tweet #1, gallery captions — must trace back to it. Everything else (parallel sessions, bridges, sandbox, roles, skills, charts) is *evidence*, not the message.
 
 ### Supporting taglines (A/B candidates for social + hero imagery)
 
-1. *Chat with Claude. Get documents, charts, spreadsheets, slide decks, and narrated videos back.*
-2. *The multi-modal GUI for Claude Code — multiple parallel sessions, sandboxed, local-first.*
-3. *Claude Code meets a real UI, a personal wiki that never forgets, and a bridge to your phone.*
-4. *Run five Claude agents in one browser tab. Message them from Telegram. Get a video back.*
+1. *Real documents, real slide decks, real narrated videos — out of Claude Code. And it remembers.*
+2. *Claude Code with a canvas and a compounding memory.*
+3. *Turn any research paper into a document, a deck, and a narrated video — without opening anything else.*
+4. *Run five Claude Code agents in one browser tab. Get artifacts back, not text.*
 
 ### Category pick
 
-Primary: **Developer Tools** · Secondary: **Productivity** · Tertiary: **Artificial Intelligence**
-Developer Tools gets us the Claude Code / Cursor / Cline audience; Productivity captures the "personal knowledge base" narrative; AI is table stakes.
+Primary: **Developer Tools** · Secondary: **Artificial Intelligence**
+Dev Tools is where our one audience (Claude Code power users) lives. We skip Productivity entirely — chasing two audiences on PH day means landing neither. AI is a defensive tertiary at most.
 
 ---
 
 ## 2. The One-Sentence Pitch
 
-**MulmoClaude turns Claude Code into a multi-modal personal agent:** you chat, it replies with interactive documents, spreadsheets, charts, narrated slide decks, and AI-generated videos — you can run many sessions side-by-side in one browser, reach the same agent from your phone (Telegram, Slack, LINE, WhatsApp), and it all runs sandboxed in Docker so Claude can't touch anything outside your workspace.
+**MulmoClaude turns Claude Code into a system that produces real documents, runs multiple agents at once, and builds a personal knowledge base from everything you do.**
+
+Three clauses, in the order a user asks them: *What does it make? How fast? Does it get smarter?* Everything else in this plan is supporting evidence.
+
+### The anti-wrapper line (use this whenever "is it just a ChatGPT clone?" shows up)
+
+> **This doesn't call the Claude API. It runs Claude Code directly — your auth, your tools, your files, your environment.**
+
+That distinction is the whole reason the product can do what it does. Repeat it verbatim in the maker post, the HN title, and tweet #1.
 
 ---
 
@@ -45,19 +57,24 @@ Product Hunt voters reward three things: **a clear "aha"**, **a short demo**, an
 
 ---
 
-## 4. Key Messages (use across all surfaces)
+## 4. Key Messages (collapsed from 9 to 5, reordered)
 
-Rank-ordered. Messages #1–#3 appear in every asset; the rest where space allows.
+A PH viewer skims for ~10 seconds and remembers one idea. So we drop to **five** messages, in the order a user's brain actually asks the question. Everything else (roles, skills, bridges-as-feature-list, Markdown storage) is supporting evidence — keep in reserve for the comment thread and FAQ, not the hero copy.
 
-1. **Multi-modal Claude Code, via GUI Chat Protocol.** Claude doesn't reply with text — it calls tools that render interactive **documents, spreadsheets, ECharts dashboards, images, forms, 3D scenes, and full narrated presentations**. GUI Chat Protocol is the open standard that makes this possible, and it's the unique heart of this product.
-2. **Run many Claude Code sessions at once, in one browser tab.** Open parallel sessions in separate roles, kick off long tasks in one, keep chatting in another. While one session is generating a video, another is refactoring your code. **Claude Code is no longer single-threaded.**
-3. **Your phone is a Claude Code client.** Message your agent from **Telegram, Slack, LINE, Discord, WhatsApp, Matrix**, and more — same workspace, same memory, same skills. Send a photo, get a document back. Ask for a chart on your commute.
-4. **Real presentations and videos, not bullet points.** The `presentMulmoScript` plugin (MulmoScript / MulmoCast engine) generates **slide decks with audio narration and AI-generated video clips** (Gemini image + Veo 3.1 video). Ship a narrated explainer without opening Keynote, Premiere, or a browser tab to ElevenLabs.
-5. **Long-term memory that's actually yours.** A personal wiki grows from every conversation, stored as plain Markdown. Claude reads, cross-links, and maintains it itself — Karpathy's LLM Knowledge Bases idea, shipped.
-6. **Docker-sandboxed by default.** Claude Code can read and write files. That's the whole point — and the whole danger. MulmoClaude **auto-detects Docker and runs Claude in a container** where only your workspace is visible. Your SSH keys, your `.env` files, your home directory — invisible. No configuration. Compare this to tools that run Claude directly against your filesystem.
-7. **Your files are the database.** Todos, calendar, contacts, charts — all Markdown files in `~/mulmoclaude/`. Git-friendly. Dropbox-friendly. Grep-friendly. Yours forever.
-8. **Roles, not modes.** Swap between General, Office, Guide & Planner, Artist, Tutor, Storyteller, MulmoCaster — each a different persona + tool palette. Context resets on switch, focus sharpens.
-9. **Skills you already have, one click away.** Your `~/.claude/skills/` show up in a sidebar with a Run button. Schedule them with one line of SKILL.md frontmatter.
+### The five (rank-ordered)
+
+1. **Artifacts, not text.** Claude Code answers with **real documents, spreadsheets, ECharts dashboards, narrated slide decks, and AI-generated videos** (MulmoScript / MulmoCast: Gemini image + Veo 3.1 video + audio narration). Not a chat bubble. This is what "multi-modal" actually means — powered by the open GUI Chat Protocol.
+2. **Parallel Claude Code, in one browser tab.** Run **many sessions at once** — one generates a video, another refactors code, a third drafts email. Claude Code is no longer single-threaded. *This is the category-defining shot for the hero video.*
+3. **It gets smarter every conversation.** A personal wiki grows from every chat — plain Markdown in your workspace, cross-linked and maintained by Claude itself. Karpathy's *LLM Knowledge Bases* idea, shipped. **This is the moat:** every other Claude client starts from zero; MulmoClaude compounds.
+4. **Your phone is a Claude Code client.** Bridges to Telegram, Slack, LINE, Discord, WhatsApp, Matrix — same agent, same workspace, same wiki. Fire a task from the subway, see the artifact on your laptop.
+5. **Sandboxed, so you can trust it.** Claude Code has filesystem access — that's the whole point and the whole risk. MulmoClaude auto-runs Claude in a **Docker container that only sees your workspace**. SSH keys, `.env` files, home directory: invisible. No configuration, no permissions dialogs. *Reframe AGPL + Docker as "serious enough to be safe," not "complicated."*
+
+### Kept in reserve (don't lead with these — they're comment-thread fuel)
+
+- Roles (General, Office, Guide & Planner, Artist, Tutor, Storyteller, MulmoCaster) — mention only when someone asks *"what can it do?"*
+- Skills launcher + SKILL.md scheduling — a Claude-Code-insider wink, save for HN.
+- Markdown-as-database / workspace portability — powers the "gets smarter" story; surface only if someone probes on lock-in.
+- ECharts, file attachments, DOCX/XLSX/PPTX — individual features, not the pitch.
 
 ---
 
@@ -72,72 +89,76 @@ Rank-ordered. Messages #1–#3 appear in every asset; the rest where space allow
 ### First comment (the maker post — pinned)
 
 ```
-Hi Product Hunt! 👋
+Hi Product Hunt 👋
 
-I'm Satoshi, the creator of MulmoClaude. I love Claude Code — but every
-time I used it I hit the same four walls:
+I'm Satoshi Nakajima. I spent eight years at Microsoft working on
+operating systems (lead architect on early Windows releases), then
+spent the last year obsessing over a single question: **what does an
+AI-native OS actually look like?**
 
-1. **It only talks in text.** I wanted Claude to *show* me things —
-   real documents, charts, spreadsheets, narrated slide decks.
-2. **One session at a time.** While Claude was thinking, I was waiting.
-3. **Only on my laptop.** I wanted to kick off a task from my phone
-   during a commute and see the result when I got home.
-4. **It has full access to my filesystem.** Fine for a pro user, scary
-   for everyone else.
+I don't think it's ChatGPT. I don't think it's Copilot. I think the
+kernel is something like Claude Code — an agent with direct access to
+your files, your tools, your environment. Powerful, but living inside
+a terminal.
 
-MulmoClaude fixes all four.
+Terminals were the OS shell of 1975. We can do better.
 
-🎨 **Multi-modal via GUI Chat Protocol.** Claude doesn't answer with
-   text — it calls tools that render interactive documents, ECharts
-   dashboards, spreadsheets, images, forms, 3D scenes. The protocol is
-   open and extensible; anyone can write a plugin.
+MulmoClaude is my attempt at the **shell for that new kernel**. It
+does three things:
 
-🎬 **Presentations and videos, for real.** The built-in MulmoScript /
-   MulmoCast engine generates full slide decks with audio narration and
-   AI-generated video clips (Gemini image + Veo 3.1 video). Ask for a
-   3-minute explainer on stellar evolution — you get a narrated video.
+**1. Claude replies with real artifacts, not text.**
+Documents, spreadsheets, ECharts dashboards, forms, 3D scenes — and
+full narrated slide decks and AI-generated videos via the built-in
+MulmoScript / MulmoCast engine (Gemini image + Veo 3.1 video +
+audio). Drop in a research paper, get back a summary doc, a deck, and
+a narrated video. No other tools opened.
 
-🧵 **Many Claude Code sessions, one browser tab.** Open parallel sessions
-   in different roles. One session generates a 5-minute video while
-   another refactors your code and a third drafts an email. Claude Code
-   is no longer single-threaded.
+**2. It runs many Claude Code agents in parallel, in one browser tab.**
+Kick off a video render in one session, refactor code in another,
+draft an email in a third. While one is working, you keep working.
+Claude Code is no longer single-threaded.
 
-📱 **Your phone is a Claude Code client.** Bridges to Telegram, Slack,
-   LINE, Discord, WhatsApp, Matrix, and more — same agent, same
-   workspace, same memory. Send a photo from your phone, get a document
-   back on your laptop.
+**3. It gets smarter every conversation.**
+Every ingested article, every decision, every fact becomes a
+cross-linked page in a personal wiki Claude builds and maintains
+itself (inspired by @karpathy's *LLM Knowledge Bases* post). It's
+all plain Markdown in `~/mulmoclaude/` — git-friendly, portable,
+yours. This is the part I'm proudest of: **every other Claude client
+starts from zero; this one compounds.**
 
-🔒 **Sandboxed by default.** Claude runs inside a Docker container that
-   only sees your workspace. Your SSH keys, your .env files, your home
-   directory — invisible. Auto-detected on launch. No configuration.
+Two details that matter:
 
-🧠 **Personal wiki that grows with you.** Inspired by @karpathy's LLM
-   Knowledge Bases post — every ingested article and every decision
-   becomes a cross-linked Markdown page Claude can search and reuse.
+- **Not a wrapper.** This doesn't call the Claude API. It runs the
+  actual Claude Code CLI — your auth, your filesystem, your skills,
+  your MCP servers. That's why it can do what it does.
+- **Sandboxed by default.** Claude runs inside a Docker container
+  that only sees your workspace. SSH keys, `.env` files, home
+  directory — invisible. Auto-detected on launch, no configuration.
 
-📁 **Your files are the database.** Todos, calendar, contacts, charts —
-   all plain Markdown in ~/mulmoclaude/. Git it, Dropbox it, grep it.
+You can also reach the same workspace from Telegram, Slack, LINE,
+Discord, WhatsApp, Matrix — same agent, same wiki memory. Fire a
+task from the subway, see the result on your laptop.
 
-Open source (AGPL), local-first.
+Open source, AGPL.
 
-Would love your feedback — especially if you're already a Claude Code
-user and have opinions about what "a real UI for Claude" should feel
-like.
+If you're already a Claude Code power user who's hit the walls of
+the terminal, this is built for you. Would love your honest feedback
+— this is the first visible surface of a much bigger thesis about
+what computing looks like when AI is the kernel.
 
 — Satoshi
 ```
 
 ### Description / gallery captions (one per screenshot)
 
-1. **Hero shot — multi-session** — "Three Claude Code sessions running in parallel, one browser tab. One renders a spreadsheet, one generates a narrated video, one drafts email."
-2. **MulmoCast presentation** — "Ask for a 3-minute narrated explainer. Get a slide deck with AI-generated video clips and voice. Zero other tools opened."
-3. **GUI Chat Protocol canvas** — "Claude's answer isn't text. It's an interactive document, spreadsheet, or chart you can keep."
-4. **Mobile bridges** — "Message Claude from Telegram, Slack, LINE, WhatsApp. Send a photo, get a document back on your laptop."
-5. **Docker sandbox banner** — "Claude can't see outside your workspace. SSH keys, .env files, home directory — all invisible."
-6. **Wiki cross-links** — "Ingest an article. Claude writes it into your personal wiki and cross-links it to what you already know."
-7. **Charts** — "‘Chart AAPL's last 30 days as a candlestick' — ECharts, PNG-exportable."
-8. **Skills launcher** — "Your ~/.claude/skills/ with a Run button. Schedule with a frontmatter line."
-9. **Workspace** — "Everything is a Markdown file in `~/mulmoclaude/`. Yours forever."
+Cut from 9 to 6. Each one maps to one of the five key messages (plus the shock demo). No orphans.
+
+1. **The shock demo** — "Drop in a research paper. Out comes a summary document, a slide deck, and a narrated video. No other tools opened." *(Leads the gallery because it's the ‘wait, it does THAT?' moment.)*
+2. **Parallel sessions (hero)** — "Three Claude Code sessions running at once, one browser tab. One renders a video, one builds a spreadsheet, one drafts email."
+3. **Artifacts, not text** — "Claude Code's answer isn't a chat bubble. It's an interactive document, spreadsheet, or chart you can edit and keep."
+4. **Compounding wiki** — "Every conversation adds to a personal wiki Claude builds and maintains itself. Cross-linked Markdown. Yours forever."
+5. **Phone as a client** — "Message Claude from Telegram, LINE, Slack, WhatsApp. Send a photo from the subway, get a document back on your laptop."
+6. **Sandboxed by default** — "Docker auto-detected. Claude only sees your workspace. SSH keys, .env files, home directory — invisible."
 
 ---
 
@@ -148,27 +169,30 @@ Three videos — each serves a different channel. **Always record silent first; 
 ### Video A — The 60-second hero (Product Hunt gallery + Twitter/X)
 
 - **Goal:** earn one upvote per viewer. No feature-listing.
-- **The single moment we must land:** split-screen with three Claude Code sessions running simultaneously, one of them producing a narrated MulmoCast video while the others do real work. Nothing else on the market shows this.
+- **The single moment we must land:** split-screen with three Claude Code sessions running simultaneously, one of them producing a narrated MulmoCast video from a dropped-in research paper. That shot is the entire pitch in one frame.
+- **The shock demo (opener):** drag a real research paper PDF into one session → out comes a **summary document + slide deck + narrated video**. Not a water-cycle explainer. A real artifact people in our target audience would actually want.
 - **Structure:**
-  - 0:00–0:05 — Cold open: browser tab, three sessions stacked. All three get prompts typed into them in 3 seconds.
-  - 0:05–0:20 — Session 1: "make a narrated 90s explainer on the water cycle" → MulmoCast renders a slide deck with voice + video clips. Session 2 (visible on the side): building a spreadsheet from a pasted CSV. Session 3: chart AAPL candlestick appears. **All at the same time, no cuts.**
-  - 0:20–0:30 — Phone appears on-screen: a Telegram message sent to the same workspace → laptop canvas updates live. Narrator: *"Your phone is a Claude Code client now."*
-  - 0:30–0:40 — Zoom to Docker sandbox banner in the UI. Narrator: *"Claude can only see your workspace. Nothing else."*
-  - 0:40–0:55 — "Ingest this article" drops a URL → wiki page appears, cross-linked to an existing entry. Narrator: *"Every conversation makes the next one smarter."*
-  - 0:55–1:00 — Logo + github URL + one-line install.
-- **Production notes:** 1080p screen capture, 24fps, no zoom transitions, monospace captions. Music: one royalty-free lo-fi track at 40% — cut it at 0:55.
+  - 0:00–0:05 — Cold open: hand drags a PDF (visibly labeled "Attention Is All You Need" or similar) onto the browser. No logo, no title card.
+  - 0:05–0:20 — Split-screen snaps to three sessions. Session 1 (largest): the paper → summary doc → deck → MulmoCast narrated video with Veo 3.1 clips. Session 2: a spreadsheet being built from pasted CSV. Session 3: ECharts candlestick appears. **All running at the same time, no cuts, no spinner waits.**
+  - 0:20–0:30 — Caption overlay: *"Every conversation makes the next one smarter."* Zoom on the wiki sidebar: a new page appears, cross-linked to two existing ones.
+  - 0:30–0:40 — Phone enters frame: a Telegram message to the same workspace → laptop canvas updates live. Caption: *"Your phone is a Claude Code client."*
+  - 0:40–0:50 — Docker sandbox banner on screen. Caption: *"Sandboxed. Claude only sees your workspace."*
+  - 0:50–0:55 — Anti-wrapper beat. Single white-on-black frame: *"This is not an API wrapper. This is Claude Code — with a shell."*
+  - 0:55–1:00 — Logo + github URL + one-line install. **No install command on-screen if we're shipping a hosted demo** (see §10.5); instead, "try it in your browser: demo.mulmoclaude.com".
+- **Production notes:** 1080p screen capture, 24fps, no zoom transitions, monospace captions. Music: one royalty-free lo-fi track at 40% — cut it at 0:55. **Non-negotiable:** zero spinner time. Pre-render, splice, don't wait.
 
 ### Video B — The 3-minute deep-dive (YouTube + landing page)
 
-- **Goal:** convert a developer watcher into a `git clone`.
+- **Goal:** convert a developer watcher into a `git clone` (or a hosted-demo click).
+- **Narrative arc:** *What does it make? How fast? Does it get smarter? Can I trust it?* — exactly the order the user's brain asks.
 - **Outline:**
-  - 0:00–0:20 — Problem framing: "Claude Code is incredible, but it only talks in text, it's single-threaded, and it's tethered to your laptop. Here's what I wanted instead."
-  - 0:20–0:50 — Install, `yarn dev`, first chat. Show the **Office role** building a real spreadsheet from a CSV paste. Call out: **GUI Chat Protocol** turns Claude's answer into an interactive artifact.
-  - 0:50–1:30 — Open a second session in parallel. Kick off a **MulmoCast narrated video** (slide deck + voice + Veo 3.1 video clips). While it renders, continue working in the first session. Call out: "one browser tab, many Claude Code workers."
-  - 1:30–2:00 — Role switch to **Guide & Planner**. Build a Kyoto trip doc. Show the file explorer — point out that everything is `.md` on disk.
-  - 2:00–2:25 — Wiki demo. Ingest two articles on the same topic. Show backlinks appearing.
-  - 2:25–2:45 — Bridges. Message from **Telegram** and **LINE**; show desktop canvas updating live. Same memory, same workspace.
-  - 2:45–3:00 — Docker sandbox: show the container isolating Claude from the host filesystem. Frame this against tools that run Claude directly on `~/`. "It's open source, AGPL, Docker-sandboxed. Link in description."
+  - 0:00–0:20 — Problem framing, in Satoshi's voice: "I worked on Windows for eight years. Claude Code is the kernel of an AI-native OS. But kernels need shells. Here's the shell I wanted."
+  - 0:20–0:50 — **Shock demo.** Drop a research paper PDF. Out comes a summary document, a slide deck, and a narrated MulmoCast video. Call out: *the answer isn't text, it's an artifact. Powered by GUI Chat Protocol.*
+  - 0:50–1:30 — Open two more sessions in parallel. Kick off another MulmoCast video in one, refactor a real codebase in another. Three artifacts produced simultaneously. Call out: *"one browser tab, many Claude Code workers."*
+  - 1:30–2:10 — **The compounding moment.** Ingest two related articles. Show wiki backlinks appearing. Open a fresh session tomorrow's simulated morning and ask a question — Claude answers grounded in the wiki it built itself. Call out: *"every other Claude client starts from zero. This one compounds."*
+  - 2:10–2:30 — Bridges. Message from **Telegram** and **LINE**; show desktop canvas updating live. Same memory, same workspace.
+  - 2:30–2:50 — Trust layer. Docker sandbox banner. Show Claude being *unable* to read a file outside the workspace. Frame against tools that run Claude directly on `~/`. Anti-wrapper line on-screen.
+  - 2:50–3:00 — Open source, AGPL. Hosted demo link + github link.
 - **Production notes:** talking-head inset bottom-right for the first 20 seconds, then pure screencast.
 
 ### Video C — The 15-second loop (Instagram, LinkedIn, PH gallery motion)
@@ -232,31 +256,30 @@ Three videos — each serves a different channel. **Always record silent first; 
 
 ### X / Twitter
 
-**Launch thread (8 tweets) — drafts:**
+**Launch thread (7 tweets) — drafts. Order matches the five key messages + shock demo + CTA.**
 
-1. *MulmoClaude is live on Product Hunt today. It's what I wanted Claude Code to feel like: multi-modal, multi-session, accessible from my phone, and sandboxed so it can't torch my laptop. 🧵*
-2. *Claude Code answers with interactive documents, spreadsheets, ECharts dashboards, images, forms, 3D scenes — not walls of text. The GUI Chat Protocol makes this possible and it's the heart of the app. [15s video]*
-3. *"Make me a 3-minute narrated explainer on the water cycle." MulmoCast builds a slide deck with AI voice + Veo 3.1 video clips. Zero other tools opened. [video]*
-4. *Three Claude Code sessions running in parallel, one browser tab. One generates a video, one writes code, one drafts an email. Claude Code is no longer single-threaded. [multi-session gif]*
-5. *Your phone is a Claude Code client now. Telegram, Slack, LINE, WhatsApp, Discord, Matrix — same agent, same workspace, same wiki memory. [bridges gif]*
-6. *Claude runs in a Docker sandbox by default. It can only see your workspace. SSH keys, .env files, home directory — invisible. Auto-detected. No configuration. [sandbox screenshot]*
-7. *Every conversation builds a personal wiki. Karpathy's LLM Knowledge Bases idea, shipped — all plain Markdown in `~/mulmoclaude/`. Git it. Dropbox it. Grep it. [wiki gif]*
-8. *Open source, AGPL. One upvote on PH costs you nothing and means everything to us today: [link]*
+1. *MulmoClaude is live on Product Hunt today. It's Claude Code that produces real artifacts — and remembers everything. Not an API wrapper. It runs Claude Code directly — your auth, your tools, your files. 🧵*
+2. **[Shock demo]** *Drop a research paper in. Out comes a summary document, a slide deck, and a narrated video. No other tools opened. [60s video]*
+3. **[Parallel sessions]** *Three Claude Code sessions, one browser tab. One renders a video, one refactors code, one drafts email. Claude Code is no longer single-threaded. [multi-session gif]*
+4. **[Compounding memory]** *Every conversation adds to a personal wiki Claude builds and maintains itself — plain Markdown, cross-linked, yours forever. Karpathy's LLM Knowledge Bases idea, shipped. Every other Claude client starts from zero. This one compounds. [wiki gif]*
+5. **[Phone as client]** *Message the same agent from Telegram, LINE, Slack, WhatsApp, Discord, Matrix. Fire a task from the subway, see the artifact on your laptop. [bridges gif]*
+6. **[Trust]** *Claude runs in a Docker sandbox — auto-detected, no configuration. It only sees your workspace. SSH keys, .env, home dir: invisible. This is the level of care a real shell needs. [sandbox screenshot]*
+7. *Try it in your browser right now: [hosted demo link]. Or `git clone` it — open source, AGPL. One upvote on PH costs you nothing and means everything today: [link]*
 
 ### Hacker News
 
-Title: **Show HN: MulmoClaude – A visual GUI and long-term wiki memory for Claude Code**
+Title: **Show HN: MulmoClaude – Claude Code that produces real artifacts and remembers everything**
 
-Body (first comment): lead with the Karpathy reference, the AGPL license, and the "workspace is the database" line. HN respects ideas over features — sell the idea.
+Body (first comment): lead with the **AI-native OS thesis** and the Karpathy *LLM Knowledge Bases* reference. HN respects ideas over features — sell the idea, not the feature list. Explicitly state: *this runs the Claude Code CLI directly, not the API — that's why it can do what it does.*
 
 ### Reddit (r/ClaudeAI, r/LocalLLaMA, r/selfhosted)
 
-- NOT a launch post. A build log: *"I spent 8 months making Claude Code visual and giving it a wiki. Here's what worked and what didn't."*
+- NOT a launch post. A build log: *"I spent 8 months giving Claude Code a shell. Here's the wiki-memory idea and what I learned."*
 - PH link at the very bottom, one line.
 
 ### LinkedIn
 
-Target audience: knowledge workers, not just devs. Lead with the "files stay yours" angle and the productivity use cases (Office role, Guide & Planner, scheduler).
+**Skip on launch day.** LinkedIn is a phase-2 channel for the productivity audience. Chasing it on day one splits focus and signals "enterprise tool" to PH voters scanning categories. Queue a LinkedIn post for T+3 once the dev wave has landed.
 
 ### Japanese community (Note, X-JP)
 
@@ -274,15 +297,38 @@ Satoshi has a strong JP audience. Ship a Japanese version of the maker post and 
 
 ## 10. Risks & Mitigations
 
-| Risk                                             | Probability | Mitigation                                                                       |
-| ------------------------------------------------ | ----------- | -------------------------------------------------------------------------------- |
-| Install friction (Node, Docker, Gemini API key)  | High        | Ship `npx create-mulmoclaude`; include a "no-Gemini mode" walkthrough            |
-| Claude Code CLI auth fails on first run          | Medium      | Pre-flight check in the app; friendly error page linking to Claude Code docs     |
-| "It's just a wrapper" objection                  | Medium      | Lead every piece of copy with the **wiki** and the **workspace-as-database** — those are net-new |
-| Demo video latency from live Claude calls        | Medium      | Pre-record results and cut ruthlessly; never show >3s of spinner                 |
-| Anthropic ships their own GUI the same week      | Low         | Frame MulmoClaude as **complementary** — local-first, open-source, plugin-extensible |
-| AGPL license scares enterprise viewers           | Low         | One FAQ line: "Personal + open-source use is fully free. Commercial licensing available." |
-| PH algorithm — late US vote surge from JP timing | Low         | JP launch tweet timed to catch evening-JP as launch-day-morning-PT              |
+| Risk                                                   | Probability | Mitigation                                                                                                                           |
+| ------------------------------------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **Activation gap — setup too heavy for PH day**        | **High**    | **Ship a hosted demo (see §10.5 below).** `npx create-mulmoclaude` alone isn't enough — 5-min install = 50% drop-off.                |
+| Claude Code CLI auth fails on first run                | Medium      | Pre-flight check in the app; friendly error page linking to Claude Code docs                                                          |
+| "It's just a wrapper" objection                        | Medium      | Lead with the anti-wrapper line verbatim: *"It runs Claude Code directly — not the API."* Reinforce with wiki + multi-session proof.  |
+| Cognitive overload (too many features in one message)  | Medium      | Already addressed in §4 — 9 messages collapsed to 5, rest kept in reserve. Hold the line; don't let screenshots creep the list back. |
+| Demo video latency from live Claude calls              | Medium      | Pre-record, splice, never show >3s of spinner                                                                                        |
+| AGPL + Docker read as "hacker tool, not safe"          | Medium      | **Reframe:** sandbox = *"the level of care a real shell needs."* AGPL = *"open-source, local-first, no vendor lock-in."* Same facts, different framing. |
+| Anthropic ships their own GUI the same week            | Low         | Frame as complementary — local-first, open-source, plugin-extensible                                                                 |
+| PH algorithm — late US vote surge from JP timing       | Low         | JP launch tweet timed to catch evening-JP as launch-day-morning-PT                                                                   |
+
+### 10.5 The activation problem — solve this or lose the day
+
+This is the single biggest gap in the v1 plan. Reality check: even with `npx create-mulmoclaude`, the install path is **Node + Claude Code CLI auth + Gemini API key + Docker** — 5 to 10 minutes, developer-only, zero mobile. PH winners are instant gratification. We get upvotes mid-morning, then momentum dies by afternoon because nobody actually tried it.
+
+**Three options, ranked by impact:**
+
+**Option A (strongly recommended) — Hosted read-only demo at `demo.mulmoclaude.com`**
+- Pre-loaded workspace with 10 prepared sessions: the research-paper → video flow, a Kyoto-trip doc, an ingested wiki with backlinks, a MulmoCast narrated presentation, a multi-session snapshot.
+- Visitors can click through existing artifacts and replay the canvas — no typing required, no auth, no API key, no Docker.
+- Budget: ~3 engineer-days. Ship it T-3. **This is the single highest-leverage change in the entire plan.**
+- CTA in the hero video and every tweet becomes *"try it in your browser: demo.mulmoclaude.com"* instead of *"git clone"*.
+
+**Option B (minimum viable) — "Watch Claude work" mode**
+- A local mode that runs without a Gemini key or Claude auth, using pre-recorded session replays baked into the repo. `npx create-mulmoclaude --demo` drops the user into an interactive walkthrough in 30 seconds.
+- Halves drop-off vs. a real install; doesn't match Option A but keeps the activation cost manageable.
+
+**Option C (last resort) — Scripted screenshot walkthrough on the landing page**
+- Click-through of the shock demo, parallel sessions, wiki backlinks, Telegram round-trip.
+- No real interactivity but preserves the "I experienced it" feeling for PH skimmers.
+
+**Decision:** commit to **Option A by T-7**. If scope slips, fall back to B before touching C.
 
 ---
 
@@ -291,7 +337,8 @@ Satoshi has a strong JP audience. Ship a Japanese version of the maker post and 
 **Day of:**
 - Product Hunt: **Top 5 of the day**; Top 10 is floor.
 - GitHub stars: **+500** in 24h.
-- Unique installs (Gemini API key inputs as proxy): **500**.
+- **Hosted-demo sessions: 3,000 unique** (the real activation metric — §10.5).
+- Installs (Gemini key inputs as proxy): **500** — secondary, since the demo absorbs the casual traffic.
 - PH comments: **50+ substantive** (not counting our team).
 
 **Week of:**
@@ -307,12 +354,28 @@ Satoshi has a strong JP audience. Ship a Japanese version of the maker post and 
 
 ---
 
-## 12. The Single Bet
+## 12. The Two Bets
 
-If we can only execute one thing well, it's this: **make the hero video land the "three Claude Code sessions running in parallel, one of them generating a narrated video" moment in under 20 seconds.** That single shot is the entire pitch — multi-session + multi-modal + MulmoCast — in one frame. Nothing else on the market looks like it. Bridges, wiki, sandbox, roles are confirmation bias for a viewer who already believes. That first 20 seconds is what earns the upvote.
+There are two things we have to land. Miss either and the launch is a 6 out of 10.
 
-Everything in this plan should be read through that lens. Cut anything that doesn't serve it.
+**Bet 1 — The shot (earns the upvote).**
+The hero video's first 20 seconds: **a research paper dropped in, three Claude Code sessions producing artifacts in parallel, one of them a narrated MulmoCast video.** That single frame is the pitch: artifacts + parallel + MulmoCast, end of sentence. Nothing else on the market looks like it.
+
+**Bet 2 — The hosted demo (earns the try).**
+`demo.mulmoclaude.com` lets a PH skimmer click through the shock demo without installing anything. Without this, the upvote from Bet 1 doesn't convert into a GitHub star, a Twitter follow, or a build. Bet 1 gets you noticed; Bet 2 gets you remembered.
+
+Everything else in this plan — bridges, sandbox, roles, wiki tour, skills launcher — is confirmation bias for a viewer who already believes. Cut anything that doesn't serve one of the two bets.
 
 ---
 
-*Prepared for the MulmoClaude launch. Revise after the asset dry-run at T-7.*
+## 13. The Story Underneath (why we're doing this at all)
+
+This is the first visible surface of a much bigger thesis: **computing is being re-platformed on top of AI agents, and the shell that platform needs doesn't exist yet.** Claude Code is the kernel. MulmoClaude is the first draft of the shell.
+
+If the launch goes well, we're not celebrating a successful product launch — we're announcing the existence of a new computing surface. Phase 2 audiences (productivity users, knowledge workers, JP market, enterprise) come later, pulled in by the dev-native gravity we establish on day one.
+
+That framing is what makes this plan aggressive rather than cautious. We're not trying to be a "very advanced tool." We're trying to show a glimpse of the future of computing, through one sharp product.
+
+---
+
+*Prepared for the MulmoClaude launch. Revise after the asset dry-run at T-7. Hosted-demo scope decision at T-10 — this is the critical path item.*
