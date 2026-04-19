@@ -49,6 +49,20 @@ In Google Chat, find your app and send it a direct message.
 | `MULMOCLAUDE_API_URL` | No | Default `http://localhost:3001` |
 | `MULMOCLAUDE_AUTH_TOKEN` | No | Bearer token |
 
+## Security — Request Verification
+
+Every incoming webhook request is verified using Google's OIDC JWT mechanism:
+
+1. The `Authorization: Bearer <token>` header is extracted
+2. The JWT signature is verified against Google's JWKS endpoint (`https://www.googleapis.com/service_accounts/v1/jwk/chat@system.gserviceaccount.com`)
+3. The following claims are checked:
+   - `iss` must be `chat@system.gserviceaccount.com`
+   - `aud` must match `GOOGLE_CHAT_PROJECT_NUMBER`
+   - `exp` must not be in the past
+4. Requests that fail verification receive `401 Unauthorized`
+
+This prevents spoofed requests from arbitrary third parties.
+
 ## Limitations
 
 - **Synchronous mode only**: Google Chat expects a response within 30 seconds. Agent responses that take longer will time out. For async responses, a service account with the Chat API is needed (future enhancement).

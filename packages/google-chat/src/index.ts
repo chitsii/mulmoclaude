@@ -4,6 +4,10 @@
 // Google Chat apps can receive events via HTTP endpoint (webhook).
 // The bot responds synchronously or asynchronously via the Chat API.
 //
+// Every incoming request is verified by checking the Authorization
+// Bearer JWT against Google's JWKS endpoint. The token must be issued
+// by chat@system.gserviceaccount.com with the project number as aud.
+//
 // Required env vars:
 //   GOOGLE_CHAT_PROJECT_NUMBER — Google Cloud project number (for token verification)
 //
@@ -12,6 +16,7 @@
 //   GOOGLE_CHAT_SERVICE_ACCOUNT_KEY — Path to service account JSON (for async replies)
 
 import "dotenv/config";
+import crypto from "crypto";
 import express, { type Request, type Response } from "express";
 import { createBridgeClient } from "@mulmobridge/client";
 
@@ -35,15 +40,160 @@ mulmo.onPush((ev) => {
   console.log(`[google-chat] push (not delivered): ${ev.chatId} ${ev.message}`);
 });
 
+function isObj(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+// ── JWT verification (Google Chat OIDC) ────────────────────────
+//
+// Google Chat sends an Authorization: Bearer <JWT> header.
+// We verify the JWT signature using Google's JWKS for the
+// chat@system.gserviceaccount.com service account, then check
+// iss, aud, and exp claims.
+
+const GOOGLE_CHAT_ISSUER = "chat@system.gserviceaccount.com";
+const JWKS_URL =
+  "https://www.googleapis.com/service_accounts/v1/jwk/chat@system.gserviceaccount.com";
+const JWKS_CACHE_TTL_MS = 3600_000; // 1 hour
+
+interface JwkKey {
+  kid: string;
+  kty: string;
+  n: string;
+  e: string;
+  alg?: string;
+}
+
+let cachedKeys: JwkKey[] = [];
+let cacheExpiresAt = 0;
+
+async function fetchJwks(): Promise<JwkKey[]> {
+  if (Date.now() < cacheExpiresAt && cachedKeys.length > 0) {
+    return cachedKeys;
+  }
+  try {
+    const res = await fetch(JWKS_URL, {
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) {
+      throw new Error(`JWKS fetch failed: ${res.status}`);
+    }
+    const data: { keys?: unknown[] } = await res.json();
+    if (!Array.isArray(data.keys)) throw new Error("Invalid JWKS response");
+    cachedKeys = data.keys.filter(
+      (k): k is JwkKey =>
+        isObj(k) &&
+        typeof k.kid === "string" &&
+        typeof k.n === "string" &&
+        typeof k.e === "string",
+    );
+    cacheExpiresAt = Date.now() + JWKS_CACHE_TTL_MS;
+    return cachedKeys;
+  } catch (err) {
+    console.error(`[google-chat] JWKS fetch error: ${err}`);
+    return cachedKeys; // return stale cache if available
+  }
+}
+
+function base64UrlDecode(str: string): Buffer {
+  const padded = str.replace(/-/g, "+").replace(/_/g, "/");
+  return Buffer.from(padded, "base64");
+}
+
+interface JwtParts {
+  header: Record<string, unknown>;
+  payload: Record<string, unknown>;
+  signatureInput: string;
+  signature: Buffer;
+}
+
+function parseJwtParts(token: string): JwtParts | null {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const header: unknown = JSON.parse(base64UrlDecode(parts[0]).toString());
+    const payload: unknown = JSON.parse(base64UrlDecode(parts[1]).toString());
+    if (!isObj(header) || !isObj(payload)) return null;
+    return {
+      header,
+      payload,
+      signatureInput: `${parts[0]}.${parts[1]}`,
+      signature: base64UrlDecode(parts[2]),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function buildRsaPublicKey(n: string, e: string): crypto.KeyObject {
+  // Convert JWK RSA components to a PEM-encoded public key
+  const nBuf = base64UrlDecode(n);
+  const eBuf = base64UrlDecode(e);
+  return crypto.createPublicKey({
+    key: { kty: "RSA", n: nBuf.toString("base64"), e: eBuf.toString("base64") },
+    format: "jwk",
+  });
+}
+
+function verifyRsaSignature(
+  signatureInput: string,
+  signature: Buffer,
+  key: crypto.KeyObject,
+  alg: string,
+): boolean {
+  const hashMap: Record<string, string> = {
+    RS256: "sha256",
+    RS384: "sha384",
+    RS512: "sha512",
+  };
+  const hash = hashMap[alg];
+  if (!hash) return false;
+  return crypto
+    .createVerify(hash)
+    .update(signatureInput)
+    .verify(key, signature);
+}
+
+async function verifyGoogleChatToken(
+  authHeader: string | undefined,
+): Promise<boolean> {
+  if (!authHeader) return false;
+  const prefix = "Bearer ";
+  if (!authHeader.startsWith(prefix)) return false;
+  const token = authHeader.slice(prefix.length).trim();
+  if (!token) return false;
+
+  const jwt = parseJwtParts(token);
+  if (!jwt) return false;
+
+  // Verify claims
+  const { payload, header } = jwt;
+  if (payload.iss !== GOOGLE_CHAT_ISSUER) return false;
+  if (String(payload.aud) !== projectNumber) return false;
+  if (typeof payload.exp === "number" && payload.exp < Date.now() / 1000) {
+    return false;
+  }
+
+  // Find matching key
+  const kid = typeof header.kid === "string" ? header.kid : "";
+  const alg = typeof header.alg === "string" ? header.alg : "RS256";
+  const keys = await fetchJwks();
+  const jwk = keys.find((k) => k.kid === kid);
+  if (!jwk) return false;
+
+  try {
+    const pubKey = buildRsaPublicKey(jwk.n, jwk.e);
+    return verifyRsaSignature(jwt.signatureInput, jwt.signature, pubKey, alg);
+  } catch {
+    return false;
+  }
+}
+
 // ── Webhook server ──────────────────────────────────────────────
 
 const app = express();
 app.disable("x-powered-by");
 app.use(express.json());
-
-function isObj(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
 
 function extractEventType(body: unknown): string {
   if (!isObj(body) || typeof body.type !== "string") return "";
@@ -72,6 +222,18 @@ function extractMessage(body: unknown): ParsedMessage | null {
 }
 
 app.post("/", async (req: Request, res: Response) => {
+  // Verify the request is from Google Chat
+  const authHeader =
+    typeof req.headers.authorization === "string"
+      ? req.headers.authorization
+      : undefined;
+  const verified = await verifyGoogleChatToken(authHeader);
+  if (!verified) {
+    console.warn("[google-chat] JWT verification failed");
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
   const eventType = extractEventType(req.body);
 
   if (eventType === "ADDED_TO_SPACE") {
