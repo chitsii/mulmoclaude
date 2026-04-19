@@ -2,7 +2,7 @@
 // The type also lives here, so test files and composables can
 // import it without pulling in a .vue file.
 //
-// To add a new view mode, append it to VIEW_MODES below.
+// To add a new view mode, add it to CANVAS_VIEW below in shortcut order.
 // Everything else (type, set, parser, shortcut) derives automatically.
 
 export const CANVAS_VIEW = {
