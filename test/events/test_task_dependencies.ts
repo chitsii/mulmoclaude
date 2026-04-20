@@ -246,6 +246,41 @@ describe("task-manager dependsOn", () => {
     assert.deepEqual(order, []);
   });
 
+  it("stale success does not leak across tick() calls in same bucket", async () => {
+    const order: string[] = [];
+    // Fixed time — both tick() calls resolve to the same tickId
+    const tm = createTaskManager({
+      tickMs: 60_000,
+      now: () => new Date("2026-01-01T00:00:00Z"),
+    });
+
+    let parentEnabled = true;
+    tm.registerTask({
+      id: "parent",
+      schedule: { type: "interval", intervalMs: 60_000 },
+      run: async () => {
+        if (!parentEnabled) throw new Error("disabled");
+        order.push("parent");
+      },
+    });
+    tm.registerTask({
+      id: "child",
+      schedule: { type: "interval", intervalMs: 60_000 },
+      dependsOn: "parent",
+      run: async () => {
+        order.push("child");
+      },
+    });
+
+    await tm.tick(); // parent succeeds → child runs
+    assert.deepEqual(order, ["parent", "child"]);
+
+    order.length = 0;
+    parentEnabled = false;
+    await tm.tick(); // same tickId, but parent fails → child must NOT run
+    assert.deepEqual(order, []);
+  });
+
   it("includes dependsOn in listTasks output", () => {
     const tm = createTaskManager();
     tm.registerTask({

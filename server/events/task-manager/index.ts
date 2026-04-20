@@ -74,10 +74,6 @@ export function createTaskManager(options?: TaskManagerOptions): ITaskManager {
   const registry = new Map<string, TaskDefinition>();
   let timer: ReturnType<typeof setInterval> | null = null;
 
-  // Track which tasks completed successfully in the most recent tick
-  // so dependsOn checks can gate on the dependency having run.
-  const lastSuccessTick = new Map<string, number>();
-
   function collectDueTasks(currentTime: Date): {
     independent: TaskDefinition[];
     dependent: TaskDefinition[];
@@ -99,25 +95,23 @@ export function createTaskManager(options?: TaskManagerOptions): ITaskManager {
   async function runAndTrack(
     def: TaskDefinition,
     currentTime: Date,
-    tickId: number,
-  ): Promise<boolean> {
+    succeeded: Set<string>,
+  ): Promise<void> {
     try {
       await def.run({ taskId: def.id, now: currentTime });
-      lastSuccessTick.set(def.id, tickId);
-      return true;
+      succeeded.add(def.id);
     } catch (err) {
       log.error("task-manager", "task failed", {
         id: def.id,
         error: String(err),
       });
-      return false;
     }
   }
 
   async function runDependentChain(
     dependent: TaskDefinition[],
     currentTime: Date,
-    tickId: number,
+    succeeded: Set<string>,
   ): Promise<void> {
     let remaining = [...dependent];
     let progress = true;
@@ -125,11 +119,11 @@ export function createTaskManager(options?: TaskManagerOptions): ITaskManager {
       progress = false;
       const next: TaskDefinition[] = [];
       for (const def of remaining) {
-        if (lastSuccessTick.get(def.dependsOn!) !== tickId) {
+        if (!succeeded.has(def.dependsOn!)) {
           next.push(def);
           continue;
         }
-        await runAndTrack(def, currentTime, tickId);
+        await runAndTrack(def, currentTime, succeeded);
         progress = true;
       }
       remaining = next;
@@ -138,14 +132,16 @@ export function createTaskManager(options?: TaskManagerOptions): ITaskManager {
 
   async function onTick(): Promise<void> {
     const currentTime = now();
-    const tickId = Math.floor(currentTime.getTime() / tickMs);
     const { independent, dependent } = collectDueTasks(currentTime);
 
+    // Per-invocation set — success does not leak across tick() calls.
+    const succeeded = new Set<string>();
+
     await Promise.all(
-      independent.map((def) => runAndTrack(def, currentTime, tickId)),
+      independent.map((def) => runAndTrack(def, currentTime, succeeded)),
     );
 
-    await runDependentChain(dependent, currentTime, tickId);
+    await runDependentChain(dependent, currentTime, succeeded);
   }
 
   return {
