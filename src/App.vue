@@ -13,7 +13,7 @@
           @toggle-right-sidebar="toggleRightSidebar"
           @open-settings="showSettings = true"
         />
-        <div class="flex-1 flex items-center gap-2 min-w-0">
+        <div class="flex-1 min-w-0">
           <PluginLauncher
             :active-tool-name="selectedResult?.toolName ?? null"
             :active-view-mode="canvasViewMode"
@@ -166,7 +166,7 @@
           <FilesView
             v-else-if="canvasViewMode === 'files'"
             :refresh-token="filesRefreshToken"
-            @load-session="onFilesViewLoadSession"
+            @load-session="loadSession"
           />
           <!-- Todos mode -->
           <TodoExplorer v-else-if="canvasViewMode === 'todos'" />
@@ -842,25 +842,8 @@ function handleUpdateResult(updatedResult: ToolResultComplete) {
   }
 }
 
-// When the user clicks an item in the sidebar while the canvas is
-// showing the file explorer, the previously-selected file would
-// otherwise stay on screen and the click would have no visible
-// effect. Auto-switch back to single mode so the clicked item
-// actually shows up in the canvas.
 function onSidebarItemClick(uuid: string) {
   selectedResultUuid.value = uuid;
-  if (canvasViewMode.value === CANVAS_VIEW.files) {
-    setCanvasViewMode(CANVAS_VIEW.single);
-  }
-}
-
-// Bridge from FilesView: a user clicked a markdown link to a chat
-// session (e.g. "[session abc](../../chat/abc-123.jsonl)" inside
-// a journal summary). loadSession pops the canvas out of files mode
-// via restoreChatViewForSession, so we don't need an explicit view
-// switch here.
-function onFilesViewLoadSession(sessionId: string): void {
-  loadSession(sessionId);
 }
 
 const GEMINI_PLUGINS = new Set(["generateImage", "presentDocument"]);
