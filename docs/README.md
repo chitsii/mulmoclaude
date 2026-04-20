@@ -12,6 +12,15 @@ Guides for using MulmoClaude. No programming knowledge required.
 | [Scheduler Guide](scheduler-guide.en.md) | English | Calendar and recurring tasks |
 | [Telegram Setup](message_apps/telegram/README.md) | English | Create and connect a Telegram Bot |
 | [Telegram セットアップ](message_apps/telegram/README.ja.md) | 日本語 | Telegram Bot の作成と接続手順 |
+| [LINE Setup](message_apps/line/README.md) | English | Create and connect a LINE bot (requires ngrok) |
+| [LINE セットアップ](message_apps/line/README.ja.md) | 日本語 | LINE bot の作成と接続手順 (ngrok 必要) |
+
+## Tips & Integrations
+
+| Document | Language | Description |
+|---|---|---|
+| [Obsidian 連携](tips/obsidian.md) | 日本語 | MulmoClaude のワークスペースを Obsidian で閲覧、既存 vault を Claude に参照させる |
+| [Obsidian Integration](tips/obsidian.en.md) | English | Browse MulmoClaude output in Obsidian, let Claude reference your vault |
 
 ## Developers
 
