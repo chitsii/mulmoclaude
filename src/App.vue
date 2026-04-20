@@ -309,6 +309,24 @@ import { useRoute, useRouter, isNavigationFailure } from "vue-router";
 import { apiGet, apiPost, apiFetchRaw } from "./utils/api";
 import { API_ROUTES } from "./config/apiRoutes";
 
+// --- Per-session state ---
+// Declared early so that pub/sub callbacks and function declarations
+// below can reference them without forward-reference ambiguity.
+const sessionMap = reactive(new Map<string, ActiveSession>());
+
+// Tracks active pub/sub subscriptions per session. The unsubscribe
+// function is stored so we can clean up when the session is removed
+// from memory. Sessions that are running always have an active
+// subscription so events arrive via WebSocket.
+const sessionSubscriptions = new Map<string, () => void>();
+
+// currentSessionId is a plain ref so that synchronous writes (e.g.
+// inside createNewSession, which is called right before sendMessage
+// might run) take effect immediately. The URL is kept in sync via
+// navigateToSession, and external URL changes (back button, typed
+// URL) feed back into the ref via the route watcher below.
+const currentSessionId = ref("");
+
 // --- Debug beat (pub/sub) ---
 const debugBeatColor = ref<string | null>(null);
 const debugTitleStyle = computed(() =>
@@ -367,27 +385,6 @@ async function markSessionRead(id: string): Promise<void> {
 // --- Routing ---
 const route = useRoute();
 const router = useRouter();
-
-// --- Per-session state ---
-const sessionMap = reactive(new Map<string, ActiveSession>());
-
-// Tracks active pub/sub subscriptions per session. The unsubscribe
-// function is stored so we can clean up when the session is removed
-// from memory. Sessions that are running always have an active
-// subscription so events arrive via WebSocket.
-const sessionSubscriptions = new Map<string, () => void>();
-
-// currentSessionId is a plain ref so that synchronous writes (e.g.
-// inside createNewSession, which is called right before sendMessage
-// might run) take effect immediately. The URL is kept in sync via
-// navigateToSession, and external URL changes (back button, typed
-// URL) feed back into the ref via the route watcher below.
-//
-// Earlier attempt used a computed derived from route.params, but
-// router.push is async — the route param doesn't update until the
-// next tick, so any code reading currentSessionId between the push
-// and the tick sees the stale value ("") and drops messages silently.
-const currentSessionId = ref("");
 
 function navigateToSession(id: string, replace = false): void {
   currentSessionId.value = id;
@@ -866,12 +863,6 @@ function onRoleChange() {
   maybeSeedRoleDefault(session);
 }
 
-// Some roles ship with a "default view" that's useful before any
-// chat exchange. Seed a synthetic tool_result so the canvas renders
-// the plugin immediately on role switch, without requiring the user
-// to first ask Claude to list anything. The result is client-only
-// (never persisted server-side) — any subsequent LLM tool call will
-// replace / augment it in the normal way.
 async function loadSession(id: string) {
   // Re-selecting the already-active, loaded session is a no-op.
   // The sessionMap check is needed because the route watcher sets
@@ -972,13 +963,6 @@ async function refreshSessionTranscript(sessionId: string): Promise<void> {
     session.toolResults = serverResults;
   }
 }
-
-// Seed the session state for a fresh user turn. Not pure (mutates
-// session), but isolated so sendMessage doesn't have the init
-// pattern inline. Writes `runStartIndex` onto the session — the
-// index into toolResults at which this run's outputs start, used
-// later to decide whether a trailing text response becomes the
-// selected canvas result.
 
 // Subscribe to a session's pub/sub channel so events from the server
 // (tool_call, text, tool_result, session_finished, etc.) arrive via
