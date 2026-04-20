@@ -79,6 +79,9 @@ const plugins = new Map<string, PlatformPlugin>();
 
 export function registerPlatform(plugin: PlatformPlugin): void {
   const key = plugin.webhookPath ?? plugin.name;
+  if (plugins.has(key)) {
+    throw new Error(`platform already registered: ${key}`);
+  }
   plugins.set(key, plugin);
 }
 

@@ -11,6 +11,9 @@ describe("PLATFORMS", () => {
     assert.equal(PLATFORMS.messenger, "messenger");
     assert.equal(PLATFORMS.mattermost, "mattermost");
     assert.equal(PLATFORMS.zulip, "zulip");
+    assert.equal(PLATFORMS.whatsapp, "whatsapp");
+    assert.equal(PLATFORMS.matrix, "matrix");
+    assert.equal(PLATFORMS.irc, "irc");
     assert.equal(PLATFORMS.googleChat, "google-chat");
   });
 

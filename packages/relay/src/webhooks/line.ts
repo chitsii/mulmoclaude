@@ -117,34 +117,35 @@ const linePlugin: PlatformPlugin = {
     replyToken?: string,
   ): Promise<void> {
     const accessToken = env.LINE_CHANNEL_ACCESS_TOKEN;
-    if (!accessToken) return;
+    if (!accessToken) {
+      throw new Error("LINE_CHANNEL_ACCESS_TOKEN not configured");
+    }
 
     const messages = chunkText(text).map((t) => ({ type: "text", text: t }));
+    const url = replyToken
+      ? "https://api.line.me/v2/bot/message/reply"
+      : "https://api.line.me/v2/bot/message/push";
+    const body = replyToken
+      ? { replyToken, messages }
+      : { to: chatId, messages };
 
-    if (replyToken) {
-      const response = await fetch("https://api.line.me/v2/bot/message/reply", {
+    let response: Response;
+    try {
+      response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${String(accessToken)}`,
         },
-        body: JSON.stringify({ replyToken, messages }),
+        body: JSON.stringify(body),
       });
-      if (!response.ok) {
-        throw new Error(`LINE reply failed: ${response.status}`);
-      }
-    } else {
-      const response = await fetch("https://api.line.me/v2/bot/message/push", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ to: chatId, messages }),
-      });
-      if (!response.ok) {
-        throw new Error(`LINE push failed: ${response.status}`);
-      }
+    } catch (err) {
+      throw new Error(
+        `LINE API network error: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    if (!response.ok) {
+      throw new Error(`LINE API failed: ${response.status}`);
     }
   },
 };
