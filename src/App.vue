@@ -180,9 +180,10 @@
           <RolesView v-else-if="canvasViewMode === 'roles'" />
         </div>
 
-        <!-- Bottom bar (Stack layouts) -->
+        <!-- Bottom bar (Stack chat only — plugin views have no
+             session context, so no chat input is shown) -->
         <div
-          v-if="isStackLayout"
+          v-if="canvasViewMode === 'stack'"
           class="border-t border-gray-200 bg-white shrink-0"
         >
           <SuggestionsPanel
