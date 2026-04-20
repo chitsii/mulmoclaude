@@ -13,6 +13,9 @@ export async function maybeSeedRoleDefault(
   session: ActiveSession,
 ): Promise<void> {
   if (session.roleId !== BUILTIN_ROLE_IDS.sourceManager) return;
+  // Pre-fetch guard: skip the network call entirely if the session
+  // already has content (user typed fast, or a previous seed ran).
+  if (session.toolResults.length > 0) return;
   const response = await apiGet<{ sources?: unknown[] }>(
     API_ROUTES.sources.list,
   );

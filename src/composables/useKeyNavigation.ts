@@ -8,6 +8,35 @@ import { findScrollableChild } from "../utils/dom/scrollable";
 
 const SCROLL_AMOUNT = 60;
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
+  );
+}
+
+function isVerticalArrow(key: string): key is "ArrowUp" | "ArrowDown" {
+  return key === "ArrowUp" || key === "ArrowDown";
+}
+
+function resolveNextUuid(
+  results: ToolResultComplete[],
+  currentUuid: string | null,
+  direction: "ArrowUp" | "ArrowDown",
+): string | null {
+  if (results.length === 0) return null;
+  const idx = results.findIndex((r) => r.uuid === currentUuid);
+  if (idx === -1) {
+    return direction === "ArrowDown"
+      ? results[0].uuid
+      : results[results.length - 1].uuid;
+  }
+  const next =
+    direction === "ArrowUp"
+      ? Math.max(0, idx - 1)
+      : Math.min(results.length - 1, idx + 1);
+  return results[next].uuid;
+}
+
 export function useKeyNavigation(opts: {
   canvasRef: Ref<HTMLDivElement | null>;
   activePane: Ref<"sidebar" | "main">;
@@ -19,13 +48,8 @@ export function useKeyNavigation(opts: {
   const { canvasRef, activePane, sidebarResults, selectedResultUuid } = opts;
 
   function handleCanvasKeydown(e: KeyboardEvent): void {
-    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
-    if (
-      e.target instanceof HTMLInputElement ||
-      e.target instanceof HTMLTextAreaElement
-    ) {
-      return;
-    }
+    if (!isVerticalArrow(e.key)) return;
+    if (isEditableTarget(e.target)) return;
     if (!canvasRef.value) return;
     const scrollable = findScrollableChild(canvasRef.value);
     if (!scrollable) return;
@@ -36,31 +60,15 @@ export function useKeyNavigation(opts: {
 
   function handleKeyNavigation(e: KeyboardEvent): void {
     if (activePane.value !== "sidebar") return;
-    if (
-      e.target instanceof HTMLInputElement ||
-      e.target instanceof HTMLTextAreaElement
-    ) {
-      return;
-    }
-    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+    if (isEditableTarget(e.target)) return;
+    if (!isVerticalArrow(e.key)) return;
     e.preventDefault();
-    const results = sidebarResults.value;
-    if (results.length === 0) return;
-    const currentIndex = results.findIndex(
-      (r) => r.uuid === selectedResultUuid.value,
+    const nextUuid = resolveNextUuid(
+      sidebarResults.value,
+      selectedResultUuid.value,
+      e.key,
     );
-    if (currentIndex === -1) {
-      selectedResultUuid.value =
-        e.key === "ArrowDown"
-          ? results[0].uuid
-          : results[results.length - 1].uuid;
-      return;
-    }
-    const nextIndex =
-      e.key === "ArrowUp"
-        ? Math.max(0, currentIndex - 1)
-        : Math.min(results.length - 1, currentIndex + 1);
-    selectedResultUuid.value = results[nextIndex].uuid;
+    if (nextUuid) selectedResultUuid.value = nextUuid;
   }
 
   return { handleCanvasKeydown, handleKeyNavigation };
