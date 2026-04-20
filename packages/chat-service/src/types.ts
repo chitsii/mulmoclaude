@@ -103,5 +103,8 @@ export interface ChatServiceDeps {
   getSessionHistory?: (
     sessionId: string,
     opts: { limit: number; offset: number },
-  ) => Promise<{ messages: Array<{ source: string; text: string }>; total: number }>;
+  ) => Promise<{
+    messages: Array<{ source: string; text: string }>;
+    total: number;
+  }>;
 }

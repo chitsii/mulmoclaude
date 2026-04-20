@@ -63,9 +63,9 @@
             spellcheck="false"
           ></textarea>
           <button
-            @click="applyChanges"
             class="apply-btn"
             :disabled="!hasChanges"
+            @click="applyChanges"
           >
             Apply Changes
           </button>
