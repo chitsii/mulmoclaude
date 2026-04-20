@@ -215,16 +215,13 @@ Read interest signals naturally from the conversation — do not wait for the us
 
 Propose once per topic. Don't push if declined. Be a concierge, not a salesperson.`;
 
-export function buildNewsConciergeContext(
-  role: Role,
-  workspacePath: string,
-): string | null {
-  // Only emit when the role has manageSource available AND sources
-  // are already set up. Roles without manageSource (artist, tutor,
-  // etc.) can't register sources, so the prompt would be misleading.
+export function buildNewsConciergeContext(role: Role): string | null {
+  // Only emit when the role has manageSource available. Roles without
+  // manageSource (artist, tutor, etc.) can't register sources, so the
+  // prompt would be misleading. No sources-dir check — the concierge
+  // should work even on fresh workspaces where the user hasn't
+  // registered any source yet.
   if (!role.availablePlugins.includes(TOOL_NAMES.manageSource)) return null;
-  const sourcesDir = join(workspacePath, WORKSPACE_DIRS.sources);
-  if (!existsSync(sourcesDir)) return null;
   return NEWS_CONCIERGE_PROMPT;
 }
 
@@ -343,7 +340,7 @@ export function buildSystemPrompt(params: SystemPromptParams): string {
     useDocker ? SANDBOX_TOOLS_HINT : null,
     buildWikiContext(workspacePath),
     buildSourcesContext(workspacePath),
-    buildNewsConciergeContext(role, workspacePath),
+    buildNewsConciergeContext(role),
     buildCustomDirsPrompt(getCachedCustomDirs()),
     buildReferenceDirsPrompt(getCachedReferenceDirs(), useDocker),
     headingSection(
