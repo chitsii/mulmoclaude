@@ -34,7 +34,7 @@
         <span
           v-if="resultTimestamps.get(result.uuid)"
           class="text-[10px] text-gray-400 shrink-0"
-          >{{ formatTime(resultTimestamps.get(result.uuid)!) }}</span
+          >{{ formatSmartTime(resultTimestamps.get(result.uuid)!) }}</span
         >
         <span class="font-mono text-xs text-gray-400 shrink-0">{{
           result.toolName
@@ -105,6 +105,7 @@ import type { ToolResultComplete } from "gui-chat-protocol/vue";
 import { View as TextResponseOriginalView } from "../plugins/textResponse/index";
 import { handleExternalLinkClick } from "../utils/dom/externalLink";
 import type { TextResponseData } from "../plugins/textResponse/types";
+import { formatSmartTime } from "../utils/format/date";
 
 // Most plugin viewComponents use h-full internally, so a defined parent
 // height is required for them to render. text-response and the
@@ -139,23 +140,6 @@ const props = defineProps<{
   resultTimestamps: Map<string, number>;
   sendTextMessage?: (text: string) => void;
 }>();
-
-function formatTime(epochMs: number): string {
-  const d = new Date(epochMs);
-  const now = new Date();
-  const isToday =
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate();
-  if (isToday) {
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-  return (
-    d.toLocaleDateString([], { month: "short", day: "numeric" }) +
-    " " +
-    d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-  );
-}
 
 const emit = defineEmits<{
   select: [uuid: string];

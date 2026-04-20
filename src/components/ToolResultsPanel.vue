@@ -25,7 +25,7 @@
         <span
           v-if="resultTimestamps.get(result.uuid)"
           class="text-[10px] text-gray-400 shrink-0"
-          >{{ formatTime(resultTimestamps.get(result.uuid)!) }}</span
+          >{{ formatSmartTime(resultTimestamps.get(result.uuid)!) }}</span
         >
       </div>
     </div>
@@ -69,6 +69,7 @@
 import { ref } from "vue";
 import type { ToolResultComplete } from "gui-chat-protocol/vue";
 import { getPlugin } from "../tools";
+import { formatSmartTime } from "../utils/format/date";
 
 interface PendingCall {
   toolUseId: string;
@@ -83,23 +84,6 @@ defineProps<{
   statusMessage: string;
   pendingCalls: PendingCall[];
 }>();
-
-function formatTime(epochMs: number): string {
-  const d = new Date(epochMs);
-  const now = new Date();
-  const isToday =
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate();
-  if (isToday) {
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-  return (
-    d.toLocaleDateString([], { month: "short", day: "numeric" }) +
-    " " +
-    d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-  );
-}
 
 const emit = defineEmits<{
   select: [uuid: string];

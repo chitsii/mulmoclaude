@@ -46,3 +46,24 @@ export function formatShortDate(ms: number): string {
     day: "numeric",
   });
 }
+
+/** "14:32" for today, "Apr 16 14:32" for past dates. Works with
+ *  both epoch ms (number) and ISO strings. */
+export function formatSmartTime(value: number | string): string {
+  const d = new Date(value);
+  const now = new Date();
+  const isToday =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  const time = d.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  if (isToday) return time;
+  const date = d.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+  });
+  return `${date} ${time}`;
+}
