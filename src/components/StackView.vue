@@ -31,7 +31,12 @@
         <span class="text-sm font-medium text-gray-800 truncate">{{
           result.title || result.toolName
         }}</span>
-        <span class="font-mono text-xs text-gray-400 ml-auto shrink-0">{{
+        <span
+          v-if="resultTimestamps.get(result.uuid)"
+          class="text-[10px] text-gray-400 shrink-0"
+          >{{ formatSmartTime(resultTimestamps.get(result.uuid)!) }}</span
+        >
+        <span class="font-mono text-xs text-gray-400 shrink-0">{{
           result.toolName
         }}</span>
       </button>
@@ -100,6 +105,7 @@ import type { ToolResultComplete } from "gui-chat-protocol/vue";
 import { View as TextResponseOriginalView } from "../plugins/textResponse/index";
 import { handleExternalLinkClick } from "../utils/dom/externalLink";
 import type { TextResponseData } from "../plugins/textResponse/types";
+import { formatSmartTime } from "../utils/format/date";
 
 // Most plugin viewComponents use h-full internally, so a defined parent
 // height is required for them to render. text-response and the
@@ -131,6 +137,7 @@ function isStackNatural(toolName: string): boolean {
 const props = defineProps<{
   toolResults: ToolResultComplete[];
   selectedResultUuid: string | null;
+  resultTimestamps: Map<string, number>;
   sendTextMessage?: (text: string) => void;
 }>();
 
