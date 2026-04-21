@@ -728,7 +728,9 @@ function createSessionEventHandler(
       handleSessionFinished(session.id);
       return;
     }
-    applyAgentEvent(event, ctx);
+    applyAgentEvent(event, ctx).catch((err) => {
+      console.error("[applyAgentEvent] unhandled:", err);
+    });
   };
 }
 
