@@ -258,12 +258,6 @@ import {
   type NotificationAction,
 } from "./types/notification";
 import { CANVAS_VIEW } from "./utils/canvas/viewMode";
-import {
-  useDynamicFavicon,
-  FAVICON_STATES,
-  type FaviconState,
-} from "./composables/useDynamicFavicon";
-import { useNotifications } from "./composables/useNotifications";
 import type { SseEvent } from "./types/sse";
 import {
   type SessionSummary,
@@ -298,6 +292,7 @@ import { useChatScroll } from "./composables/useChatScroll";
 import { useViewLayout } from "./composables/useViewLayout";
 import { useSessionSync } from "./composables/useSessionSync";
 import { useSessionDerived } from "./composables/useSessionDerived";
+import { useFaviconState } from "./composables/useFaviconState";
 import { useCanvasViewMode } from "./composables/useCanvasViewMode";
 import { isCanvasViewMode } from "./utils/canvas/viewMode";
 import { useMcpTools } from "./composables/useMcpTools";
@@ -469,21 +464,7 @@ const {
 } = useSessionDerived({ sessionMap, currentSessionId, sessions });
 
 // ── Dynamic favicon (#470) ──────────────────────────────────
-const faviconState = computed<FaviconState>(() => {
-  if (isRunning.value) return FAVICON_STATES.running;
-  const hasUnread =
-    currentSummary.value?.hasUnread ?? activeSession.value?.hasUnread ?? false;
-  if (hasUnread) return FAVICON_STATES.done;
-  return FAVICON_STATES.idle;
-});
-
-const { unreadCount: notificationUnreadCount } = useNotifications();
-const hasNotificationBadge = computed(() => notificationUnreadCount.value > 0);
-
-useDynamicFavicon({
-  state: faviconState,
-  hasNotification: hasNotificationBadge,
-});
+useFaviconState({ isRunning, currentSummary, activeSession });
 
 const toolResultsPanelRef = ref<{ root: HTMLDivElement | null } | null>(null);
 const chatListRef = computed(() => toolResultsPanelRef.value?.root ?? null);
