@@ -8,7 +8,7 @@ import { isValidFilePath } from "../../src/composables/useFileSelection.ts";
 
 describe("isValidFilePath", () => {
   it("accepts ordinary workspace-relative paths", () => {
-    for (const p of [
+    for (const path of [
       "a",
       "a.md",
       "notes/a.md",
@@ -17,7 +17,7 @@ describe("isValidFilePath", () => {
       "spaces are fine.md",
       "unicode/日本語.md",
     ]) {
-      assert.equal(isValidFilePath(p), true, `path=${p}`);
+      assert.equal(isValidFilePath(path), true, `path=${path}`);
     }
   });
 
@@ -30,8 +30,8 @@ describe("isValidFilePath", () => {
   });
 
   it("rejects parent-directory segments", () => {
-    for (const p of ["..", "../secret", "a/../b", "a/b/.."]) {
-      assert.equal(isValidFilePath(p), false, `path=${p}`);
+    for (const path of ["..", "../secret", "a/../b", "a/b/.."]) {
+      assert.equal(isValidFilePath(path), false, `path=${path}`);
     }
   });
 
@@ -41,8 +41,8 @@ describe("isValidFilePath", () => {
   });
 
   it("rejects empty string and non-string values", () => {
-    for (const v of ["", null, undefined, 42, [], ["a"], {}, true, false]) {
-      assert.equal(isValidFilePath(v), false, `value=${JSON.stringify(v)}`);
+    for (const val of ["", null, undefined, 42, [], ["a"], {}, true, false]) {
+      assert.equal(isValidFilePath(val), false, `value=${JSON.stringify(val)}`);
     }
   });
 });

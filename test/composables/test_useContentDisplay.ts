@@ -16,20 +16,20 @@ function textContent(path: string, body: string): FileContent {
 
 describe("useContentDisplay — type flags", () => {
   it("isMarkdown is true for .md and .markdown (case-insensitive)", () => {
-    for (const p of ["a.md", "a.MD", "a.Markdown", "deep/path/README.md"]) {
-      const selectedPath = ref<string | null>(p);
+    for (const path of ["a.md", "a.MD", "a.Markdown", "deep/path/README.md"]) {
+      const selectedPath = ref<string | null>(path);
       const content = ref<FileContent | null>(null);
       const { isMarkdown } = useContentDisplay(selectedPath, content);
-      assert.equal(isMarkdown.value, true, `path=${p}`);
+      assert.equal(isMarkdown.value, true, `path=${path}`);
     }
   });
 
   it("isMarkdown is false for null, unrelated extensions", () => {
-    for (const p of [null, "a.mdx", "a.txt", "a"]) {
-      const selectedPath = ref<string | null>(p);
+    for (const path of [null, "a.mdx", "a.txt", "a"]) {
+      const selectedPath = ref<string | null>(path);
       const content = ref<FileContent | null>(null);
       const { isMarkdown } = useContentDisplay(selectedPath, content);
-      assert.equal(isMarkdown.value, false, `path=${JSON.stringify(p)}`);
+      assert.equal(isMarkdown.value, false, `path=${JSON.stringify(path)}`);
     }
   });
 
@@ -133,7 +133,7 @@ describe("useContentDisplay — mdFrontmatter", () => {
     assert.ok(mdFrontmatter.value);
     assert.equal(mdFrontmatter.value.body, "body");
     const titleField = mdFrontmatter.value.fields.find(
-      (f) => f.key === "title",
+      (field) => field.key === "title",
     );
     assert.ok(titleField);
     assert.equal(titleField.value, "Hello");

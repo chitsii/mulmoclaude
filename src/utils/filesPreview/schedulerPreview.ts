@@ -9,15 +9,15 @@ import type {
 } from "../../plugins/scheduler/index";
 import { WORKSPACE_FILES } from "../../config/workspacePaths";
 
-function isScheduledItem(x: unknown): x is ScheduledItem {
-  if (typeof x !== "object" || x === null) return false;
-  if (!("id" in x) || typeof x.id !== "string") return false;
-  if (!("title" in x) || typeof x.title !== "string") return false;
+function isScheduledItem(value: unknown): value is ScheduledItem {
+  if (typeof value !== "object" || value === null) return false;
+  if (!("id" in value) || typeof value.id !== "string") return false;
+  if (!("title" in value) || typeof value.title !== "string") return false;
   return true;
 }
 
-function isScheduledItemArray(x: unknown): x is ScheduledItem[] {
-  return Array.isArray(x) && x.every(isScheduledItem);
+function isScheduledItemArray(value: unknown): value is ScheduledItem[] {
+  return Array.isArray(value) && value.every(isScheduledItem);
 }
 
 export function toSchedulerResult(

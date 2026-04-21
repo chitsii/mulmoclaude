@@ -76,14 +76,15 @@ describe("useMarkdownMode", () => {
   });
 
   it("multiple instances do not share state (each reads current storage)", () => {
-    const a = useMarkdownMode();
-    a.toggleMdRaw();
-    const b = useMarkdownMode();
-    assert.equal(b.mdRawMode.value, true);
-    // b.toggleMdRaw only flips b; a.mdRawMode is its own ref.
-    b.toggleMdRaw();
-    assert.equal(b.mdRawMode.value, false);
-    assert.equal(a.mdRawMode.value, true);
+    const first = useMarkdownMode();
+    first.toggleMdRaw();
+    const second = useMarkdownMode();
+    assert.equal(second.mdRawMode.value, true);
+    // `second.toggleMdRaw` only flips `second`; `first.mdRawMode`
+    // is its own ref.
+    second.toggleMdRaw();
+    assert.equal(second.mdRawMode.value, false);
+    assert.equal(first.mdRawMode.value, true);
     assert.equal(storage.get(STORAGE_KEY), "false");
   });
 });

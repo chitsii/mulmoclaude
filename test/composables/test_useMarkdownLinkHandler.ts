@@ -20,7 +20,7 @@ interface FakeElement {
 }
 
 function makeAnchor(href: string | null): FakeElement {
-  const el: FakeElement = {
+  const anchor: FakeElement = {
     tag: "a",
     parent: null,
     href: href ?? undefined,
@@ -32,7 +32,7 @@ function makeAnchor(href: string | null): FakeElement {
       };
     },
   };
-  return el;
+  return anchor;
 }
 
 function makeSpanInsideAnchor(href: string | null): FakeElement {
@@ -64,7 +64,7 @@ interface FakeMouseEvent {
 }
 
 function makeEvent(opts: Partial<FakeMouseEvent> = {}): FakeMouseEvent {
-  const ev: FakeMouseEvent = {
+  const event: FakeMouseEvent = {
     button: 0,
     ctrlKey: false,
     metaKey: false,
@@ -73,14 +73,14 @@ function makeEvent(opts: Partial<FakeMouseEvent> = {}): FakeMouseEvent {
     defaultPrevented: false,
     propagationStopped: false,
     preventDefault() {
-      ev.defaultPrevented = true;
+      event.defaultPrevented = true;
     },
     stopPropagation() {
-      ev.propagationStopped = true;
+      event.propagationStopped = true;
     },
     ...opts,
   };
-  return ev;
+  return event;
 }
 
 // Install a minimal Element constructor so `instanceof Element` passes
@@ -113,8 +113,8 @@ function setup(selectedPath: string | null = "notes/a.md") {
   const captured: CapturedCalls = { navigate: [], session: [] };
   const path = ref<string | null>(selectedPath);
   const { handleMarkdownLinkClick } = useMarkdownLinkHandler(path, {
-    onNavigate: (p) => captured.navigate.push(p),
-    onLoadSession: (s) => captured.session.push(s),
+    onNavigate: (target) => captured.navigate.push(target),
+    onLoadSession: (sessionId) => captured.session.push(sessionId),
   });
   return { path, handleMarkdownLinkClick, captured };
 }
@@ -125,20 +125,20 @@ describe("useMarkdownLinkHandler", () => {
 
   it("navigates to a resolved workspace path for relative links", () => {
     const { handleMarkdownLinkClick, captured } = setup("notes/a.md");
-    const ev = makeEvent({ target: makeReal(makeAnchor("./b.md")) });
-    handleMarkdownLinkClick(ev as unknown as MouseEvent);
+    const event = makeEvent({ target: makeReal(makeAnchor("./b.md")) });
+    handleMarkdownLinkClick(event as unknown as MouseEvent);
     assert.deepEqual(captured.navigate, ["notes/b.md"]);
     assert.equal(captured.session.length, 0);
-    assert.equal(ev.defaultPrevented, true);
-    assert.equal(ev.propagationStopped, true);
+    assert.equal(event.defaultPrevented, true);
+    assert.equal(event.propagationStopped, true);
   });
 
   it("walks up via closest('a') when the click target is a nested element", () => {
     const { handleMarkdownLinkClick, captured } = setup("notes/a.md");
-    const ev = makeEvent({
+    const event = makeEvent({
       target: makeReal(makeSpanInsideAnchor("./b.md")),
     });
-    handleMarkdownLinkClick(ev as unknown as MouseEvent);
+    handleMarkdownLinkClick(event as unknown as MouseEvent);
     assert.deepEqual(captured.navigate, ["notes/b.md"]);
   });
 
@@ -146,40 +146,40 @@ describe("useMarkdownLinkHandler", () => {
     // resolveWorkspaceLink joins "notes/a.md" + "../chat/abc-123.jsonl"
     // → "chat/abc-123.jsonl", which extractSessionIdFromPath recognises.
     const { handleMarkdownLinkClick, captured } = setup("notes/a.md");
-    const ev = makeEvent({
+    const event = makeEvent({
       target: makeReal(makeAnchor("../chat/abc-123.jsonl")),
     });
-    handleMarkdownLinkClick(ev as unknown as MouseEvent);
+    handleMarkdownLinkClick(event as unknown as MouseEvent);
     assert.deepEqual(captured.session, ["abc-123"]);
     assert.equal(captured.navigate.length, 0);
   });
 
   it("ignores external http(s) links (lets browser handle)", () => {
     const { handleMarkdownLinkClick, captured } = setup();
-    const ev = makeEvent({
+    const event = makeEvent({
       target: makeReal(makeAnchor("https://example.com")),
     });
-    handleMarkdownLinkClick(ev as unknown as MouseEvent);
+    handleMarkdownLinkClick(event as unknown as MouseEvent);
     assert.equal(captured.navigate.length, 0);
-    assert.equal(ev.defaultPrevented, false);
+    assert.equal(event.defaultPrevented, false);
   });
 
   it("ignores anchor-only (#section) links", () => {
     const { handleMarkdownLinkClick, captured } = setup();
-    const ev = makeEvent({ target: makeReal(makeAnchor("#heading")) });
-    handleMarkdownLinkClick(ev as unknown as MouseEvent);
+    const event = makeEvent({ target: makeReal(makeAnchor("#heading")) });
+    handleMarkdownLinkClick(event as unknown as MouseEvent);
     assert.equal(captured.navigate.length, 0);
-    assert.equal(ev.defaultPrevented, false);
+    assert.equal(event.defaultPrevented, false);
   });
 
   it("ignores right/middle button clicks", () => {
     const { handleMarkdownLinkClick, captured } = setup();
     for (const button of [1, 2]) {
-      const ev = makeEvent({
+      const event = makeEvent({
         button,
         target: makeReal(makeAnchor("./b.md")),
       });
-      handleMarkdownLinkClick(ev as unknown as MouseEvent);
+      handleMarkdownLinkClick(event as unknown as MouseEvent);
     }
     assert.equal(captured.navigate.length, 0);
   });
@@ -187,11 +187,11 @@ describe("useMarkdownLinkHandler", () => {
   it("ignores modifier-key clicks (ctrl/meta/shift open in new tab)", () => {
     const { handleMarkdownLinkClick, captured } = setup();
     for (const mod of ["ctrlKey", "metaKey", "shiftKey"] as const) {
-      const ev = makeEvent({
+      const event = makeEvent({
         [mod]: true,
         target: makeReal(makeAnchor("./b.md")),
       });
-      handleMarkdownLinkClick(ev as unknown as MouseEvent);
+      handleMarkdownLinkClick(event as unknown as MouseEvent);
     }
     assert.equal(captured.navigate.length, 0);
   });
@@ -199,8 +199,10 @@ describe("useMarkdownLinkHandler", () => {
   it("does nothing when event.target isn't an Element (regression: instanceof guard)", () => {
     const { handleMarkdownLinkClick, captured } = setup();
     // A plain object that does NOT inherit from FakeElementBase.
-    const ev = makeEvent({ target: { closest: () => makeAnchor("./b.md") } });
-    handleMarkdownLinkClick(ev as unknown as MouseEvent);
+    const event = makeEvent({
+      target: { closest: () => makeAnchor("./b.md") },
+    });
+    handleMarkdownLinkClick(event as unknown as MouseEvent);
     assert.equal(captured.navigate.length, 0);
   });
 
@@ -211,22 +213,22 @@ describe("useMarkdownLinkHandler", () => {
       parent: null,
       closest: () => null,
     };
-    const ev = makeEvent({ target: makeReal(targetWithNoAnchor) });
-    handleMarkdownLinkClick(ev as unknown as MouseEvent);
+    const event = makeEvent({ target: makeReal(targetWithNoAnchor) });
+    handleMarkdownLinkClick(event as unknown as MouseEvent);
     assert.equal(captured.navigate.length, 0);
   });
 
   it("does nothing when href is missing", () => {
     const { handleMarkdownLinkClick, captured } = setup();
-    const ev = makeEvent({ target: makeReal(makeAnchor(null)) });
-    handleMarkdownLinkClick(ev as unknown as MouseEvent);
+    const event = makeEvent({ target: makeReal(makeAnchor(null)) });
+    handleMarkdownLinkClick(event as unknown as MouseEvent);
     assert.equal(captured.navigate.length, 0);
   });
 
   it("does nothing when no file is selected (selectedPath is null)", () => {
     const { handleMarkdownLinkClick, captured } = setup(null);
-    const ev = makeEvent({ target: makeReal(makeAnchor("./b.md")) });
-    handleMarkdownLinkClick(ev as unknown as MouseEvent);
+    const event = makeEvent({ target: makeReal(makeAnchor("./b.md")) });
+    handleMarkdownLinkClick(event as unknown as MouseEvent);
     assert.equal(captured.navigate.length, 0);
   });
 });
