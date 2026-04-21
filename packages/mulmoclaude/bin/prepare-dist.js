@@ -3,9 +3,33 @@
 // Copies server source + client build + shared config into this
 // package so `npm publish` includes everything needed to run.
 //
-// Run before publishing:
-//   yarn build   # build client
-//   node packages/mulmoclaude/bin/prepare-dist.js
+// ── Local test flow (before publishing) ───────────────────────
+// From the repo root:
+//
+//   yarn build                                       # 1. Vite build → dist/client/
+//   yarn install                                     # 2. brings in tsx (runtime)
+//   node packages/mulmoclaude/bin/prepare-dist.js    # 3. copy into this pkg
+//   node packages/mulmoclaude/bin/mulmoclaude.js --no-open --port 3099
+//
+// Expected: the launcher prints `[server] listening port=3099`.
+// Sanity-check from another shell:
+//
+//   curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3099/
+//     → 200  (index.html served with bearer token substituted)
+//   curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3099/api/config
+//     → 401  (protected API, expected without token)
+//
+// Stop: Ctrl+C, or `kill "$(lsof -ti:3099)"`.
+//
+// To test the exact published artifact end-to-end:
+//
+//   cd packages/mulmoclaude && npm pack        # → mulmoclaude-<ver>.tgz
+//   mkdir /tmp/mc-test && cd /tmp/mc-test
+//   npm init -y && npm install /abs/path/to/mulmoclaude-<ver>.tgz
+//   ./node_modules/.bin/mulmoclaude --no-open --port 3099
+//
+// ── Publish ───────────────────────────────────────────────────
+//   cd packages/mulmoclaude && npm publish --access public
 
 import { cpSync, existsSync, rmSync } from "fs";
 import { join, dirname } from "path";
