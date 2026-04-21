@@ -19,7 +19,7 @@ const QUEUE_KEY_PREFIX = "q:";
 export class RelayDurableObject implements DurableObject {
   private state: DurableObjectState;
   private env: Env;
-  private ws: WebSocket | null = null;
+  private webSocket: WebSocket | null = null;
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
@@ -53,20 +53,20 @@ export class RelayDurableObject implements DurableObject {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    if (this.ws) {
+    if (this.webSocket) {
       try {
-        this.ws.close(1000, "replaced by new connection");
+        this.webSocket.close(1000, "replaced by new connection");
       } catch {
         /* already closed */
       }
-      this.ws = null;
+      this.webSocket = null;
     }
 
     const pair = new WebSocketPair();
     const [client, server] = [pair[0], pair[1]];
 
     this.state.acceptWebSocket(server);
-    this.ws = server;
+    this.webSocket = server;
 
     this.flushQueue().catch(() => {});
 
@@ -87,7 +87,7 @@ export class RelayDurableObject implements DurableObject {
       await this.handleResponse(response);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      this.ws?.send(
+      this.webSocket?.send(
         JSON.stringify({
           type: "error",
           platform: response.platform,
@@ -99,11 +99,11 @@ export class RelayDurableObject implements DurableObject {
   }
 
   async webSocketClose(__ws: WebSocket, __code: number, __reason: string, __wasClean: boolean): Promise<void> {
-    this.ws = null;
+    this.webSocket = null;
   }
 
   async webSocketError(__ws: WebSocket, __error: unknown): Promise<void> {
-    this.ws = null;
+    this.webSocket = null;
   }
 
   // ── Message enqueue ────────────────────────────────────────
@@ -111,12 +111,12 @@ export class RelayDurableObject implements DurableObject {
   private async handleEnqueue(request: Request): Promise<Response> {
     const msg: RelayMessage = await request.json();
 
-    if (this.ws) {
+    if (this.webSocket) {
       try {
-        this.ws.send(JSON.stringify(msg));
+        this.webSocket.send(JSON.stringify(msg));
         return new Response("forwarded", { status: 200 });
       } catch {
-        this.ws = null;
+        this.webSocket = null;
       }
     }
 
@@ -136,15 +136,15 @@ export class RelayDurableObject implements DurableObject {
   }
 
   private async flushQueue(): Promise<void> {
-    if (!this.ws) return;
+    if (!this.webSocket) return;
 
     const keys = await this.listQueueKeys();
     for (const key of keys) {
       const raw = await this.state.storage.get<string>(key);
-      if (!raw || !this.ws) break;
+      if (!raw || !this.webSocket) break;
 
       try {
-        this.ws.send(raw);
+        this.webSocket.send(raw);
         await this.state.storage.delete(key);
       } catch {
         break;
