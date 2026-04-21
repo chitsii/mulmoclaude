@@ -79,10 +79,7 @@ export class RelayDurableObject implements DurableObject {
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  async webSocketMessage(
-    __ws: WebSocket,
-    message: string | ArrayBuffer,
-  ): Promise<void> {
+  async webSocketMessage(__ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
     if (typeof message !== "string") return;
 
     let response: RelayResponse;
@@ -108,12 +105,7 @@ export class RelayDurableObject implements DurableObject {
     }
   }
 
-  async webSocketClose(
-    __ws: WebSocket,
-    __code: number,
-    __reason: string,
-    __wasClean: boolean,
-  ): Promise<void> {
+  async webSocketClose(__ws: WebSocket, __code: number, __reason: string, __wasClean: boolean): Promise<void> {
     // No-op: getSocket() derives state from the runtime, not an
     // instance field, so there is nothing to clear.
   }
@@ -182,11 +174,6 @@ export class RelayDurableObject implements DurableObject {
     if (!plugin) {
       throw new Error(`unknown platform: ${response.platform}`);
     }
-    await plugin.sendResponse(
-      response.chatId,
-      response.text,
-      this.env,
-      response.replyToken,
-    );
+    await plugin.sendResponse(response.chatId, response.text, this.env, response.replyToken);
   }
 }
