@@ -25,12 +25,21 @@ export class RelayDurableObject implements DurableObject {
     this.env = env;
   }
 
-  /** Return the live WebSocket, surviving Durable Object hibernation.
-   *  After hibernation `this.ws` is gone, but the runtime preserves
-   *  accepted WebSockets — `state.getWebSockets()` returns them. */
+  /** Return the live OPEN WebSocket, surviving Durable Object
+   *  hibernation. Filters out CLOSING/CLOSED sockets and closes
+   *  any extras from reconnect races. */
   private getSocket(): WebSocket | null {
-    const sockets = this.state.getWebSockets();
-    return sockets.length > 0 ? sockets[0] : null;
+    const sockets = this.state.getWebSockets().filter((s) => s.readyState === WebSocket.READY_STATE_OPEN);
+    if (sockets.length === 0) return null;
+    // Enforce single connection: close extras from reconnect races
+    for (let i = 1; i < sockets.length; i++) {
+      try {
+        sockets[i].close(1000, "duplicate connection");
+      } catch {
+        /* already closing */
+      }
+    }
+    return sockets[0];
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -60,8 +69,7 @@ export class RelayDurableObject implements DurableObject {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const existing = this.getSocket();
-    if (existing) {
+    for (const existing of this.state.getWebSockets()) {
       try {
         existing.close(1000, "replaced by new connection");
       } catch {
