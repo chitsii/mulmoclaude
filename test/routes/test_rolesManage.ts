@@ -1,0 +1,120 @@
+import { after, before, describe, it } from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
+
+// The roles route imports workspacePath at module load. Override HOME
+// so os.homedir() → temp root, then dynamic-import the modules.
+let tmpRoot: string;
+let originalHome: string | undefined;
+let originalUserProfile: string | undefined;
+
+type RolesRoute = typeof import("../../server/api/routes/roles.js");
+type RolesIo = typeof import("../../server/utils/files/roles-io.js");
+let rolesRoute: RolesRoute;
+let rolesIo: RolesIo;
+let rolesDir: string;
+
+before(async () => {
+  tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "roles-manage-test-"));
+  originalHome = process.env.HOME;
+  originalUserProfile = process.env.USERPROFILE;
+  process.env.HOME = tmpRoot;
+  process.env.USERPROFILE = tmpRoot;
+  fs.mkdirSync(path.join(tmpRoot, "mulmoclaude"), { recursive: true });
+  rolesRoute = await import("../../server/api/routes/roles.js");
+  rolesIo = await import("../../server/utils/files/roles-io.js");
+  rolesDir = path.join(tmpRoot, "mulmoclaude", "config", "roles");
+});
+
+after(() => {
+  if (originalHome === undefined) delete process.env.HOME;
+  else process.env.HOME = originalHome;
+  if (originalUserProfile === undefined) delete process.env.USERPROFILE;
+  else process.env.USERPROFILE = originalUserProfile;
+  fs.rmSync(tmpRoot, { recursive: true, force: true });
+});
+
+function sampleRole(roleId: string) {
+  return {
+    id: roleId,
+    name: `Role ${roleId}`,
+    icon: "person",
+    prompt: "You are a test role.",
+    availablePlugins: ["wiki"],
+    queries: [],
+  };
+}
+
+describe("executeManageRoles — rename (oldRoleId)", () => {
+  it("writes the new-id file and removes the old-id file", async () => {
+    rolesIo.saveRole("original", sampleRole("original"));
+    assert.equal(rolesIo.roleExists("original"), true);
+
+    const result = await rolesRoute.executeManageRoles(
+      {
+        action: "update",
+        role: sampleRole("renamed"),
+        oldRoleId: "original",
+      },
+      "test-session",
+    );
+
+    assert.equal(result.success, true, `result: ${JSON.stringify(result)}`);
+    assert.equal(rolesIo.roleExists("renamed"), true, "new role file should exist");
+    assert.equal(rolesIo.roleExists("original"), false, "old role file should have been deleted");
+  });
+
+  it("rejects a rename into a built-in id", async () => {
+    rolesIo.saveRole("tmp", sampleRole("tmp"));
+    const result = await rolesRoute.executeManageRoles(
+      {
+        action: "update",
+        role: sampleRole("general"), // "general" is a built-in id
+        oldRoleId: "tmp",
+      },
+      "test-session",
+    );
+    assert.equal(result.success, false);
+    assert.match(String(result.error), /reserved/i);
+    // Clean up
+    rolesIo.deleteRole("tmp");
+    // Ensure we didn't accidentally create the built-in id file
+    const generalPath = path.join(rolesDir, "general.json");
+    assert.equal(fs.existsSync(generalPath), false);
+  });
+
+  it("rejects a rename into an id already in use", async () => {
+    rolesIo.saveRole("alpha", sampleRole("alpha"));
+    rolesIo.saveRole("beta", sampleRole("beta"));
+    const result = await rolesRoute.executeManageRoles(
+      {
+        action: "update",
+        role: sampleRole("beta"),
+        oldRoleId: "alpha",
+      },
+      "test-session",
+    );
+    assert.equal(result.success, false);
+    assert.match(String(result.error), /already exists/i);
+    assert.equal(rolesIo.roleExists("alpha"), true, "'alpha' should still exist");
+    assert.equal(rolesIo.roleExists("beta"), true, "'beta' should still exist");
+    rolesIo.deleteRole("alpha");
+    rolesIo.deleteRole("beta");
+  });
+
+  it("plain update (no oldRoleId) still works and does not delete anything", async () => {
+    rolesIo.saveRole("plain", sampleRole("plain"));
+    const result = await rolesRoute.executeManageRoles(
+      {
+        action: "update",
+        role: { ...sampleRole("plain"), name: "Renamed Display" },
+      },
+      "test-session",
+    );
+    assert.equal(result.success, true);
+    assert.equal(rolesIo.roleExists("plain"), true);
+    rolesIo.deleteRole("plain");
+  });
+});
