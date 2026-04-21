@@ -68,7 +68,7 @@
       >
         <!-- Gemini API key warning -->
         <div
-          v-if="!geminiAvailable && needsGemini(currentRoleId)"
+          v-if="!geminiAvailable && needsGeminiForRole(currentRoleId)"
           class="mx-4 mt-3 mb-2 rounded border border-yellow-400 bg-yellow-50 p-3 text-xs text-yellow-700 shrink-0"
         >
           <span class="material-icons text-xs align-middle mr-1">warning</span>
@@ -114,7 +114,11 @@
       >
         <!-- Gemini API key warning (Stack layouts — no sidebar to host it) -->
         <div
-          v-if="isStackLayout && !geminiAvailable && needsGemini(currentRoleId)"
+          v-if="
+            isStackLayout &&
+            !geminiAvailable &&
+            needsGeminiForRole(currentRoleId)
+          "
           class="mx-3 mt-2 rounded border border-yellow-400 bg-yellow-50 p-2 text-xs text-yellow-700 shrink-0"
         >
           <span class="material-icons text-xs align-middle mr-1">warning</span>
@@ -240,9 +244,7 @@ import ChatInput, { type PastedFile } from "./components/ChatInput.vue";
 import SessionHistoryPanel from "./components/SessionHistoryPanel.vue";
 import ToolResultsPanel from "./components/ToolResultsPanel.vue";
 import CanvasViewToggle from "./components/CanvasViewToggle.vue";
-import PluginLauncher, {
-  type PluginLauncherTarget,
-} from "./components/PluginLauncher.vue";
+import PluginLauncher from "./components/PluginLauncher.vue";
 import StackView from "./components/StackView.vue";
 import FilesView from "./components/FilesView.vue";
 import TodoExplorer from "./components/TodoExplorer.vue";
@@ -252,33 +254,29 @@ import SkillsView from "./plugins/manageSkills/View.vue";
 import RolesView from "./plugins/manageRoles/View.vue";
 import SettingsModal from "./components/SettingsModal.vue";
 import NotificationToast from "./components/NotificationToast.vue";
-import {
-  NOTIFICATION_ACTION_TYPES,
-  NOTIFICATION_VIEWS,
-  type NotificationAction,
-} from "./types/notification";
+import type { NotificationAction } from "./types/notification";
 import { CANVAS_VIEW } from "./utils/canvas/viewMode";
 import type { SseEvent } from "./types/sse";
 import { type SessionEntry, type ActiveSession } from "./types/session";
-import { EVENT_TYPES, generationKey } from "./types/events";
-import { extractImageData, makeTextResult } from "./utils/tools/result";
-import { buildAgentRequestBody } from "./utils/agent/request";
+import { EVENT_TYPES } from "./types/events";
+import { extractImageData } from "./utils/tools/result";
+import { buildAgentRequestBody, postAgentRun } from "./utils/agent/request";
 import {
-  pushResult,
+  applyAgentEvent,
+  type AgentEventContext,
+} from "./utils/agent/eventDispatch";
+import {
   pushErrorMessage,
   beginUserTurn,
-  appendToLastAssistantText,
+  updateResult,
 } from "./utils/session/sessionHelpers";
 import { maybeSeedRoleDefault } from "./utils/session/seedRoleDefault";
+import { createEmptySession } from "./utils/session/sessionFactory";
 import {
-  findPendingToolCall,
-  shouldSelectAssistantText,
-} from "./utils/agent/toolCalls";
-import {
+  buildLoadedSession,
   parseSessionEntries,
-  resolveSelectedUuid,
-  resolveSessionTimestamps,
 } from "./utils/session/sessionEntries";
+import { resolveNotificationTarget } from "./utils/notification/dispatch";
 import { usePendingCalls } from "./composables/usePendingCalls";
 import { useClickOutside } from "./composables/useClickOutside";
 import { useKeyNavigation } from "./composables/useKeyNavigation";
@@ -290,7 +288,7 @@ import { useSessionDerived } from "./composables/useSessionDerived";
 import { useFaviconState } from "./composables/useFaviconState";
 import { useMergedSessions } from "./composables/useMergedSessions";
 import { useCanvasViewMode } from "./composables/useCanvasViewMode";
-import { isCanvasViewMode } from "./utils/canvas/viewMode";
+import { useSelectedResult } from "./composables/useSelectedResult";
 import { useMcpTools } from "./composables/useMcpTools";
 import { useRoles } from "./composables/useRoles";
 import { usePubSub } from "./composables/usePubSub";
@@ -301,9 +299,10 @@ import { useRightSidebar } from "./composables/useRightSidebar";
 import { useEventListeners } from "./composables/useEventListeners";
 import { provideAppApi } from "./composables/useAppApi";
 import { provideActiveSession } from "./composables/useActiveSession";
-import { useRoute, useRouter, isNavigationFailure } from "vue-router";
-import { apiGet, apiFetchRaw } from "./utils/api";
+import { useRoute, useRouter } from "vue-router";
+import { apiGet } from "./utils/api";
 import { API_ROUTES } from "./config/apiRoutes";
+import { needsGemini } from "./utils/role/plugins";
 
 // --- Per-session state ---
 // Declared early so that pub/sub callbacks and function declarations
@@ -332,27 +331,21 @@ const { subscribe: pubsubSubscribe } = usePubSub();
 const route = useRoute();
 const router = useRouter();
 
+// Omit ?role= for the default role to keep URLs clean.
+function buildRoleQuery(): Record<string, string> {
+  const id = currentRoleId.value;
+  if (!id || roles.value.length === 0 || id === roles.value[0]?.id) return {};
+  return { role: id };
+}
+
 function navigateToSession(id: string, replace = false): void {
   currentSessionId.value = id;
   const method = replace ? router.replace : router.push;
-  // Use buildViewQuery() (reads canvasViewMode ref) instead of raw
-  // route.query — the ref may have been updated synchronously by
-  // setCanvasViewMode before this navigation runs, while
-  // route.query.view is still stale (router.push is async).
-  // Build query: view mode + role (omit role if it's the default
-  // to keep URLs clean for the common case).
-  const viewQuery = buildViewQuery();
-  const roleQuery =
-    currentRoleId.value && currentRoleId.value !== roles.value[0]?.id
-      ? { role: currentRoleId.value }
-      : {};
   method({
     name: "chat",
     params: { sessionId: id },
-    query: { ...viewQuery, ...roleQuery },
+    query: { ...buildViewQuery(), ...buildRoleQuery() },
   }).catch((err) => {
-    // NavigationDuplicated is harmless (user clicked the same session
-    // they're already on). Anything else is a real bug.
     if (err?.type !== 16) {
       console.error("[navigateToSession] push failed:", err);
     }
@@ -360,15 +353,12 @@ function navigateToSession(id: string, replace = false): void {
 }
 
 function handleNotificationNavigate(action: NotificationAction): void {
-  if (action.type !== NOTIFICATION_ACTION_TYPES.navigate) return;
-  if (action.view === NOTIFICATION_VIEWS.chat) {
-    if (action.sessionId) navigateToSession(action.sessionId);
-  } else if (action.view === NOTIFICATION_VIEWS.todos) {
-    setCanvasViewMode(CANVAS_VIEW.todos);
-  } else if (action.view === NOTIFICATION_VIEWS.scheduler) {
-    setCanvasViewMode(CANVAS_VIEW.scheduler);
-  } else if (action.view === NOTIFICATION_VIEWS.files) {
-    setCanvasViewMode(CANVAS_VIEW.files);
+  const target = resolveNotificationTarget(action);
+  if (!target) return;
+  if (target.kind === "session") {
+    navigateToSession(target.sessionId);
+  } else {
+    setCanvasViewMode(CANVAS_VIEW[target.view]);
   }
 }
 
@@ -401,37 +391,6 @@ watch(
   },
 );
 
-// External URL changes for ?result= → sync into the session's
-// selectedResultUuid. This handles back/forward and direct URL
-// access with a specific result pre-selected.
-watch(
-  () => route.query.result,
-  (newResult) => {
-    const session = sessionMap.get(currentSessionId.value);
-    if (!session) return;
-    const resultId = typeof newResult === "string" ? newResult : null;
-    if (resultId !== session.selectedResultUuid) {
-      session.selectedResultUuid = resultId;
-    }
-  },
-);
-
-// Deduplicate consecutive tool results with the same toolName for the
-const selectedResultUuid = computed({
-  get: () => activeSession.value?.selectedResultUuid ?? null,
-  set: (val: string | null) => {
-    if (activeSession.value) activeSession.value.selectedResultUuid = val;
-    // Sync to URL. Null/empty → remove ?result= for clean URLs.
-    const { result: __result, ...restQuery } = route.query;
-    const nextQuery = val ? { ...restQuery, result: val } : restQuery;
-    router.replace({ query: nextQuery }).catch((err: unknown) => {
-      if (!isNavigationFailure(err)) {
-        console.error("[selectedResultUuid] navigation failed:", err);
-      }
-    });
-  },
-});
-
 // --- Global state ---
 const { roles, currentRoleId, currentRole, refreshRoles } = useRoles();
 
@@ -460,38 +419,35 @@ const {
   unreadCount,
 } = useSessionDerived({ sessionMap, currentSessionId, sessions });
 
+const { selectedResultUuid } = useSelectedResult({
+  activeSession,
+  sessionMap,
+  currentSessionId,
+});
+
 // ── Dynamic favicon (#470) ──────────────────────────────────
 useFaviconState({ isRunning, currentSummary, activeSession });
 
 const toolResultsPanelRef = ref<{ root: HTMLDivElement | null } | null>(null);
-const chatListRef = computed(() => toolResultsPanelRef.value?.root ?? null);
 const canvasRef = ref<HTMLDivElement | null>(null);
 const chatInputRef = ref<{ focus: () => void } | null>(null);
 const topBarRef = ref<HTMLDivElement | null>(null);
-// Measured when the history popup opens — the popup is a direct child
-// of the root, so its absolute `top` must equal the global top bar's
-// full height.
 const historyTopOffset = ref<number | undefined>(undefined);
 
-function focusChatInput(): void {
-  chatInputRef.value?.focus();
-}
 const sessionTabBarRef = ref<{
   historyButton: HTMLButtonElement | null;
 } | null>(null);
 const historyButtonRef = computed(
   () => sessionTabBarRef.value?.historyButton ?? null,
 );
-// Exposed `root` from SessionHistoryPanel — the click-outside guard
-// needs the actual popup DOM element (not the component instance).
 const historyPanelRef = ref<{ root: HTMLDivElement | null } | null>(null);
 const historyPopupRef = computed(() => historyPanelRef.value?.root ?? null);
-const toolResultsLength = computed(() => toolResults.value.length);
-useChatScroll({
-  chatListRef,
-  toolResultsLength,
+
+const { focusChatInput } = useChatScroll({
+  toolResultsPanelRef,
+  toolResults,
   isRunning,
-  focusChatInput,
+  chatInputRef,
 });
 
 const { showRightSidebar, toggleRightSidebar } = useRightSidebar();
@@ -503,6 +459,7 @@ const {
   buildViewQuery,
   filesRefreshToken,
   handleViewModeShortcut,
+  onPluginNavigate,
 } = useCanvasViewMode({ isRunning });
 
 // The no-sidebar "stack-style" layout (top bar + full-width canvas +
@@ -535,10 +492,7 @@ function handleNewSessionClick(): void {
   createNewSession();
 }
 
-// In plugin views (Todos / Files / ...) no chat is active, so the
-// Measure the top bar's height whenever the history popup is about
-// to open. Defer to nextTick so the popup's v-if transition doesn't
-// race the measurement.
+// Measure the top bar's height when the history popup opens.
 watch(showHistory, (open) => {
   if (open) {
     nextTick(() => {
@@ -547,13 +501,6 @@ watch(showHistory, (open) => {
   }
 });
 const rightSidebarRef = ref<InstanceType<typeof RightSidebar> | null>(null);
-
-// Plugin-launcher click: switch canvas to the matching view mode.
-function onPluginNavigate(target: PluginLauncherTarget): void {
-  if (isCanvasViewMode(target.key)) {
-    setCanvasViewMode(target.key);
-  }
-}
 
 const { availableTools, toolDescriptions, mcpToolsError, fetchMcpToolsStatus } =
   useMcpTools({
@@ -573,11 +520,6 @@ const selectedResult = computed(
     ) ?? null,
 );
 
-// Type-guard for the user-side branch of a text-response result. Used
-// to surface the first user message as a preview for live sessions
-// that haven't been persisted to disk yet.
-// Merged list for the history pane: live sessions in `sessionMap`
-// merged with server-only sessions, sorted newest-first by
 const { mergedSessions, tabSessions } = useMergedSessions({
   sessionMap,
   sessions,
@@ -638,25 +580,14 @@ function onQueryEdit(query: string): void {
 }
 
 function handleUpdateResult(updatedResult: ToolResultComplete) {
-  const results = activeSession.value?.toolResults;
-  if (!results) return;
-  const index = results.findIndex(
-    (result) => result.uuid === updatedResult.uuid,
-  );
-  if (index !== -1) {
-    Object.assign(results[index], updatedResult);
-  }
+  if (activeSession.value) updateResult(activeSession.value, updatedResult);
 }
 
 function onSidebarItemClick(uuid: string) {
   selectedResultUuid.value = uuid;
 }
 
-const GEMINI_PLUGINS = new Set(["generateImage", "presentDocument"]);
-const needsGemini = (roleId: string) =>
-  (roles.value.find((role) => role.id === roleId)?.availablePlugins ?? []).some(
-    (plugin) => GEMINI_PLUGINS.has(plugin),
-  );
+const needsGeminiForRole = (roleId: string) => needsGemini(roles.value, roleId);
 
 // Remove the current session from sessionMap if it's empty (no messages).
 // Returns true if a session was removed, so the caller can use
@@ -674,33 +605,15 @@ function removeCurrentIfEmpty(): boolean {
 }
 
 function createNewSession(roleId?: string): ActiveSession {
-  // Remove the current session if it's empty (no messages exchanged).
   removeCurrentIfEmpty();
-
-  const id = uuidv4();
   const rId = roleId ?? currentRoleId.value;
-  const now = new Date().toISOString();
-  const session: ActiveSession = {
-    id,
-    roleId: rId,
-    toolResults: [],
-    resultTimestamps: new Map(),
-    isRunning: false,
-    statusMessage: "",
-    toolCallHistory: [],
-    selectedResultUuid: null,
-    hasUnread: false,
-    startedAt: now,
-    updatedAt: now,
-    runStartIndex: 0,
-    pendingGenerations: {},
-  };
-  sessionMap.set(id, session);
-  navigateToSession(id, true);
+  const session = createEmptySession(uuidv4(), rId);
+  sessionMap.set(session.id, session);
+  navigateToSession(session.id, true);
   currentRoleId.value = rId;
   suggestionsPanelRef.value?.collapse();
   nextTick(() => focusChatInput());
-  return sessionMap.get(id)!;
+  return sessionMap.get(session.id)!;
 }
 
 function onRoleChange() {
@@ -712,86 +625,40 @@ function onRoleChange() {
   maybeSeedRoleDefault(session);
 }
 
-async function loadSession(id: string) {
-  // Re-selecting the already-active, loaded session is a no-op.
-  // The sessionMap check is needed because the route watcher sets
-  // currentSessionId before calling loadSession — without it the
-  // guard would bail before the session data is fetched.
-  if (id === currentSessionId.value && sessionMap.has(id)) return;
+function activateSession(id: string, roleId: string, replace: boolean): void {
+  const reactiveSession = sessionMap.get(id);
+  if (reactiveSession) ensureSessionSubscription(reactiveSession);
+  navigateToSession(id, replace);
+  currentRoleId.value = roleId;
+  showHistory.value = false;
+}
 
-  // If the current session is empty, remove it from memory and use
-  // replace-navigation so the empty session doesn't linger in
-  // browser history (back button won't revisit it).
+async function loadSession(id: string) {
+  if (id === currentSessionId.value && sessionMap.has(id)) return;
   const replaced = removeCurrentIfEmpty();
 
-  // Already live in memory — just switch to it. The watch on
-  // currentSessionId clears the unread flag automatically.
   const live = sessionMap.get(id);
   if (live) {
-    navigateToSession(id, replaced);
-    currentRoleId.value = live.roleId;
-    showHistory.value = false;
+    activateSession(id, live.roleId, replaced);
     return;
   }
 
-  // Load from server
   const response = await apiGet<SessionEntry[]>(
     API_ROUTES.sessions.detail.replace(":id", encodeURIComponent(id)),
   );
   if (!response.ok) return;
-  const entries = response.data;
 
-  const meta = entries.find((entry) => entry.type === EVENT_TYPES.sessionMeta);
-  const roleId = meta?.roleId ?? currentRoleId.value;
-  const toolResultsList = parseSessionEntries(entries);
-  const urlResult =
-    typeof route.query.result === "string" ? route.query.result : null;
-  const resolvedSelectedUuid = resolveSelectedUuid(toolResultsList, urlResult);
-  // Use server summary for live state (isRunning, etc.) and timestamps
-  const serverSummary = sessions.value.find((session) => session.id === id);
-  const { startedAt, updatedAt } = resolveSessionTimestamps(
-    serverSummary,
-    new Date().toISOString(),
-  );
-  // Approximate per-entry timestamps for a loaded session: the JSONL
-  // format doesn't persist them yet, so spread entries evenly between
-  // startedAt and updatedAt. New results pushed in this session via
-  // pushResult() will overwrite with the real Date.now().
-  const loadedTimestamps = new Map<string, number>();
-  const startMs = new Date(startedAt).getTime();
-  const endMs = new Date(updatedAt).getTime();
-  toolResultsList.forEach((result, i) => {
-    const frac =
-      toolResultsList.length > 1 ? i / (toolResultsList.length - 1) : 0;
-    loadedTimestamps.set(result.uuid, startMs + (endMs - startMs) * frac);
-  });
-
-  const newSession: ActiveSession = {
+  const newSession = buildLoadedSession({
     id,
-    roleId,
-    toolResults: toolResultsList,
-    resultTimestamps: loadedTimestamps,
-    isRunning: serverSummary?.isRunning ?? false,
-    statusMessage: serverSummary?.statusMessage ?? "",
-    toolCallHistory: [],
-    selectedResultUuid: resolvedSelectedUuid,
-    hasUnread: false,
-    startedAt,
-    updatedAt,
-    runStartIndex: toolResultsList.length,
-    pendingGenerations: {},
-  };
+    entries: response.data,
+    defaultRoleId: currentRoleId.value,
+    urlResult:
+      typeof route.query.result === "string" ? route.query.result : null,
+    serverSummary: sessions.value.find((s) => s.id === id),
+    nowIso: new Date().toISOString(),
+  });
   sessionMap.set(id, newSession);
-  // Subscribe immediately — the watch(currentSessionId) may have
-  // already fired before the session was in sessionMap (e.g. when
-  // opened via URL), so it couldn't subscribe at that point.
-  // Use sessionMap.get() to obtain the reactive proxy — passing the
-  // raw object would bypass Vue's reactivity tracking.
-  const reactiveSession = sessionMap.get(id)!;
-  ensureSessionSubscription(reactiveSession);
-  navigateToSession(id, replaced);
-  currentRoleId.value = roleId;
-  showHistory.value = false;
+  activateSession(id, newSession.roleId, replaced);
 }
 
 // Re-fetch the transcript from the server and patch any entries the
@@ -814,19 +681,10 @@ async function refreshSessionTranscript(sessionId: string): Promise<void> {
   }
 }
 
-// Subscribe to a session's pub/sub channel so events from the server
-// (tool_call, text, tool_result, session_finished, etc.) arrive via
-// WebSocket and are dispatched into the session's reactive state.
-// Returns the unsubscribe function. Idempotent — if a subscription
-// already exists for this session, it's reused.
-function ensureSessionSubscription(session: ActiveSession): void {
-  if (sessionSubscriptions.has(session.id)) return;
-
+function buildAgentEventContext(session: ActiveSession): AgentEventContext {
   const sessionId = session.id;
-  const ctx: AgentEventContext = {
+  return {
     get session() {
-      // Always resolve from sessionMap so we track the latest
-      // reactive proxy — loadSession may replace the object.
       return sessionMap.get(sessionId) ?? session;
     },
     setCurrentRoleId: (roleId) => {
@@ -835,41 +693,52 @@ function ensureSessionSubscription(session: ActiveSession): void {
     onRoleChange,
     refreshRoles,
     scrollSidebarToBottom: () => rightSidebarRef.value?.scrollToBottom(),
+    onGenerationsDrained: () => {
+      if (currentSessionId.value === sessionId) {
+        markSessionRead(sessionId);
+      }
+    },
   };
+}
 
-  const channel = sessionChannel(session.id);
-  const unsub = pubsubSubscribe(channel, (data) => {
+function hasPendingGenerations(sessionId: string): boolean {
+  const live = sessionMap.get(sessionId);
+  return !!live && Object.keys(live.pendingGenerations).length > 0;
+}
+
+function handleSessionFinished(sessionId: string): void {
+  refreshSessionTranscript(sessionId).catch((err) => {
+    console.error("[handleSessionFinished] refresh failed:", err);
+  });
+  if (currentSessionId.value === sessionId) {
+    markSessionRead(sessionId);
+  } else if (!hasPendingGenerations(sessionId)) {
+    unsubscribeSession(sessionId);
+  }
+}
+
+function createSessionEventHandler(
+  session: ActiveSession,
+  ctx: AgentEventContext,
+): (data: unknown) => void {
+  return (data: unknown) => {
     const event = data as SseEvent;
     if (!event || typeof event !== "object") return;
-
-    // session_finished signals end-of-run. If the user is viewing
-    // this session, clear unread and keep the subscription alive so
-    // we receive events if another tab starts a new run. Only
-    // unsubscribe sessions the user is NOT currently viewing — the
-    // watch(currentSessionId) handler cleans up when switching away.
     if (event.type === EVENT_TYPES.sessionFinished) {
-      // Recover any events lost due to pub-sub disconnects during
-      // long runs (e.g. Docker builds). Fire-and-forget; if the
-      // re-fetch fails the user still has whatever events arrived
-      // via the live stream + can reload manually. See #350.
-      refreshSessionTranscript(session.id);
-      if (currentSessionId.value === session.id) {
-        markSessionRead(session.id);
-      } else {
-        // Keep the subscription alive if background generations are
-        // still in flight — otherwise their completion events would
-        // be lost and the busy indicator would stay stuck.
-        const live = sessionMap.get(session.id);
-        const hasPending =
-          !!live && Object.keys(live.pendingGenerations ?? {}).length > 0;
-        if (!hasPending) unsubscribeSession(session.id);
-      }
+      handleSessionFinished(session.id);
       return;
     }
+    applyAgentEvent(event, ctx).catch((err) => {
+      console.error("[applyAgentEvent] unhandled:", err);
+    });
+  };
+}
 
-    applyAgentEvent(event, ctx);
-  });
-
+function ensureSessionSubscription(session: ActiveSession): void {
+  if (sessionSubscriptions.has(session.id)) return;
+  const ctx = buildAgentEventContext(session);
+  const handler = createSessionEventHandler(session, ctx);
+  const unsub = pubsubSubscribe(sessionChannel(session.id), handler);
   sessionSubscriptions.set(session.id, unsub);
 }
 
@@ -878,136 +747,6 @@ function unsubscribeSession(chatSessionId: string): void {
   if (unsub) {
     unsub();
     sessionSubscriptions.delete(chatSessionId);
-  }
-}
-
-// Dispatch a single event from the agent pub/sub channel against an
-// active session. Hoisted so its switch counts toward its own
-// cognitive-complexity budget rather than ballooning the caller's
-// score. Reactive refs / callbacks that live in the setup scope are
-// passed via `ctx` — this keeps the handler a regular named function
-// with a clear signature.
-interface AgentEventContext {
-  session: ActiveSession;
-  setCurrentRoleId: (roleId: string) => void;
-  onRoleChange: () => void;
-  refreshRoles: () => Promise<void>;
-  scrollSidebarToBottom: () => void;
-}
-
-// Try to append a text chunk to the last assistant text-response
-// result in the session. Returns true if appended, false if a new
-// result should be created instead. Extracted to keep
-// applyAgentEvent under the cognitive-complexity threshold.
-// eslint-disable-next-line sonarjs/cognitive-complexity -- pre-existing 15; streaming append adds 1
-async function applyAgentEvent(
-  event: SseEvent,
-  ctx: AgentEventContext,
-): Promise<void> {
-  const { session } = ctx;
-  switch (event.type) {
-    case EVENT_TYPES.toolCall:
-      session.toolCallHistory.push({
-        toolUseId: event.toolUseId,
-        toolName: event.toolName,
-        args: event.args,
-        timestamp: Date.now(),
-      });
-      ctx.scrollSidebarToBottom();
-      return;
-    case EVENT_TYPES.toolCallResult: {
-      const entry = findPendingToolCall(
-        session.toolCallHistory,
-        event.toolUseId,
-      );
-      if (entry) entry.result = event.content;
-      ctx.scrollSidebarToBottom();
-      return;
-    }
-    case EVENT_TYPES.status:
-      session.statusMessage = event.message;
-      return;
-    case EVENT_TYPES.switchRole:
-      setTimeout(() => {
-        ctx.setCurrentRoleId(event.roleId);
-        ctx.onRoleChange();
-      }, 0);
-      return;
-    case EVENT_TYPES.rolesUpdated:
-      await ctx.refreshRoles();
-      return;
-    case EVENT_TYPES.text: {
-      const source = event.source ?? "assistant";
-      if (source === "user") {
-        // The tab that sent the message already added it locally via
-        // beginUserTurn. Deduplicate: skip if the last text-response
-        // is a user message with identical text.
-        const last = session.toolResults[session.toolResults.length - 1];
-        const lastData = last?.data as
-          | { role?: string; text?: string }
-          | undefined;
-        if (
-          last?.toolName === "text-response" &&
-          lastData?.role === "user" &&
-          lastData?.text === event.message
-        )
-          return;
-        pushResult(session, makeTextResult(event.message, "user"));
-        return;
-      }
-      // Streaming: append to the last assistant text-response if one
-      // exists, rather than creating a new card per chunk.
-      if (appendToLastAssistantText(session, event.message)) return;
-      const textResult = makeTextResult(event.message, "assistant");
-      pushResult(session, textResult);
-      if (
-        shouldSelectAssistantText(session.toolResults, session.runStartIndex)
-      ) {
-        session.selectedResultUuid = textResult.uuid;
-      }
-      return;
-    }
-    case EVENT_TYPES.toolResult: {
-      const { result } = event;
-      const existing = session.toolResults.findIndex(
-        (existingResult) => existingResult.uuid === result.uuid,
-      );
-      if (existing >= 0) {
-        session.toolResults[existing] = result;
-      } else {
-        pushResult(session, result);
-        session.selectedResultUuid = result.uuid;
-      }
-      return;
-    }
-    case EVENT_TYPES.error:
-      console.error("[agent] error event:", event.message);
-      pushErrorMessage(session, event.message);
-      return;
-    case EVENT_TYPES.sessionFinished:
-      // Handled in the subscription callback — no-op here.
-      return;
-    case EVENT_TYPES.generationStarted: {
-      const mapKey = generationKey(event.kind, event.filePath, event.key);
-      session.pendingGenerations[mapKey] = {
-        kind: event.kind,
-        filePath: event.filePath,
-        key: event.key,
-      };
-      return;
-    }
-    case EVENT_TYPES.generationFinished: {
-      const mapKey = generationKey(event.kind, event.filePath, event.key);
-      delete session.pendingGenerations[mapKey];
-      // When the last pending generation drains and the user is
-      // actively viewing this session, clear the unread flag server
-      // set on drain. Mirrors the sessionFinished handler.
-      const drained = Object.keys(session.pendingGenerations).length === 0;
-      if (drained && currentSessionId.value === session.id) {
-        markSessionRead(session.id);
-      }
-      return;
-    }
   }
 }
 
@@ -1029,40 +768,18 @@ async function sendMessage(text?: string) {
       (result) => result.uuid === session.selectedResultUuid,
     ) ?? undefined;
 
-  // Subscribe to the session's pub/sub channel BEFORE posting so we
-  // don't miss events. The subscription callback dispatches each
-  // event into the session's reactive state via applyAgentEvent.
   ensureSessionSubscription(session);
 
-  try {
-    const response = await apiFetchRaw(API_ROUTES.agent.run, {
-      method: "POST",
-      body: JSON.stringify(
-        buildAgentRequestBody({
-          message,
-          role: sessionRole,
-          chatSessionId: session.id,
-          selectedImageData:
-            fileSnapshot?.dataUrl ?? extractImageData(selectedRes),
-        }),
-      ),
-      headers: { "Content-Type": "application/json" },
-    });
-
-    if (!response.ok) {
-      const errBody = await response.text().catch(() => "");
-      pushErrorMessage(
-        session,
-        `Server error ${response.status}: ${errBody.slice(0, 200)}`,
-      );
-      unsubscribeSession(session.id);
-    }
-  } catch (err) {
-    console.error("[agent] fetch error:", err);
-    pushErrorMessage(
-      session,
-      err instanceof Error ? err.message : "Connection error.",
-    );
+  const result = await postAgentRun(
+    buildAgentRequestBody({
+      message,
+      role: sessionRole,
+      chatSessionId: session.id,
+      selectedImageData: fileSnapshot?.dataUrl ?? extractImageData(selectedRes),
+    }),
+  );
+  if (!result.ok) {
+    pushErrorMessage(session, result.error);
     unsubscribeSession(session.id);
   }
 }
