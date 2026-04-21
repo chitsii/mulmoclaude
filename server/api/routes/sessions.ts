@@ -154,7 +154,11 @@ export async function loadAllSessions(): Promise<
         if (indexEntry?.keywords !== undefined)
           summary.keywords = indexEntry.keywords;
         if (live) {
-          summary.isRunning = live.isRunning;
+          // Background generations (image/audio/movie) keep the session
+          // "busy" even when the agent turn has ended, so the sidebar
+          // indicator stays lit across view navigation.
+          summary.isRunning =
+            live.isRunning || Object.keys(live.pendingGenerations).length > 0;
           summary.statusMessage = live.statusMessage;
         }
         return {

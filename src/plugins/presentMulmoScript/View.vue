@@ -578,6 +578,8 @@ import { apiGet, apiPost, apiFetchRaw } from "../../utils/api";
 import { API_ROUTES } from "../../config/apiRoutes";
 import { errorMessage } from "../../utils/errors";
 import { useClipboardCopy } from "../../composables/useClipboardCopy";
+import { useActiveSession } from "../../composables/useActiveSession";
+import { GENERATION_KINDS } from "../../types/events";
 
 interface Beat {
   speaker?: string;
@@ -664,6 +666,31 @@ const characterKeys = computed(() => {
   const imgs = script.value.imageParams?.images ?? {};
   return Object.keys(imgs).filter((k) => imgs[k]?.type === "imagePrompt");
 });
+
+// Session-scoped pending generations — lets spinners survive view
+// unmount/remount and tags new generations on the correct session
+// channel so the cross-session sidebar indicator stays lit.
+const activeSessionRef = useActiveSession();
+const chatSessionId = computed(() => activeSessionRef?.value?.id);
+
+const pendingForThisScript = computed<Record<string, true>>(() => {
+  const out: Record<string, true> = {};
+  const pending = activeSessionRef?.value?.pendingGenerations ?? {};
+  const fp = filePath.value;
+  if (!fp) return out;
+  for (const key of Object.keys(pending)) {
+    const parts = key.split(":");
+    if (parts.length >= 3 && parts[1] === fp) {
+      out[key] = true;
+    }
+  }
+  return out;
+});
+
+// Local renderState / charRenderState / audioState / movieGenerating
+// are kept in sync with `pendingForThisScript` by the watcher below
+// and by `initializeScript`, so the template continues to read them
+// without needing per-kind predicates here.
 
 function characterPrompt(key: string): string {
   return (script.value.imageParams?.images?.[key]?.prompt as string) ?? "";
@@ -849,7 +876,11 @@ async function renderBeat(index: number) {
   renderState[index] = "rendering";
   const response = await apiPost<{ image?: string; error?: string }>(
     API_ROUTES.mulmoScript.renderBeat,
-    { filePath: filePath.value, beatIndex: index },
+    {
+      filePath: filePath.value,
+      beatIndex: index,
+      chatSessionId: chatSessionId.value,
+    },
   );
   if (!response.ok) {
     renderErrors[index] = response.error || "Render failed";
@@ -871,7 +902,12 @@ async function regenerateBeat(index: number) {
   renderState[index] = "rendering";
   const response = await apiPost<{ image?: string; error?: string }>(
     API_ROUTES.mulmoScript.renderBeat,
-    { filePath: filePath.value, beatIndex: index, force: true },
+    {
+      filePath: filePath.value,
+      beatIndex: index,
+      force: true,
+      chatSessionId: chatSessionId.value,
+    },
   );
   if (!response.ok) {
     renderErrors[index] = response.error || "Render failed";
@@ -916,7 +952,11 @@ async function generateAudio(index: number) {
   delete audioErrors[index];
   const response = await apiPost<{ audio?: string; error?: string }>(
     API_ROUTES.mulmoScript.generateBeatAudio,
-    { filePath: filePath.value, beatIndex: index },
+    {
+      filePath: filePath.value,
+      beatIndex: index,
+      chatSessionId: chatSessionId.value,
+    },
   );
   if (!response.ok) {
     audioErrors[index] = response.error || "Audio generation failed";
@@ -1097,7 +1137,12 @@ async function renderCharacter(key: string, force: boolean) {
   delete charErrors[key];
   const response = await apiPost<{ image?: string; error?: string }>(
     API_ROUTES.mulmoScript.renderCharacter,
-    { filePath: filePath.value, key, force },
+    {
+      filePath: filePath.value,
+      key,
+      force,
+      chatSessionId: chatSessionId.value,
+    },
   );
   if (!response.ok) {
     charErrors[key] = response.error || "Render failed";
@@ -1172,17 +1217,85 @@ async function initializeScript() {
     }
     // ignore errors
   }
+
+  // Reflect any generations that were already in flight when we
+  // mounted (user switched away mid-generation and came back).
+  for (const key of Object.keys(pendingForThisScript.value)) {
+    reflectGenerationStart(key);
+  }
 }
 
 onMounted(initializeScript);
 watch(() => props.selectedResult, initializeScript);
+
+// Keep the view in sync with generations that started from a different
+// view mount or a parallel tab. When a generation key for this script
+// disappears from session.pendingGenerations we reload the relevant
+// artifact off disk; when one appears we mirror it into the local
+// "rendering" state so spinners show even after a remount.
+watch(pendingForThisScript, (now, prev = {}) => {
+  for (const key of Object.keys(now)) {
+    if (!(key in prev)) reflectGenerationStart(key);
+  }
+  for (const key of Object.keys(prev)) {
+    if (!(key in now)) reflectGenerationFinish(key);
+  }
+});
+
+function reflectGenerationStart(key: string): void {
+  const [kind, , tail] = key.split(":");
+  if (kind === GENERATION_KINDS.beatImage) {
+    const idx = Number(tail);
+    if (!renderedImages[idx]) renderState[idx] = "rendering";
+  } else if (kind === GENERATION_KINDS.beatAudio) {
+    const idx = Number(tail);
+    if (!beatAudios[idx]) audioState[idx] = "generating";
+  } else if (kind === GENERATION_KINDS.characterImage) {
+    if (!charImages[tail]) charRenderState[tail] = "rendering";
+  } else if (kind === GENERATION_KINDS.movie) {
+    movieGenerating.value = true;
+  }
+}
+
+async function reflectGenerationFinish(key: string): Promise<void> {
+  const [kind, , tail] = key.split(":");
+  if (kind === GENERATION_KINDS.beatImage) {
+    const idx = Number(tail);
+    await loadExistingBeatImage(idx);
+    if (renderState[idx] === "rendering") delete renderState[idx];
+  } else if (kind === GENERATION_KINDS.beatAudio) {
+    const idx = Number(tail);
+    await loadExistingBeatAudio(idx);
+    if (audioState[idx] === "generating") delete audioState[idx];
+  } else if (kind === GENERATION_KINDS.characterImage) {
+    await loadExistingCharacterImage(tail);
+    if (charRenderState[tail] === "rendering") delete charRenderState[tail];
+  } else if (kind === GENERATION_KINDS.movie) {
+    movieGenerating.value = false;
+    await refreshMoviePath();
+  }
+}
+
+async function refreshMoviePath(): Promise<void> {
+  if (!filePath.value) return;
+  const response = await apiGet<{ moviePath?: string }>(
+    API_ROUTES.mulmoScript.movieStatus,
+    { filePath: filePath.value },
+  );
+  if (response.ok && response.data.moviePath) {
+    moviePath.value = response.data.moviePath;
+  }
+}
 
 async function generateMovie() {
   movieGenerating.value = true;
   try {
     const res = await apiFetchRaw(API_ROUTES.mulmoScript.generateMovie, {
       method: "POST",
-      body: JSON.stringify({ filePath: filePath.value }),
+      body: JSON.stringify({
+        filePath: filePath.value,
+        chatSessionId: chatSessionId.value,
+      }),
       headers: { "Content-Type": "application/json" },
     });
     if (!res.ok || !res.body) throw new Error("Generation failed");

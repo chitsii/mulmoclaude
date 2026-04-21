@@ -12,7 +12,11 @@ import {
 } from "../../../src/config/pubsubChannels.js";
 import { log } from "../../system/logger/index.js";
 import { updateHasUnread } from "../../utils/files/session-io.js";
-import { EVENT_TYPES } from "../../../src/types/events.js";
+import {
+  EVENT_TYPES,
+  type GenerationKind,
+  generationKey,
+} from "../../../src/types/events.js";
 import { ONE_HOUR_MS, ONE_MINUTE_MS } from "../../utils/time.js";
 
 // ── Types ──────────────────────────────────────────────────────
@@ -39,6 +43,12 @@ export interface ServerSession {
   updatedAt: string;
   /** Kills the spawned Claude CLI process for this session. */
   abortRun?: () => void;
+  /**
+   * In-flight background generations keyed by `generationKey(kind, filePath, key)`.
+   * Non-empty means the session has ongoing work even when `isRunning` (agent turn)
+   * is false — used to keep the busy indicator lit across view navigation.
+   */
+  pendingGenerations: Record<string, GenerationKind>;
 }
 
 // ── Constants ──────────────────────────────────────────────────
@@ -49,6 +59,14 @@ const EVICTION_CHECK_INTERVAL_MS = 5 * ONE_MINUTE_MS;
 // ── Store ──────────────────────────────────────────────────────
 
 const store = new Map<string, ServerSession>();
+/**
+ * Parallel pending-generation tracking for sessions that aren't in the
+ * in-memory store. The MulmoScript view can be opened on a session
+ * whose full ServerSession entry never existed or was evicted after
+ * idle timeout — we still want to mark unread and fire
+ * notifySessionsChanged when the work drains. Cleared on drain.
+ */
+const storelessPending = new Map<string, Set<string>>();
 let pubsub: IPubSub | null = null;
 let evictionTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -92,6 +110,7 @@ export function getOrCreateSession(
     selectedImageData: opts.selectedImageData,
     startedAt: opts.startedAt,
     updatedAt: opts.updatedAt,
+    pendingGenerations: {},
   };
   store.set(chatSessionId, session);
   return session;
@@ -167,11 +186,99 @@ export function pushSessionEvent(
   chatSessionId: string,
   event: Record<string, unknown>,
 ): void {
-  const session = store.get(chatSessionId);
-  if (!session) return;
-
   const type = event.type as string;
 
+  // Delivery to subscribers is always attempted — plugin-initiated
+  // generation events can fire for sessions that aren't in the
+  // in-memory store (loaded from disk, evicted after idle timeout,
+  // etc.). The client's subscription is on the channel, not on any
+  // server-side session object, so the UI still updates.
+  publishToSessionChannel(chatSessionId, event);
+
+  const generationDelta = resolveGenerationDelta(chatSessionId, type, event);
+  if (generationDelta === "same") return;
+
+  // When the last pending generation completes, flag the session as
+  // unread — same semantics as endRun(): "something for the user to
+  // notice". Clients viewing the session clear it via markRead.
+  if (generationDelta === "drained") {
+    const session = store.get(chatSessionId);
+    if (session) session.hasUnread = true;
+    persistHasUnread(chatSessionId, true);
+  }
+
+  // A generation starting or finishing changes the session summary's
+  // isRunning flag, so the sidebar needs to refetch. We fire on both
+  // transitions (started and drained) so the sidebar indicator and
+  // hasUnread both propagate without waiting for a later refetch.
+  notifySessionsChanged();
+}
+
+/**
+ * Dispatch the event to whichever pending tracker the session has.
+ * Returns the empty↔non-empty transition so the caller can decide
+ * whether to flip hasUnread and notify.
+ */
+function resolveGenerationDelta(
+  chatSessionId: string,
+  type: string,
+  event: Record<string, unknown>,
+): GenerationDelta {
+  const session = store.get(chatSessionId);
+  if (session) return applyEventToSession(session, type, event);
+  if (
+    type === EVENT_TYPES.generationStarted ||
+    type === EVENT_TYPES.generationFinished
+  ) {
+    return updateStorelessPending(chatSessionId, type, event);
+  }
+  return "same";
+}
+
+function updateStorelessPending(
+  chatSessionId: string,
+  type: string,
+  event: Record<string, unknown>,
+): GenerationDelta {
+  const kind = event.kind as GenerationKind;
+  const filePath = event.filePath as string;
+  const key = event.key as string;
+  const mapKey = generationKey(kind, filePath, key);
+  const existing = storelessPending.get(chatSessionId);
+  const wasEmpty = !existing || existing.size === 0;
+
+  if (type === EVENT_TYPES.generationStarted) {
+    const set = existing ?? new Set<string>();
+    set.add(mapKey);
+    if (!existing) storelessPending.set(chatSessionId, set);
+  } else if (existing) {
+    existing.delete(mapKey);
+    if (existing.size === 0) storelessPending.delete(chatSessionId);
+  }
+
+  const isEmpty = (storelessPending.get(chatSessionId)?.size ?? 0) === 0;
+  if (wasEmpty === isEmpty) return "same";
+  return isEmpty ? "drained" : "started";
+}
+
+/**
+ * How a generation event affected the session's pendingGenerations set:
+ *
+ * - `started`: empty → non-empty (first generation in a quiet session)
+ * - `drained`: non-empty → empty (last pending generation finished)
+ * - `same`: no transition (parallel starts/finishes within a burst,
+ *   or a non-generation event type)
+ *
+ * Callers use this to decide whether to fire `notifySessionsChanged()`
+ * and whether to flip hasUnread on drain.
+ */
+type GenerationDelta = "started" | "drained" | "same";
+
+function applyEventToSession(
+  session: ServerSession,
+  type: string,
+  event: Record<string, unknown>,
+): GenerationDelta {
   if (type === EVENT_TYPES.toolCall) {
     session.toolCallHistory.push({
       toolUseId: event.toolUseId as string,
@@ -188,9 +295,62 @@ export function pushSessionEvent(
     session.statusMessage = event.message as string;
     // No notifySessionsChanged() here — status updates are high-frequency
     // and flow to subscribed clients via the session.<id> channel directly.
+  } else if (
+    type === EVENT_TYPES.generationStarted ||
+    type === EVENT_TYPES.generationFinished
+  ) {
+    return updatePendingGenerations(session, type, event);
+  }
+  return "same";
+}
+
+function updatePendingGenerations(
+  session: ServerSession,
+  type: string,
+  event: Record<string, unknown>,
+): GenerationDelta {
+  const kind = event.kind as GenerationKind;
+  const filePath = event.filePath as string;
+  const key = event.key as string;
+  const mapKey = generationKey(kind, filePath, key);
+  const wasEmpty = Object.keys(session.pendingGenerations).length === 0;
+
+  if (type === EVENT_TYPES.generationStarted) {
+    session.pendingGenerations[mapKey] = kind;
+  } else {
+    delete session.pendingGenerations[mapKey];
   }
 
-  publishToSessionChannel(chatSessionId, event);
+  const isEmpty = Object.keys(session.pendingGenerations).length === 0;
+  if (wasEmpty === isEmpty) return "same";
+  return isEmpty ? "drained" : "started";
+}
+
+/**
+ * Convenience wrapper for plugin routes that run long async jobs.
+ * Publishes a generationStarted or generationFinished event on the
+ * session channel. Safely no-ops when chatSessionId is missing — lets
+ * callers that aren't inside a session context use the same routes.
+ */
+export function publishGeneration(
+  chatSessionId: string | undefined,
+  kind: GenerationKind,
+  filePath: string,
+  key: string,
+  finished: boolean,
+  error?: string,
+): void {
+  if (!chatSessionId) return;
+  const event: Record<string, unknown> = {
+    type: finished
+      ? EVENT_TYPES.generationFinished
+      : EVENT_TYPES.generationStarted,
+    kind,
+    filePath,
+    key,
+  };
+  if (error) event.error = error;
+  pushSessionEvent(chatSessionId, event);
 }
 
 export type PushToolResultOutcome =
@@ -313,6 +473,7 @@ function evictIdleSessions(): void {
  */
 export function __resetForTests(): void {
   store.clear();
+  storelessPending.clear();
   pubsub = null;
   if (evictionTimer) {
     clearInterval(evictionTimer);

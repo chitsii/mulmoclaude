@@ -270,7 +270,7 @@ import {
   type SessionEntry,
   type ActiveSession,
 } from "./types/session";
-import { EVENT_TYPES } from "./types/events";
+import { EVENT_TYPES, generationKey } from "./types/events";
 import { extractImageData, makeTextResult } from "./utils/tools/result";
 import { findScrollableChild } from "./utils/dom/scrollable";
 import { buildAgentRequestBody } from "./utils/agent/request";
@@ -298,6 +298,7 @@ import { useSessionHistory } from "./composables/useSessionHistory";
 import { useRightSidebar } from "./composables/useRightSidebar";
 import { useEventListeners } from "./composables/useEventListeners";
 import { provideAppApi } from "./composables/useAppApi";
+import { provideActiveSession } from "./composables/useActiveSession";
 import { useRoute, useRouter, isNavigationFailure } from "vue-router";
 import { apiGet, apiPost, apiFetchRaw } from "./utils/api";
 import { API_ROUTES } from "./config/apiRoutes";
@@ -510,10 +511,20 @@ const sidebarResults = computed(() => {
 const currentSummary = computed(() =>
   sessions.value.find((s) => s.id === currentSessionId.value),
 );
-const isRunning = computed(
-  () =>
-    currentSummary.value?.isRunning ?? activeSession.value?.isRunning ?? false,
-);
+// The server-side summary already merges pendingGenerations into
+// `isRunning` (see server/api/routes/sessions.ts), but pub/sub events
+// for background generations arrive faster than the next sessions
+// refetch — fold the in-memory map in so ChatInput reflects the new
+// state immediately.
+const isRunning = computed(() => {
+  const active = activeSession.value;
+  const pending = active
+    ? Object.keys(active.pendingGenerations).length > 0
+    : false;
+  return (
+    currentSummary.value?.isRunning || active?.isRunning || pending || false
+  );
+});
 const statusMessage = computed(
   () =>
     currentSummary.value?.statusMessage ??
@@ -762,10 +773,17 @@ watch(currentSessionId, (id) => {
   if (session) {
     ensureSessionSubscription(session);
   }
-  // Unsubscribe from the previous session if it's not running
+  // Unsubscribe from the previous session if it's not running and has
+  // no in-flight background generations. Tearing down the subscription
+  // while a generation is still running would orphan its completion
+  // event, leaving the session's busy indicator stuck on.
   if (previousSessionId && previousSessionId !== id) {
     const prevSession = sessionMap.get(previousSessionId);
-    if (prevSession && !prevSession.isRunning) {
+    const prevBusy =
+      !!prevSession &&
+      (prevSession.isRunning ||
+        Object.keys(prevSession.pendingGenerations ?? {}).length > 0);
+    if (prevSession && !prevBusy) {
       unsubscribeSession(previousSessionId);
     }
   }
@@ -919,6 +937,7 @@ function createNewSession(roleId?: string): ActiveSession {
     startedAt: now,
     updatedAt: now,
     runStartIndex: 0,
+    pendingGenerations: {},
   };
   sessionMap.set(id, session);
   navigateToSession(id, true);
@@ -1043,6 +1062,7 @@ async function loadSession(id: string) {
     startedAt,
     updatedAt,
     runStartIndex: toolResultsList.length,
+    pendingGenerations: {},
   };
   sessionMap.set(id, newSession);
   // Subscribe immediately — the watch(currentSessionId) may have
@@ -1135,7 +1155,13 @@ function ensureSessionSubscription(session: ActiveSession): void {
       if (currentSessionId.value === session.id) {
         markSessionRead(session.id);
       } else {
-        unsubscribeSession(session.id);
+        // Keep the subscription alive if background generations are
+        // still in flight — otherwise their completion events would
+        // be lost and the busy indicator would stay stuck.
+        const live = sessionMap.get(session.id);
+        const hasPending =
+          !!live && Object.keys(live.pendingGenerations ?? {}).length > 0;
+        if (!hasPending) unsubscribeSession(session.id);
       }
       return;
     }
@@ -1274,6 +1300,23 @@ async function applyAgentEvent(
     case EVENT_TYPES.sessionFinished:
       // Handled in the subscription callback — no-op here.
       return;
+    case EVENT_TYPES.generationStarted: {
+      const mapKey = generationKey(event.kind, event.filePath, event.key);
+      session.pendingGenerations[mapKey] = event.kind;
+      return;
+    }
+    case EVENT_TYPES.generationFinished: {
+      const mapKey = generationKey(event.kind, event.filePath, event.key);
+      delete session.pendingGenerations[mapKey];
+      // When the last pending generation drains and the user is
+      // actively viewing this session, clear the unread flag server
+      // set on drain. Mirrors the sessionFinished handler.
+      const drained = Object.keys(session.pendingGenerations).length === 0;
+      if (drained && currentSessionId.value === session.id) {
+        markSessionRead(session.id);
+      }
+      return;
+    }
   }
 }
 
@@ -1343,6 +1386,9 @@ provideAppApi({
   refreshRoles,
   sendMessage: (message: string) => sendMessage(message),
 });
+// Plugin Views that need to tag background work with the current
+// session (e.g. MulmoScript generations) inject this.
+provideActiveSession(activeSession);
 
 useEventListeners({
   onKeyNavigation: handleKeyNavigation,

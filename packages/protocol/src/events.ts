@@ -16,6 +16,49 @@ export const EVENT_TYPES = {
   sessionFinished: "session_finished",
   sessionMeta: "session_meta",
   rolesUpdated: "roles_updated",
+  generationStarted: "generation_started",
+  generationFinished: "generation_finished",
 } as const;
 
 export type EventType = (typeof EVENT_TYPES)[keyof typeof EVENT_TYPES];
+
+/**
+ * Long-running async work originated by a plugin (MulmoScript etc.)
+ * that continues past the initial HTTP response. The server publishes
+ * a `generationStarted` event when the work begins and a
+ * `generationFinished` event when it completes (or fails). Clients
+ * track the in-flight set in `Session.pendingGenerations` so the UI
+ * can keep a "busy" indicator lit across view navigation.
+ */
+export const GENERATION_KINDS = {
+  beatImage: "beatImage",
+  characterImage: "characterImage",
+  beatAudio: "beatAudio",
+  movie: "movie",
+} as const;
+
+export type GenerationKind =
+  (typeof GENERATION_KINDS)[keyof typeof GENERATION_KINDS];
+
+export interface GenerationEvent {
+  type: "generation_started" | "generation_finished";
+  kind: GenerationKind;
+  /** MulmoScript file path — identifies the script the generation belongs to. */
+  filePath: string;
+  /** beatIndex (as string) for beat*, character key for characterImage, "" for movie. */
+  key: string;
+  /** Only set on generation_finished when the work failed. */
+  error?: string;
+}
+
+/**
+ * Stable map-key for a generation: the triple (kind, filePath, key).
+ * Both server and client use this to update `pendingGenerations`.
+ */
+export function generationKey(
+  kind: GenerationKind,
+  filePath: string,
+  key: string,
+): string {
+  return `${kind}:${filePath}:${key}`;
+}

@@ -29,6 +29,16 @@ function buildLiveSummary(
     updatedAt: live.updatedAt,
     preview,
   };
+  // Fold in-memory pending generations into isRunning. The server
+  // summary also carries this (via /api/sessions) but arrives on a
+  // REST refetch — using the live map too makes the session-tab
+  // spinner react within one socket round-trip of the click.
+  const pending = live.pendingGenerations ?? {};
+  const livePending = Object.keys(pending).length > 0;
+  const isRunning =
+    serverEntry?.isRunning !== undefined
+      ? serverEntry.isRunning || livePending
+      : livePending || undefined;
   // Carry summary / keywords ONLY if the server already has them.
   // Object-spread with a conditional object keeps us from adding
   // `undefined` values that would otherwise show up as explicit
@@ -39,10 +49,7 @@ function buildLiveSummary(
     ...(serverEntry?.keywords !== undefined && {
       keywords: serverEntry.keywords,
     }),
-    // Carry live state from the server entry (authoritative source).
-    ...(serverEntry?.isRunning !== undefined && {
-      isRunning: serverEntry.isRunning,
-    }),
+    ...(isRunning !== undefined && { isRunning }),
     ...(serverEntry?.hasUnread !== undefined && {
       hasUnread: serverEntry.hasUnread,
     }),
