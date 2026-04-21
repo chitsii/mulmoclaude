@@ -94,8 +94,12 @@ When `action === "update"` and `oldRoleId` is present and differs from
    (`roleExists(role.id)`) — this guards against silently overwriting a
    neighbour.
 3. `saveRole(role.id, roleToSave)` — writes the new file.
-4. `deleteRole(oldRoleId)` — removes the old file (guarded against
-   deleting a built-in id or a missing file).
+4. `deleteRole(oldRoleId)` — removes the old file (guarded only
+   against a missing file). A file at `config/roles/<builtin>.json`
+   is a user-created override, not the built-in itself (which lives in
+   `BUILTIN_ROLES`); leaving it behind on rename would continue to
+   shadow the built-in and couldn't be cleaned up via `delete`, which
+   also rejects built-in ids.
 
 Old `update` requests without `oldRoleId` keep their previous behaviour
 (overwrite in place), so existing LLM tool-calls are unaffected.

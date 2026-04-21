@@ -98,7 +98,12 @@ function saveRoleResult(input: ManageRolesInput, sessionId: string): Record<stri
   };
 
   saveRole(role.id, roleToSave);
-  if (isRename && oldRoleId && !BUILTIN_IDS.has(oldRoleId) && roleExists(oldRoleId)) {
+  // On rename, remove the old file even if its id matches a built-in —
+  // a file at `config/roles/<builtin>.json` is a user-created override,
+  // not the built-in itself (which lives in BUILTIN_ROLES). Leaving it
+  // behind would shadow the built-in and couldn't be cleaned up via
+  // `delete`, which also rejects built-in ids.
+  if (isRename && oldRoleId && roleExists(oldRoleId)) {
     deleteRole(oldRoleId);
   }
   notifyRolesUpdated(sessionId);

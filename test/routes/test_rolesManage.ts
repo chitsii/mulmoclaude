@@ -104,6 +104,29 @@ describe("executeManageRoles — rename (oldRoleId)", () => {
     rolesIo.deleteRole("beta");
   });
 
+  it("removes a built-in-id override file when renaming away from it", async () => {
+    // A file at config/roles/general.json is a user override of the
+    // built-in "general" role. Renaming it to a non-builtin id must
+    // remove the override file — otherwise it would continue to shadow
+    // the built-in and couldn't be deleted through the manage API.
+    rolesIo.saveRole("general", sampleRole("general"));
+    assert.equal(rolesIo.roleExists("general"), true);
+
+    const result = await rolesRoute.executeManageRoles(
+      {
+        action: "update",
+        role: sampleRole("general_custom"),
+        oldRoleId: "general",
+      },
+      "test-session",
+    );
+
+    assert.equal(result.success, true, `result: ${JSON.stringify(result)}`);
+    assert.equal(rolesIo.roleExists("general_custom"), true, "new role file should exist");
+    assert.equal(rolesIo.roleExists("general"), false, "built-in override file should have been deleted");
+    rolesIo.deleteRole("general_custom");
+  });
+
   it("plain update (no oldRoleId) still works and does not delete anything", async () => {
     rolesIo.saveRole("plain", sampleRole("plain"));
     const result = await rolesRoute.executeManageRoles(
