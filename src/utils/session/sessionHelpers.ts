@@ -92,6 +92,20 @@ export function applyTextEvent(
   }
 }
 
+/** In-place update a result that was re-emitted by a plugin view
+ *  (e.g. after the user edits a chart config). */
+export function updateResult(
+  session: ActiveSession,
+  updatedResult: ToolResultComplete,
+): void {
+  const index = session.toolResults.findIndex(
+    (r) => r.uuid === updatedResult.uuid,
+  );
+  if (index !== -1) {
+    Object.assign(session.toolResults[index], updatedResult);
+  }
+}
+
 /** Handle an incoming tool_result event: upsert into the session's
  *  result list. Selects the result only on insert; in-place updates
  *  preserve the user's current selection. */

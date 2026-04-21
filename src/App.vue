@@ -268,6 +268,7 @@ import {
 import {
   pushErrorMessage,
   beginUserTurn,
+  updateResult,
 } from "./utils/session/sessionHelpers";
 import { maybeSeedRoleDefault } from "./utils/session/seedRoleDefault";
 import { createEmptySession } from "./utils/session/sessionFactory";
@@ -287,6 +288,7 @@ import { useSessionDerived } from "./composables/useSessionDerived";
 import { useFaviconState } from "./composables/useFaviconState";
 import { useMergedSessions } from "./composables/useMergedSessions";
 import { useCanvasViewMode } from "./composables/useCanvasViewMode";
+import { useSelectedResult } from "./composables/useSelectedResult";
 import { useMcpTools } from "./composables/useMcpTools";
 import { useRoles } from "./composables/useRoles";
 import { usePubSub } from "./composables/usePubSub";
@@ -297,7 +299,7 @@ import { useRightSidebar } from "./composables/useRightSidebar";
 import { useEventListeners } from "./composables/useEventListeners";
 import { provideAppApi } from "./composables/useAppApi";
 import { provideActiveSession } from "./composables/useActiveSession";
-import { useRoute, useRouter, isNavigationFailure } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { apiGet } from "./utils/api";
 import { API_ROUTES } from "./config/apiRoutes";
 import { needsGemini } from "./utils/role/plugins";
@@ -389,37 +391,6 @@ watch(
   },
 );
 
-// External URL changes for ?result= → sync into the session's
-// selectedResultUuid. This handles back/forward and direct URL
-// access with a specific result pre-selected.
-watch(
-  () => route.query.result,
-  (newResult) => {
-    const session = sessionMap.get(currentSessionId.value);
-    if (!session) return;
-    const resultId = typeof newResult === "string" ? newResult : null;
-    if (resultId !== session.selectedResultUuid) {
-      session.selectedResultUuid = resultId;
-    }
-  },
-);
-
-// Deduplicate consecutive tool results with the same toolName for the
-const selectedResultUuid = computed({
-  get: () => activeSession.value?.selectedResultUuid ?? null,
-  set: (val: string | null) => {
-    if (activeSession.value) activeSession.value.selectedResultUuid = val;
-    // Sync to URL. Null/empty → remove ?result= for clean URLs.
-    const { result: __result, ...restQuery } = route.query;
-    const nextQuery = val ? { ...restQuery, result: val } : restQuery;
-    router.replace({ query: nextQuery }).catch((err: unknown) => {
-      if (!isNavigationFailure(err)) {
-        console.error("[selectedResultUuid] navigation failed:", err);
-      }
-    });
-  },
-});
-
 // --- Global state ---
 const { roles, currentRoleId, currentRole, refreshRoles } = useRoles();
 
@@ -447,6 +418,12 @@ const {
   activeSessionCount,
   unreadCount,
 } = useSessionDerived({ sessionMap, currentSessionId, sessions });
+
+const { selectedResultUuid } = useSelectedResult({
+  activeSession,
+  sessionMap,
+  currentSessionId,
+});
 
 // ── Dynamic favicon (#470) ──────────────────────────────────
 useFaviconState({ isRunning, currentSummary, activeSession });
@@ -515,10 +492,7 @@ function handleNewSessionClick(): void {
   createNewSession();
 }
 
-// In plugin views (Todos / Files / ...) no chat is active, so the
-// Measure the top bar's height whenever the history popup is about
-// to open. Defer to nextTick so the popup's v-if transition doesn't
-// race the measurement.
+// Measure the top bar's height when the history popup opens.
 watch(showHistory, (open) => {
   if (open) {
     nextTick(() => {
@@ -544,11 +518,6 @@ const selectedResult = computed(
     toolResults.value.find((r) => r.uuid === selectedResultUuid.value) ?? null,
 );
 
-// Type-guard for the user-side branch of a text-response result. Used
-// to surface the first user message as a preview for live sessions
-// that haven't been persisted to disk yet.
-// Merged list for the history pane: live sessions in `sessionMap`
-// merged with server-only sessions, sorted newest-first by
 const { mergedSessions, tabSessions } = useMergedSessions({
   sessionMap,
   sessions,
@@ -609,12 +578,7 @@ function onQueryEdit(query: string): void {
 }
 
 function handleUpdateResult(updatedResult: ToolResultComplete) {
-  const results = activeSession.value?.toolResults;
-  if (!results) return;
-  const index = results.findIndex((r) => r.uuid === updatedResult.uuid);
-  if (index !== -1) {
-    Object.assign(results[index], updatedResult);
-  }
+  if (activeSession.value) updateResult(activeSession.value, updatedResult);
 }
 
 function onSidebarItemClick(uuid: string) {
