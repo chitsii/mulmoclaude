@@ -160,7 +160,13 @@ function applyChanges() {
 const isAssistant = computed(() => (props.selectedResult.data?.role ?? "assistant") === "assistant");
 
 function openLinksInNewTab(event: MouseEvent): void {
-  handleExternalLinkClick(event);
+  if (handleExternalLinkClick(event)) return;
+  // Prevent relative workspace-path links (rendered by marked from
+  // agent Markdown) from navigating the SPA to a non-existent route.
+  const target = event.target as HTMLElement;
+  if (target.closest("a")) {
+    event.preventDefault();
+  }
 }
 
 const { pdfDownloading, pdfError, downloadPdf: rawDownloadPdf } = usePdfDownload();
