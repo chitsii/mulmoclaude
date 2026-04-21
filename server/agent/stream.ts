@@ -98,7 +98,7 @@ function extractTextDelta(event: RawStreamEvent): string | null {
 // Filter assistant block events: when deltas already streamed the
 // text, remove text-type events to prevent duplication.
 function filterAssistantBlocks(blockEvents: AgentEvent[], deltaStreamed: boolean): AgentEvent[] {
-  return deltaStreamed ? blockEvents.filter((e) => e.type !== EVENT_TYPES.text) : blockEvents;
+  return deltaStreamed ? blockEvents.filter((agentEvent) => agentEvent.type !== EVENT_TYPES.text) : blockEvents;
 }
 
 // Stateful parser that deduplicates text across the three stages
@@ -138,7 +138,7 @@ export function createStreamParser(): {
       if (event.session_id) {
         events.push({
           type: EVENT_TYPES.claudeSessionId,
-          id: event.session_id,
+          ["id"]: event.session_id,
         });
       }
       textStreamedFromDeltas = false;
@@ -151,11 +151,11 @@ export function createStreamParser(): {
     }
 
     const content = event.message?.content;
-    const blockEvents = Array.isArray(content) ? content.map(blockToEvent).filter((e): e is AgentEvent => e !== null) : [];
+    const blockEvents = Array.isArray(content) ? content.map(blockToEvent).filter((agentEvent): agentEvent is AgentEvent => agentEvent !== null) : [];
 
     if (event.type === "assistant") {
       const filtered = filterAssistantBlocks(blockEvents, textStreamedFromDeltas);
-      if (filtered.some((e) => e.type === EVENT_TYPES.text)) {
+      if (filtered.some((agentEvent) => agentEvent.type === EVENT_TYPES.text)) {
         textEmitted = true;
       }
       return [{ type: EVENT_TYPES.status, message: "Thinking..." }, ...filtered];
@@ -174,7 +174,7 @@ export function parseStreamEvent(event: RawStreamEvent): AgentEvent[] {
     if (event.session_id) {
       events.push({
         type: EVENT_TYPES.claudeSessionId,
-        id: event.session_id,
+        ["id"]: event.session_id,
       });
     }
     return events;
@@ -185,7 +185,7 @@ export function parseStreamEvent(event: RawStreamEvent): AgentEvent[] {
   }
 
   const content = event.message?.content;
-  const blockEvents = Array.isArray(content) ? content.map(blockToEvent).filter((e): e is AgentEvent => e !== null) : [];
+  const blockEvents = Array.isArray(content) ? content.map(blockToEvent).filter((agentEvent): agentEvent is AgentEvent => agentEvent !== null) : [];
 
   if (event.type === "assistant") {
     return [{ type: EVENT_TYPES.status, message: "Thinking..." }, ...blockEvents];
