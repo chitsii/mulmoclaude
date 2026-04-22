@@ -72,6 +72,7 @@
         v-for="entry in pageEntries"
         :key="entry.slug"
         class="flex items-baseline gap-2 px-4 py-1 cursor-pointer hover:bg-blue-50 transition-colors"
+        :data-testid="`wiki-page-entry-${entry.slug || entry.title}`"
         @click="navigatePage(entry.slug || entry.title)"
       >
         <span class="font-medium text-sm text-gray-800 shrink-0">{{ entry.title }}</span>
@@ -249,13 +250,21 @@ function pushWiki(query: LocationQuery) {
   });
 }
 
+// Preserve siblings only when already on /wiki. Cross-route jumps
+// (e.g. from /chat, where the URL may carry `?result=<uuid>`) start
+// from a clean query so chat-specific params don't bleed into /wiki.
+function currentWikiQuery(): LocationQuery {
+  return route.name === PAGE_ROUTES.wiki ? route.query : {};
+}
+
 function navigate(newAction: "index" | WikiTabView) {
-  const query = newAction === "index" ? dropKeys(route.query, ["page", "view"]) : { ...dropKeys(route.query, ["page"]), view: newAction };
+  const base = currentWikiQuery();
+  const query = newAction === "index" ? dropKeys(base, ["page", "view"]) : { ...dropKeys(base, ["page"]), view: newAction };
   pushWiki(query);
 }
 
 function navigatePage(pageName: string) {
-  pushWiki({ ...dropKeys(route.query, ["view"]), page: pageName });
+  pushWiki({ ...dropKeys(currentWikiQuery(), ["view"]), page: pageName });
 }
 
 function handleContentClick(event: MouseEvent) {
