@@ -150,7 +150,7 @@ async function resolvePagePath(pageName: string): Promise<string | null> {
   // wiki index so [[日出生台演習場]] resolves to its page file.
   const indexContent = readFileOrEmpty(indexFile());
   const entries = parseIndexEntries(indexContent);
-  const titleMatch = entries.find((entry) => entry.title === pageName || entry.title.includes(pageName) || pageName.includes(entry.title));
+  const titleMatch = entries.find((entry) => entry.title === pageName);
   if (titleMatch && slugs.has(titleMatch.slug)) {
     return path.join(dir, slugs.get(titleMatch.slug)!);
   }
