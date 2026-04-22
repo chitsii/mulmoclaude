@@ -315,8 +315,7 @@ const jaMessages = {
   },
   pluginWiki: {
     backToIndex: "インデックスに戻る",
-    downloadPdf: "↓ PDF",
-    pdfLoadingLabel: "PDF",
+    pdf: "PDF",
     pdfFailed: "⚠ PDF 失敗",
     tabIndex: "インデックス",
     tabLog: "ログ",

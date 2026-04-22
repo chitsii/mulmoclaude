@@ -10,19 +10,13 @@
       </div>
       <div class="flex gap-1 items-center">
         <template v-if="action === 'page' && content">
-          <button
-            class="px-3 py-1 text-xs rounded-full border transition-colors border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 w-16 flex items-center justify-center gap-1"
-            :disabled="pdfDownloading"
-            @click="downloadPdf"
-          >
-            <svg v-if="pdfDownloading" class="animate-spin w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-            </svg>
-            <span v-else>{{ t("pluginWiki.downloadPdf") }}</span>
-            <span v-if="pdfDownloading">{{ t("pluginWiki.pdfLoadingLabel") }}</span>
-          </button>
-          <span v-if="pdfError" class="text-xs text-red-500" :title="pdfError">{{ t("pluginWiki.pdfFailed") }}</span>
+          <div class="button-group">
+            <button class="download-btn download-btn-green" :disabled="pdfDownloading" @click="downloadPdf">
+              <span class="material-icons">{{ pdfDownloading ? "hourglass_empty" : "download" }}</span>
+              {{ t("pluginWiki.pdf") }}
+            </button>
+          </div>
+          <span v-if="pdfError" class="text-xs text-red-500 self-center ml-2" :title="pdfError">{{ t("pluginWiki.pdfFailed") }}</span>
         </template>
         <button
           class="px-3 py-1 text-xs rounded-full border transition-colors"
@@ -90,12 +84,12 @@ import type { ToolResultComplete } from "gui-chat-protocol/vue";
 import type { WikiData, WikiPageEntry } from "./index";
 import { handleExternalLinkClick } from "../../utils/dom/externalLink";
 import { useFreshPluginData } from "../../composables/useFreshPluginData";
+import { usePdfDownload } from "../../composables/usePdfDownload";
 import { renderWikiLinks } from "./helpers";
 import { rewriteMarkdownImageRefs } from "../../utils/image/rewriteMarkdownImageRefs";
-import { apiPost, apiFetchRaw } from "../../utils/api";
+import { apiPost } from "../../utils/api";
 import { API_ROUTES } from "../../config/apiRoutes";
 import { PAGE_ROUTES } from "../../router";
-import { errorMessage } from "../../utils/errors";
 
 type WikiTabView = "log" | "lint_report";
 
@@ -178,8 +172,11 @@ const renderedContent = computed(() => {
 });
 
 const navError = ref<string | null>(null);
-const pdfDownloading = ref(false);
-const pdfError = ref<string | null>(null);
+const { pdfDownloading, pdfError, downloadPdf: rawDownloadPdf } = usePdfDownload();
+
+async function downloadPdf() {
+  await rawDownloadPdf(content.value, `${title.value}.pdf`);
+}
 
 async function callApi(body: Record<string, unknown>) {
   navError.value = null;
@@ -236,40 +233,6 @@ function navigatePage(pageName: string) {
   pushWiki({ ...dropKeys(route.query, ["view"]), page: pageName });
 }
 
-async function downloadPdf() {
-  pdfError.value = null;
-  pdfDownloading.value = true;
-  let response: Response;
-  try {
-    response = await apiFetchRaw(API_ROUTES.pdf.markdown, {
-      method: "POST",
-      body: JSON.stringify({
-        markdown: content.value,
-        filename: `${title.value}.pdf`,
-      }),
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    pdfError.value = errorMessage(err);
-    pdfDownloading.value = false;
-    return;
-  }
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    pdfError.value = `PDF error ${response.status}: ${text}`;
-    pdfDownloading.value = false;
-    return;
-  }
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `${title.value}.pdf`;
-  anchor.click();
-  URL.revokeObjectURL(url);
-  pdfDownloading.value = false;
-}
-
 function handleContentClick(event: MouseEvent) {
   // 1. Internal wiki links: `[[Page Name]]` was rewritten to a
   //    `<span class="wiki-link">` during markdown pre-processing,
@@ -289,6 +252,31 @@ function handleContentClick(event: MouseEvent) {
 </script>
 
 <style scoped>
+.button-group {
+  display: flex;
+  gap: 0.5em;
+}
+.download-btn {
+  padding: 0.5em 1em;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+.download-btn-green {
+  background-color: #4caf50;
+}
+.download-btn .material-icons {
+  font-size: 1.2em;
+}
+.download-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .wiki-content :deep(.wiki-link) {
   color: #2563eb;
   cursor: pointer;

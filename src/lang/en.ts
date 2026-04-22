@@ -323,8 +323,7 @@ const enMessages = {
   },
   pluginWiki: {
     backToIndex: "Back to index",
-    downloadPdf: "↓ PDF",
-    pdfLoadingLabel: "PDF",
+    pdf: "PDF",
     pdfFailed: "⚠ PDF failed",
     tabIndex: "Index",
     tabLog: "Log",
