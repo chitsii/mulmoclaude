@@ -211,6 +211,46 @@ None — logic lives in the Vue component and is covered by E2E.
 - Back/forward through `index → pages/A → pages/B → log` — each step restores expected state.
 - Old stale URL `/wiki?page=foo` — confirm it lands on the index (not a crash); no redirect is intentional.
 
+## Review-pass addendum (post-PR #655 review by isamu)
+
+The initial landing kept param reading / building / validation inline in
+`View.vue`, with `App.vue` copying the literal `{ section: "pages", slug }`
+shape. The review (PR #655 comment) pointed out that this mirrored the
+drift-prone pattern `#633` had already solved for files, and left a
+security gap in the watcher where `/wiki/pages/..%2Fsecrets` decodes to
+`slug === "../secrets"` and reached the server's fuzzy matcher with no
+guard. Addressed as follows:
+
+1. **New helper** `src/plugins/wiki/route.ts` owns all wiki URL / action
+   literals plus three pure functions:
+   - `readWikiRouteTarget(params)` — normalise `route.params` to a
+     `WikiTarget | null`, returning `null` for unsafe slugs or unknown
+     sections.
+   - `buildWikiRouteParams(target)` — inverse; produces the object
+     `router.push({ name, params })` expects.
+   - `isSafeWikiSlug(value)` — separators and `..` rejection.
+2. **Router guard** (`src/router/guards.ts`) runs `readWikiRouteTarget`
+   at navigation time and redirects to `/wiki` with `replace: true`
+   when it returns `null`. Single source of truth for "is this URL
+   legitimate" — same guard catches direct navigation, pasted links,
+   and programmatic pushes.
+3. **View.vue / App.vue** import from the helper instead of duplicating
+   the string literals / target-to-params map.
+4. **Unit tests** (`test/plugins/wiki/test_route.ts`) cover the helper
+   exhaustively, including round-trip `buildWikiRouteParams` →
+   `readWikiRouteTarget`.
+5. **E2E tables** in `wiki-navigation.spec.ts`:
+   - `SAFE_SLUGS` — space, `%`, `#`, `?`, `+`, `&`, parens, Japanese,
+     Korean, emoji — each navigates to `/wiki/pages/<encoded>` and
+     asserts the sentinel body rendered (proving the decoded slug
+     reached the server unmangled).
+   - `DANGEROUS_URLS` — `%2F` in slug, `..%2Fsecrets`, bare `..`,
+     backslash, `/wiki/pages` with no slug — each must redirect to
+     `/wiki` and must NOT trigger a page fetch.
+6. **wiki-page-chat.spec.ts**: the old "send button disabled" test for
+   a traversal URL became "guard redirects to `/wiki` — composer
+   doesn't exist at all", a strictly stronger assertion.
+
 ## Out of scope / future work
 
 - Redirecting old `?page=` / `?view=` URLs to the new paths. Explicitly declined per non-goals.

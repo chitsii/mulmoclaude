@@ -43,13 +43,56 @@ const LOG_PAYLOAD = {
   content: "## 2026-04-22\n- Did stuff",
 };
 
-const JAPANESE_SLUG = "さくらインターネット";
-const PAGE_JAPANESE = {
-  action: "page",
-  title: "さくらインターネット",
-  pageName: JAPANESE_SLUG,
-  content: "# さくらインターネット\n\n日本のデータセンター。",
-};
+// Slugs that the router MUST pass through unchanged to the API body.
+// Reserved URL characters (space, `%`, `#`, `?`, `+`) are each a
+// classic path-segment gotcha: the browser / Vue Router either
+// percent-encodes them on push and decodes on read, or (if something
+// is broken) collapses / mangles them. `%2F` in the address bar
+// decodes to `/` in `route.params.slug` but it's a LEGAL slug in some
+// workflows (pages keyed by a slug containing a literal slash) — the
+// guard rejects it via `isSafeWikiSlug`, see DANGEROUS_URLS below.
+// `..` is a security token (see DANGEROUS_URLS) so it is NOT in this
+// table. Non-ASCII characters round-trip via UTF-8 percent-encoding
+// and are included to lock in that behaviour.
+const SAFE_SLUGS: ReadonlyArray<{ label: string; slug: string }> = [
+  { label: "ASCII baseline", slug: "plain-ascii" },
+  { label: "space", slug: "my notes" },
+  { label: "percent literal", slug: "100%done" },
+  { label: "hash/fragment char", slug: "#1-priority" },
+  { label: "question mark", slug: "how-to?" },
+  { label: "plus sign", slug: "C++tips" },
+  { label: "ampersand", slug: "Q&A" },
+  { label: "parens", slug: "note (copy 1)" },
+  { label: "Japanese (kanji + kana)", slug: "さくらインターネット" },
+  { label: "Korean (hangul)", slug: "한국어메모" },
+  { label: "emoji (surrogate pair)", slug: "🎉party" },
+];
+
+// URLs that the router guard MUST redirect to `/wiki` without
+// rendering a page. `%2F` decodes to `/` in route.params.slug, and
+// `..%2Fsecrets` decodes to `../secrets` — both would otherwise reach
+// the server's `wikiSlugify` fuzzy matcher and could match a different
+// page. `/wiki/pages` (no slug) is malformed by construction.
+const DANGEROUS_URLS: ReadonlyArray<{ label: string; url: string }> = [
+  { label: "%2F in slug (decodes to /)", url: "/wiki/pages/" + encodeURIComponent("a/b") },
+  { label: "traversal via %2F", url: "/wiki/pages/" + encodeURIComponent("../secrets") },
+  { label: "bare `..` in slug", url: "/wiki/pages/" + encodeURIComponent("..") },
+  { label: "backslash in slug", url: "/wiki/pages/" + encodeURIComponent("a\\b") },
+  // `/wiki/pages` with no trailing slug matches the route regex
+  // (section=pages, slug=undefined) and the guard bounces it.
+  { label: "missing slug on pages section", url: "/wiki/pages" },
+];
+
+function pagePayload(slug: string) {
+  // Unique per slug so the test can assert "THIS slug rendered"
+  // rather than "some page rendered".
+  return {
+    action: "page",
+    title: slug,
+    pageName: slug,
+    content: `# ${slug}\n\nSENTINEL-BODY ${slug}`,
+  };
+}
 
 async function mockWikiApi(page: Page): Promise<void> {
   await page.route(
@@ -59,7 +102,7 @@ async function mockWikiApi(page: Page): Promise<void> {
       if (req.method() === "GET") {
         const slug = new URL(req.url()).searchParams.get("slug");
         if (slug === "onboarding") return route.fulfill({ json: { data: PAGE_ONBOARDING } });
-        if (slug === JAPANESE_SLUG) return route.fulfill({ json: { data: PAGE_JAPANESE } });
+        if (slug) return route.fulfill({ json: { data: pagePayload(slug) } });
         return route.fulfill({ json: { data: INDEX_PAYLOAD } });
       }
       if (req.method() === "POST") {
@@ -67,8 +110,8 @@ async function mockWikiApi(page: Page): Promise<void> {
         if (body.action === "page" && body.pageName === "onboarding") {
           return route.fulfill({ json: { data: PAGE_ONBOARDING } });
         }
-        if (body.action === "page" && body.pageName === JAPANESE_SLUG) {
-          return route.fulfill({ json: { data: PAGE_JAPANESE } });
+        if (body.action === "page" && body.pageName) {
+          return route.fulfill({ json: { data: pagePayload(body.pageName) } });
         }
         if (body.action === "log") return route.fulfill({ json: { data: LOG_PAYLOAD } });
         return route.fulfill({ json: { data: INDEX_PAYLOAD } });
@@ -136,15 +179,50 @@ test.describe("wiki navigation — URL sync", () => {
     await expect(page.getByText("Welcome to the project.")).toBeVisible();
   });
 
-  test("non-ASCII slug round-trips through the URL", async ({ page }) => {
-    // Vue Router percent-encodes path params on push and decodes them
-    // on read. The POST body must receive the original string, not a
-    // percent-encoded version.
-    await page.goto(`/wiki/pages/${encodeURIComponent(JAPANESE_SLUG)}`);
+  // Table-driven round-trip for reserved / non-ASCII characters:
+  // navigate straight to /wiki/pages/<encoded>, assert the API saw
+  // the decoded slug verbatim (sentinel body renders in the DOM).
+  // Mirrors the fixture table in e2e/tests/files-path-url.spec.ts.
+  for (const { label, slug } of SAFE_SLUGS) {
+    test(`safe slug round-trips: ${label}`, async ({ page }) => {
+      await page.goto("/wiki/pages/" + encodeURIComponent(slug));
+      await expect(page.getByText(`SENTINEL-BODY ${slug}`).first()).toBeVisible();
+    });
+  }
 
-    await expect(page.getByRole("heading", { level: 1, name: JAPANESE_SLUG })).toBeVisible();
-    await expect(page.getByText("日本のデータセンター。")).toBeVisible();
-  });
+  // Guard-rejection table. The router guard in `src/router/guards.ts`
+  // must intercept each of these before the view runs — landing the
+  // user on `/wiki` (index) and NEVER hitting the page fetch for the
+  // dangerous slug.
+  for (const { label, url } of DANGEROUS_URLS) {
+    test(`guard redirects to /wiki: ${label}`, async ({ page }) => {
+      // Fail loudly if anything ever asks for the dangerous page —
+      // this is the whole point of the guard.
+      const forbiddenRequests: string[] = [];
+      page.on("request", (req) => {
+        if (req.url().endsWith("/api/wiki") && req.method() === "POST") {
+          const body = (req.postDataJSON() ?? {}) as { action?: string; pageName?: string };
+          if (body.action === "page" && body.pageName) forbiddenRequests.push(body.pageName);
+        }
+      });
+
+      await page.goto(url);
+
+      // Guard replaces to /wiki — final URL has no path / log / lint
+      // segment, and the index renders.
+      await expect(page.getByTestId("wiki-page-entry-onboarding")).toBeVisible();
+      await expect(async () => {
+        const parsed = new URL(page.url());
+        // Accept `/wiki` or `/wiki/` — `replace:true` with empty
+        // params may yield either depending on browser normalisation.
+        expect(parsed.pathname).toMatch(/^\/wiki\/?$/);
+      }).toPass({ timeout: 5000 });
+
+      // Defence-in-depth: check no page fetch was made for any
+      // dangerous pageName. (It's OK for the index to fetch.)
+      expect(forbiddenRequests).toEqual([]);
+    });
+  }
 });
 
 test.describe("wiki navigation — from manageWiki tool result", () => {

@@ -97,15 +97,18 @@ test.describe("wiki page chat composer", () => {
     await expect(page.getByTestId("wiki-page-chat-send")).toBeDisabled();
   });
 
-  test("send stays disabled when the URL slug contains path-traversal tokens", async ({ page }) => {
-    // Defence-in-depth: even if the server returns a page payload for
-    // the traversal slug, the client must refuse to interpolate it
-    // into `data/wiki/pages/${slug}.md` and fire off an agent run that
-    // could Read outside the wiki directory.
+  test("traversal URL is redirected to /wiki by the router guard", async ({ page }) => {
+    // After the guard was added (plans/feat-wiki-path-urls.md review
+    // pass), dangerous slugs like `../secrets` never reach the view —
+    // the guard `replace:true`-redirects to `/wiki` before mount. So
+    // the composer isn't just disabled, it doesn't exist: we should
+    // land on the index with no page-chat input rendered at all.
     await page.goto("/wiki/pages/" + encodeURIComponent("../secrets"));
-    await expect(page.getByTestId("wiki-page-chat-input")).toBeVisible();
-    await page.getByTestId("wiki-page-chat-input").fill("What's in here?");
-    await expect(page.getByTestId("wiki-page-chat-send")).toBeDisabled();
+    await expect(page.getByTestId("wiki-page-entry-onboarding")).toBeVisible();
+    await expect(page.getByTestId("wiki-page-chat-input")).toHaveCount(0);
+    await expect(async () => {
+      expect(new URL(page.url()).pathname).toMatch(/^\/wiki\/?$/);
+    }).toPass({ timeout: 5000 });
   });
 
   test("sending prepends the read-page instruction and lands on /chat", async ({ page }) => {

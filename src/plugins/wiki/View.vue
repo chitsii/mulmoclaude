@@ -135,8 +135,9 @@ import { rewriteMarkdownImageRefs } from "../../utils/image/rewriteMarkdownImage
 import { apiPost } from "../../utils/api";
 import { API_ROUTES } from "../../config/apiRoutes";
 import { PAGE_ROUTES } from "../../router";
+import { WIKI_ACTION, WIKI_ROUTE_SECTION, buildWikiRouteParams, isSafeWikiSlug, readWikiRouteTarget, wikiActionFor, type WikiTarget } from "./route";
 
-type WikiTabView = "log" | "lint_report";
+type WikiTabView = typeof WIKI_ACTION.log | typeof WIKI_ACTION.lintReport;
 
 const route = useRoute();
 const router = useRouter();
@@ -198,26 +199,25 @@ watch(
   },
 );
 
-// URL segment ↔ internal action name. The server/tool still speak
-// `lint_report` (underscore); only the URL uses kebab-case.
-const URL_TO_ACTION: Record<string, WikiTabView> = { log: "log", "lint-report": "lint_report" };
-
 // URL is the single source of truth for wiki navigation. Button
 // handlers push to the router; this watcher drives callApi(). Only
 // runs when WikiView is mounted as the /wiki page — when mounted as
 // a manageWiki tool-result inside /chat, the tool-result watcher
-// above seeds state and this watcher does nothing.
+// above seeds state and this watcher does nothing. Unsafe params
+// (e.g. `/wiki/pages/..%2Fsecrets` decoded to `slug === "../secrets"`)
+// are already intercepted by the router guard in `router/guards.ts`
+// and redirected to `/wiki`; by the time the watcher fires, the
+// params are known-safe. `readWikiRouteTarget` returning `null` here
+// therefore means an unexpected shape — fall back to the index view.
 watch(
   () => (route.name === PAGE_ROUTES.wiki ? [route.params.section, route.params.slug] : null),
   (params) => {
     if (!params) return;
-    const [section, slug] = params;
-    if (section === "pages" && typeof slug === "string" && slug.length > 0) {
-      callApi({ action: "page", pageName: slug });
-    } else if (typeof section === "string" && section in URL_TO_ACTION) {
-      callApi({ action: URL_TO_ACTION[section] });
+    const target = readWikiRouteTarget({ section: params[0], slug: params[1] }) ?? { kind: "index" };
+    if (target.kind === "page") {
+      callApi({ action: WIKI_ACTION.page, pageName: target.slug });
     } else {
-      callApi({ action: "index" });
+      callApi({ action: wikiActionFor(target) });
     }
   },
   { immediate: true },
@@ -270,31 +270,16 @@ async function callApi(body: Record<string, unknown>) {
   }
 }
 
-type WikiTarget = { kind: "index" } | { kind: "page"; slug: string } | { kind: "log" } | { kind: "lint_report" };
-
-function targetToParams(target: WikiTarget): Record<string, string> {
-  switch (target.kind) {
-    case "index":
-      return {};
-    case "page":
-      return { section: "pages", slug: target.slug };
-    case "log":
-      return { section: "log" };
-    case "lint_report":
-      return { section: "lint-report" };
-  }
-}
-
 function pushWiki(target: WikiTarget) {
-  router.push({ name: PAGE_ROUTES.wiki, params: targetToParams(target) }).catch((err: unknown) => {
+  router.push({ name: PAGE_ROUTES.wiki, params: buildWikiRouteParams(target) }).catch((err: unknown) => {
     if (!isNavigationFailure(err)) {
       console.error("[wiki] navigation failed:", err);
     }
   });
 }
 
-function navigate(newAction: "index" | WikiTabView) {
-  pushWiki(newAction === "index" ? { kind: "index" } : { kind: newAction });
+function navigate(newAction: typeof WIKI_ACTION.index | WikiTabView) {
+  pushWiki(newAction === WIKI_ACTION.index ? { kind: "index" } : { kind: newAction });
 }
 
 function navigatePage(pageName: string) {
@@ -308,24 +293,18 @@ const chatDraft = ref("");
 const isStandaloneWikiRoute = computed(() => route.name === PAGE_ROUTES.wiki);
 const canSendChat = computed(() => chatDraft.value.trim().length > 0 && currentSlug() !== null);
 
-// Reject path-traversal tokens so `?page=../secrets` can't be
-// interpolated into the prompt and escape `data/wiki/pages/`. Keeps
-// non-ASCII slugs (e.g. Japanese titles like `さくらインターネット`)
-// working — we only ban separators and `..`, not arbitrary unicode.
-function isSafeSlug(slug: string): boolean {
-  return slug.length > 0 && !slug.includes("/") && !slug.includes("\\") && !slug.includes("..");
-}
-
 function currentSlug(): string | null {
   // Prefer the URL on /wiki (source of truth for that route); fall
   // back to the tool-result payload when WikiView is mounted as a
-  // manageWiki result inside /chat.
+  // manageWiki result inside /chat. `isSafeWikiSlug` guards against
+  // traversal tokens — the router guard already strips these from
+  // standalone /wiki URLs, but the tool-result payload arrives from
+  // the server/agent and can't assume that upstream filter.
   const raw =
-    route.name === PAGE_ROUTES.wiki && route.params.section === "pages" && typeof route.params.slug === "string"
+    route.name === PAGE_ROUTES.wiki && route.params.section === WIKI_ROUTE_SECTION.pages && typeof route.params.slug === "string"
       ? route.params.slug
       : (props.selectedResult?.data?.pageName ?? null);
-  if (!raw || !isSafeSlug(raw)) return null;
-  return raw;
+  return isSafeWikiSlug(raw) ? raw : null;
 }
 
 function submitChat() {
