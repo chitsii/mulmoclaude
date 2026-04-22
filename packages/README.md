@@ -76,6 +76,8 @@ Four platforms deliver messages via **inbound HTTP webhooks** — [LINE](./bridg
 | [@mulmobridge/bluesky](./bridges/bluesky/) | Bluesky (chat.bsky DMs) | Long polling (outbound HTTP) | **No** | [![npm](https://img.shields.io/npm/v/@mulmobridge/bluesky)](https://www.npmjs.com/package/@mulmobridge/bluesky) |
 | [@mulmobridge/chatwork](./bridges/chatwork/) | Chatwork (Japanese business chat) | Long polling (outbound HTTP) | **No** | [![npm](https://img.shields.io/npm/v/@mulmobridge/chatwork)](https://www.npmjs.com/package/@mulmobridge/chatwork) |
 | [@mulmobridge/xmpp](./bridges/xmpp/) | XMPP / Jabber (any server) | XMPP over TLS (outbound) | **No** | [![npm](https://img.shields.io/npm/v/@mulmobridge/xmpp)](https://www.npmjs.com/package/@mulmobridge/xmpp) |
+| [@mulmobridge/rocketchat](./bridges/rocketchat/) | Rocket.Chat (DMs) | Long polling (outbound HTTP) | **No** | [![npm](https://img.shields.io/npm/v/@mulmobridge/rocketchat)](https://www.npmjs.com/package/@mulmobridge/rocketchat) |
+| [@mulmobridge/signal](./bridges/signal/) | Signal (via signal-cli-rest-api) | WebSocket + REST to local daemon | **No** (daemon local) | [![npm](https://img.shields.io/npm/v/@mulmobridge/signal)](https://www.npmjs.com/package/@mulmobridge/signal) |
 
 > **"Public URL needed?"** — Bridges that use inbound webhooks require the bridge process to be reachable from the internet (public IP, ngrok, Cloudflare Tunnel, etc.). Outbound-only bridges (polling / WebSocket) work from behind any NAT or firewall with no extra setup.
 
@@ -183,6 +185,8 @@ packages/
     bluesky/      ← Bluesky bridge (chat.bsky DMs, long polling)
     chatwork/     ← Chatwork bridge (long polling)
     xmpp/         ← XMPP / Jabber bridge (TLS)
+    rocketchat/   ← Rocket.Chat bridge (REST polling)
+    signal/       ← Signal bridge (via signal-cli-rest-api)
   scheduler/      ← @receptron/task-scheduler (non-MulmoBridge, general-purpose)
   mulmoclaude/    ← launcher npm package for the MulmoClaude app
 ```

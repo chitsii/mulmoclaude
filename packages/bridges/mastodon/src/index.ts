@@ -64,16 +64,12 @@ function isObj(value: unknown): value is JsonRecord {
 }
 
 interface PostStatusOptions {
-  chatId: string;
   inReplyTo: string | null;
   visibility: string;
 }
 
-async function postOneStatus(chunk: string, opts: PostStatusOptions): Promise<string | null> {
-  // Proactive direct messages need an explicit mention target; reply posts
-  // inherit recipients from the parent status via in_reply_to_id.
-  const statusText = !opts.inReplyTo && opts.visibility === "direct" && opts.chatId ? `@${opts.chatId} ${chunk}` : chunk;
-  const body: JsonRecord = { status: statusText, visibility: opts.visibility };
+async function postOneStatus(chunk: string, opts: PostStatusOptions): Promise<string> {
+  const body: JsonRecord = { status: chunk, visibility: opts.visibility };
   if (opts.inReplyTo) body.in_reply_to_id = opts.inReplyTo;
   let res: Response;
   try {
@@ -90,22 +86,37 @@ async function postOneStatus(chunk: string, opts: PostStatusOptions): Promise<st
     const detail = await res.text().catch(() => "");
     throw new Error(`Mastodon status POST failed: ${res.status} ${detail.slice(0, 200)}`);
   }
-  // Return the created status id so long-reply chunks can be
-  // threaded off each other rather than all re-replying to the
-  // original user status (which flattens the thread).
-  const payload: unknown = await res.json().catch(() => null);
-  if (isObj(payload) && typeof payload.id === "string") return payload.id;
-  return null;
+  // Mastodon's create-status endpoint always returns a Status object
+  // with an `id`. A missing id means the response is malformed; fail
+  // loudly instead of returning null, otherwise postStatus's loop
+  // would leave `prevId` stale and all later chunks would chain onto
+  // the parent of the failed one. See CodeRabbit outside-diff comment
+  // on #611.
+  const payload: unknown = await res.json().catch((err) => {
+    throw new Error(`Mastodon status POST returned invalid JSON: ${err instanceof Error ? err.message : String(err)}`);
+  });
+  if (!isObj(payload) || typeof payload.id !== "string") {
+    throw new Error("Mastodon status POST response is missing id");
+  }
+  return payload.id;
 }
 
 async function postStatus(chatId: string, text: string, inReplyTo: string | null, visibility: string): Promise<void> {
+  // Direct-visibility statuses only deliver to users @-mentioned in
+  // the body — a reply carries the mention from the parent via
+  // `in_reply_to_id`, but a fresh push (inReplyTo=null) has no parent
+  // to inherit from. Prepend the recipient handle so direct pushes
+  // actually reach the user. Non-direct visibilities don't need the
+  // mention; leave them untouched to avoid noise in public timelines.
+  const needsLeadingMention = !inReplyTo && visibility === "direct" && chatId.length > 0;
+  const bodyText = needsLeadingMention ? `@${chatId} ${text}` : text;
+
   // Thread chunk 2+ onto the previous chunk so clients render them as a
   // readable reply chain rather than N parallel replies to the original.
-  const chunks = chunkText(text, MAX_STATUS_LEN);
+  const chunks = chunkText(bodyText, MAX_STATUS_LEN);
   let prevId: string | null = inReplyTo;
   for (const chunk of chunks) {
-    const postedId = await postOneStatus(chunk, { chatId, inReplyTo: prevId, visibility });
-    if (postedId) prevId = postedId;
+    prevId = await postOneStatus(chunk, { inReplyTo: prevId, visibility });
   }
 }
 
