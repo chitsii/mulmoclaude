@@ -132,9 +132,16 @@ async function handleEnvelope(raw: string): Promise<void> {
 
 // ── WebSocket loop ──────────────────────────────────────────────
 
+// Module-scoped so the backoff survives across `connect()` calls. A
+// previous version declared this inside `connect()`, which reset it
+// to RECONNECT_BASE_MS on every reconnect — so a daemon flapping in
+// a tight close loop would reconnect every ~1s forever instead of
+// backing off. Reset to the base on successful `open`; double (capped
+// at RECONNECT_MAX_MS) on each close.
+let backoffMs = RECONNECT_BASE_MS;
+
 function connect(): void {
   const socket = new WebSocket(wsUrl);
-  let backoffMs = RECONNECT_BASE_MS;
 
   socket.on("open", () => {
     console.log(`[signal] receive stream connected`);
@@ -150,11 +157,10 @@ function connect(): void {
   });
 
   socket.on("close", (code, reason) => {
-    console.warn(`[signal] stream closed code=${code} reason=${reason.toString().slice(0, 100)}; reconnecting in ${backoffMs}ms`);
-    setTimeout(() => {
-      backoffMs = Math.min(backoffMs * 2, RECONNECT_MAX_MS);
-      connect();
-    }, backoffMs);
+    const wait = backoffMs;
+    backoffMs = Math.min(backoffMs * 2, RECONNECT_MAX_MS);
+    console.warn(`[signal] stream closed code=${code} reason=${reason.toString().slice(0, 100)}; reconnecting in ${wait}ms`);
+    setTimeout(connect, wait);
   });
 }
 
