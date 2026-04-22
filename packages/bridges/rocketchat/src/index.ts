@@ -148,29 +148,52 @@ async function handleIncoming(msg: IncomingMessage): Promise<void> {
 
 // ── Poll loop ───────────────────────────────────────────────────
 
+// Paginate with `offset` — `im.list` supports `offset`/`count` per
+// Rocket.Chat REST docs, and a single 100-capped request would hide
+// the tail for users with many DM rooms. See CodeRabbit review on
+// #611.
+const LIST_PAGE = 100;
+
 async function listDmRoomIds(): Promise<string[]> {
-  const result = await rcGet("/im.list", { count: "100" });
-  const rooms = Array.isArray(result.ims) ? result.ims : [];
-  return rooms.filter((room): room is JsonRecord => isObj(room) && typeof room._id === "string").map((room) => String(room._id));
+  const ids: string[] = [];
+  let offset = 0;
+  for (;;) {
+    const result = await rcGet("/im.list", { count: String(LIST_PAGE), offset: String(offset) });
+    const rooms = Array.isArray(result.ims) ? result.ims : [];
+    for (const room of rooms) {
+      if (isObj(room) && typeof room._id === "string") ids.push(room._id);
+    }
+    if (rooms.length < LIST_PAGE) return ids;
+    offset += rooms.length;
+  }
 }
 
+// Rocket.Chat im.history returns newest-first with a caller-supplied
+// page cap. A single fetch therefore trims the oldest entries during
+// bursts or after long downtime. Loop until the server returns a
+// short page so we never silently skip messages when bridging
+// resumes. See CodeRabbit review on #611.
+const HISTORY_PAGE = 50;
+
 async function pollRoom(roomId: string, oldestIso: string): Promise<string> {
-  const result = await rcGet("/im.history", {
-    roomId,
-    oldest: oldestIso,
-    inclusive: "false",
-    count: "50",
-  });
-  const messages = Array.isArray(result.messages) ? result.messages : [];
-  const sorted = [...messages].reverse(); // API returns newest-first
-  let newestIso = oldestIso;
-  for (const raw of sorted) {
-    const parsed = parseMessage(raw, roomId);
-    if (!parsed) continue;
-    await handleIncoming(parsed);
-    if (parsed.tsIso > newestIso) newestIso = parsed.tsIso;
+  let cursor = oldestIso;
+  for (;;) {
+    const result = await rcGet("/im.history", {
+      roomId,
+      oldest: cursor,
+      inclusive: "false",
+      count: String(HISTORY_PAGE),
+    });
+    const messages = Array.isArray(result.messages) ? result.messages : [];
+    const sorted = [...messages].reverse(); // API returns newest-first
+    for (const raw of sorted) {
+      const parsed = parseMessage(raw, roomId);
+      if (!parsed) continue;
+      await handleIncoming(parsed);
+      if (parsed.tsIso > cursor) cursor = parsed.tsIso;
+    }
+    if (messages.length < HISTORY_PAGE) return cursor;
   }
-  return newestIso;
 }
 
 async function pollLoop(): Promise<void> {
@@ -180,7 +203,15 @@ async function pollLoop(): Promise<void> {
     try {
       const rooms = await listDmRoomIds();
       for (const roomId of rooms) {
-        if (!cursors.has(roomId)) cursors.set(roomId, new Date().toISOString());
+        // First time we see a room, rewind the cursor by one poll
+        // interval so the message that triggered room creation (often
+        // the user's first DM) is still captured on the next
+        // /im.history call. A pure `new Date().toISOString()` cursor
+        // would place the `oldest` boundary at or after the first
+        // message's ts, dropping it with `inclusive: "false"`.
+        if (!cursors.has(roomId)) {
+          cursors.set(roomId, new Date(Date.now() - pollIntervalSec * 1000).toISOString());
+        }
         try {
           const newestIso = await pollRoom(roomId, cursors.get(roomId)!);
           cursors.set(roomId, newestIso);
