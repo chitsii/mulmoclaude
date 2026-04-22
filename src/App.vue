@@ -402,7 +402,7 @@ function handleViewModeShortcut(event: KeyboardEvent): void {
     if (route.name === PAGE_ROUTES.chat) {
       toggleLayoutMode();
     } else {
-      router.push({ name: PAGE_ROUTES.chat }).catch(() => {});
+      resumeOrCreateChatSession().catch((err) => console.error("[Cmd+1] resume failed:", err));
     }
     return;
   }
@@ -561,6 +561,27 @@ function onRoleChange() {
   // automatically.
   const session = createNewSession(currentRoleId.value);
   maybeSeedRoleDefault(session);
+}
+
+// Land on /chat with no specific session in mind (initial load, Cmd+1
+// from another page). Prefer the most-recent session so the user
+// resumes where they left off; only create a fresh session when they
+// have no chat history at all. Explicit "+" clicks and role switches
+// still create a new session via createNewSession() directly.
+async function resumeOrCreateChatSession(): Promise<void> {
+  const topId = mergedSessions.value[0]?.id;
+  if (!topId) {
+    createNewSession();
+    return;
+  }
+  if (sessionMap.has(topId)) {
+    // Already in memory — navigate explicitly. loadSession would
+    // early-return here if topId === currentSessionId, skipping the
+    // URL push we need when arriving from a non-chat page.
+    navigateToSession(topId);
+    return;
+  }
+  await loadSession(topId);
 }
 
 function activateSession(sessionId: string, roleId: string, replace: boolean): void {
@@ -759,7 +780,9 @@ onMounted(async () => {
   // Fire-and-forget side fetches.
   fetchHealth();
   fetchMcpToolsStatus();
-  fetchSessions();
+  // Awaited below before resuming the top session, so we know the
+  // sessions list is populated when we pick which one to land on.
+  const sessionsReady = fetchSessions();
   // Roles must be loaded before the first session is created, so
   // createNewSession() picks a roleId that exists in the merged
   // role list (built-in + custom).
@@ -785,7 +808,8 @@ onMounted(async () => {
         createNewSession();
       }
     } else {
-      createNewSession();
+      await sessionsReady;
+      await resumeOrCreateChatSession();
     }
   }
 });
