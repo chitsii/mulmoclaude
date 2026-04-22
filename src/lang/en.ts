@@ -43,6 +43,7 @@ const enMessages = {
   sessionHistoryPanel: {
     filters: {
       all: "All",
+      unread: "Unread",
       human: "Human",
       scheduler: "Scheduler",
       skill: "Skill",
