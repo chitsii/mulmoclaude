@@ -2,7 +2,7 @@ import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 
 // workspace-io imports workspacePath at module load. We override
 // HOME/USERPROFILE so homedir() → our temp root, then dynamic-

@@ -51,14 +51,14 @@ describe("computeSearchHash", () => {
 });
 
 describe("computeSearchRelPath", () => {
-  it("builds conversations/searches/YYYY-MM-DD/<slug>-<hash>.markdown", () => {
+  it("builds conversations/searches/YYYY-MM-DD/<slug>-<hash>.md", () => {
     const relPath = computeSearchRelPath({
       query: "熊本地震 2016",
       sessionId: SID,
       timestamp: FIXED_TS,
     });
     assert.ok(relPath.startsWith("conversations/searches/2026-04-13/"));
-    assert.ok(relPath.endsWith(".markdown"));
+    assert.ok(relPath.endsWith(".md"));
   });
 
   it("produces stable path for identical inputs", () => {
@@ -169,7 +169,7 @@ describe("writeSearchResult (I/O)", () => {
       resultBody: "b",
     });
     const dir = path.join(workspaceRoot, "conversations", "searches", "2026-04-13");
-    const files = (await readdir(dir)).filter((name) => name.endsWith(".markdown"));
+    const files = (await readdir(dir)).filter((name) => name.endsWith(".md"));
     // At least two files (prior test in this block wrote one too).
     assert.ok(files.length >= 2);
   });

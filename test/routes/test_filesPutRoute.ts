@@ -11,7 +11,7 @@ import { after, before, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { mkdirSync, promises, readdirSync } from "fs";
 import { mkdtemp, rm, writeFile } from "fs/promises";
-import { homedir, tmpdir } from "os";
+import { tmpdir } from "os";
 import path from "path";
 import type { Request, Response } from "express";
 

@@ -64,8 +64,8 @@ describe("buildIndexMarkdown", () => {
         topics: [{ slug: "video-generation", title: "Video Generation" }, { slug: "bare-slug" }],
       }),
     );
-    assert.match(out, /\[Video Generation\]\(topics\/video-generation\.markdown\)/);
-    assert.match(out, /\[bare-slug\]\(topics\/bare-slug\.markdown\)/);
+    assert.match(out, /\[Video Generation\]\(topics\/video-generation\.md\)/);
+    assert.match(out, /\[bare-slug\]\(topics\/bare-slug\.md\)/);
   });
 
   it("sorts daily entries newest-first", () => {
@@ -110,7 +110,7 @@ describe("buildIndexMarkdown", () => {
 
   it("renders daily row with nested YYYY/MM/DD path", () => {
     const out = buildIndexMarkdown(baseInput({ days: [{ date: "2026-04-11" }] }));
-    assert.match(out, /\[2026-04-11\]\(daily\/2026\/04\/11\.markdown\)/);
+    assert.match(out, /\[2026-04-11\]\(daily\/2026\/04\/11\.md\)/);
   });
 });
 

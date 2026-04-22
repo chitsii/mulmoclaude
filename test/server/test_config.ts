@@ -2,7 +2,7 @@ import { after, afterEach, before, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "fs";
 import { mkdtemp, rm } from "fs/promises";
-import { homedir, tmpdir } from "os";
+import { tmpdir } from "os";
 import path from "path";
 
 // The config module reads workspacePath at the time of each call,

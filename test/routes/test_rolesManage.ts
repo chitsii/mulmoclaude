@@ -2,7 +2,7 @@ import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 
 // The roles route imports workspacePath at module load. Override HOME
 // so homedir() → temp root, then dynamic-import the modules.

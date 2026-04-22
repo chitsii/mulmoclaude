@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { ReadStream, Stats, createReadStream, promises, readFileSync, realpathSync } from "fs";
+import { ReadStream, Stats, createReadStream, readFileSync, realpathSync } from "fs";
 import path from "path";
 import { workspacePath } from "../../workspace/workspace.js";
 import { statSafe, statSafeAsync, readDirSafeAsync, resolveWithinRoot, writeFileAtomic } from "../../utils/files/index.js";

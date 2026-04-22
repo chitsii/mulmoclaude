@@ -39,30 +39,30 @@ describe("wikiSlugify", () => {
 });
 
 describe("extractSlugFromBulletHref", () => {
-  it("extracts slug from pages/<slug>.markdown", () => {
-    assert.equal(extractSlugFromBulletHref("pages/sakura-internet.markdown"), "sakura-internet");
+  it("extracts slug from pages/<slug>.md", () => {
+    assert.equal(extractSlugFromBulletHref("pages/sakura-internet.md"), "sakura-internet");
   });
 
   it("handles leading ./ and deeper prefixes", () => {
-    assert.equal(extractSlugFromBulletHref("./pages/foo.markdown"), "foo");
-    assert.equal(extractSlugFromBulletHref("wiki/pages/foo.markdown"), "foo");
+    assert.equal(extractSlugFromBulletHref("./pages/foo.md"), "foo");
+    assert.equal(extractSlugFromBulletHref("wiki/pages/foo.md"), "foo");
   });
 
-  it("accepts a bare <slug>.markdown without the pages prefix", () => {
-    assert.equal(extractSlugFromBulletHref("foo.markdown"), "foo");
+  it("accepts a bare <slug>.md without the pages prefix", () => {
+    assert.equal(extractSlugFromBulletHref("foo.md"), "foo");
   });
 
-  it("accepts just <slug> with no .markdown extension", () => {
+  it("accepts just <slug> with no .md extension", () => {
     assert.equal(extractSlugFromBulletHref("foo"), "foo");
   });
 
   it("strips surrounding whitespace", () => {
-    assert.equal(extractSlugFromBulletHref("  pages/foo.markdown  "), "foo");
+    assert.equal(extractSlugFromBulletHref("  pages/foo.md  "), "foo");
   });
 
   it("returns empty for absolute URLs (caller should fall back)", () => {
     assert.equal(extractSlugFromBulletHref("https://example.com/foo"), "");
-    assert.equal(extractSlugFromBulletHref("http://x/foo.markdown"), "");
+    assert.equal(extractSlugFromBulletHref("http://x/foo.md"), "");
   });
 
   it("returns empty for an empty input", () => {
@@ -99,7 +99,7 @@ describe("parseIndexEntries", () => {
   });
 
   it("parses bullet markdown links", () => {
-    const markdown = "- [Video Generation](pages/video-generation.markdown) — about video";
+    const markdown = "- [Video Generation](pages/video-generation.md) — about video";
     const entries = parseIndexEntries(markdown);
     assert.deepEqual(entries[0], {
       title: "Video Generation",
@@ -113,7 +113,7 @@ describe("parseIndexEntries", () => {
     // `wikiSlugify(title)` which stripped every non-ASCII character
     // and returned "", breaking in-canvas navigation. The slug must
     // now come from the href segment.
-    const markdown = "- [さくらインターネット](pages/sakura-internet.markdown) — クラウド事業者";
+    const markdown = "- [さくらインターネット](pages/sakura-internet.md) — クラウド事業者";
     const entries = parseIndexEntries(markdown);
     assert.deepEqual(entries[0], {
       title: "さくらインターネット",
@@ -123,9 +123,9 @@ describe("parseIndexEntries", () => {
   });
 
   it("derives slug from a bare filename href", () => {
-    // Some historical index.markdown files used `[Title](slug.markdown)` without
+    // Some historical index.md files used `[Title](slug.md)` without
     // the `pages/` prefix. Still valid — use the filename as slug.
-    const markdown = "- [Video Generation](video-generation.markdown) — about video";
+    const markdown = "- [Video Generation](video-generation.md) — about video";
     const entries = parseIndexEntries(markdown);
     assert.equal(entries[0]?.slug, "video-generation");
   });
@@ -166,7 +166,7 @@ describe("parseIndexEntries", () => {
   });
 
   it("handles a missing description on bullet links", () => {
-    const markdown = "- [Topic](pages/topic.markdown)";
+    const markdown = "- [Topic](pages/topic.md)";
     const entries = parseIndexEntries(markdown);
     assert.equal(entries[0]?.description, "");
   });
@@ -197,7 +197,7 @@ describe("findOrphanPages", () => {
     const indexed = new Set(["a", "b"]);
     const issues = findOrphanPages(files, indexed);
     assert.equal(issues.length, 1);
-    assert.match(issues[0] ?? "", /Orphan page.*orphan\.markdown/);
+    assert.match(issues[0] ?? "", /Orphan page.*orphan\.md/);
   });
 
   it("flags multiple orphans", () => {
@@ -231,28 +231,28 @@ describe("findBrokenLinksInPage", () => {
   it("returns no issues when every wiki link resolves", () => {
     const content = "See [[Topic A]] and [[Topic B]] for details.";
     const fileSlugs = new Set(["topic-a", "topic-b"]);
-    assert.deepEqual(findBrokenLinksInPage("source.markdown", content, fileSlugs), []);
+    assert.deepEqual(findBrokenLinksInPage("source.md", content, fileSlugs), []);
   });
 
   it("flags a broken link", () => {
     const content = "See [[Missing Topic]] for details.";
     const fileSlugs = new Set(["other"]);
-    const issues = findBrokenLinksInPage("source.markdown", content, fileSlugs);
+    const issues = findBrokenLinksInPage("source.md", content, fileSlugs);
     assert.equal(issues.length, 1);
-    assert.match(issues[0] ?? "", /Broken link\*\* in `source\.markdown`/);
-    assert.match(issues[0] ?? "", /missing-topic\.markdown/);
+    assert.match(issues[0] ?? "", /Broken link\*\* in `source\.md`/);
+    assert.match(issues[0] ?? "", /missing-topic\.md/);
   });
 
   it("ignores non-wiki-link bracket sequences", () => {
     const content = "Plain text with [normal](link) references.";
     const fileSlugs = new Set<string>();
-    assert.deepEqual(findBrokenLinksInPage("source.markdown", content, fileSlugs), []);
+    assert.deepEqual(findBrokenLinksInPage("source.md", content, fileSlugs), []);
   });
 
   it("flags multiple broken links in the same page", () => {
     const content = "[[A]] and [[B]] and [[C]]";
     const fileSlugs = new Set<string>();
-    assert.equal(findBrokenLinksInPage("source.markdown", content, fileSlugs).length, 3);
+    assert.equal(findBrokenLinksInPage("source.md", content, fileSlugs).length, 3);
   });
 });
 

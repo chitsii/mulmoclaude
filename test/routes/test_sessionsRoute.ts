@@ -10,7 +10,7 @@ import { after, before, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { mkdirSync, readFileSync } from "fs";
 import { mkdtemp, rm, writeFile, utimes } from "fs/promises";
-import { homedir, tmpdir } from "os";
+import { tmpdir } from "os";
 import path from "path";
 import type { Request, Response } from "express";
 import { encodeCursor } from "../../server/api/routes/sessionsCursor.js";
@@ -90,7 +90,7 @@ let getHandler: Handler;
 let markReadHandler: Handler;
 
 async function writeSession(
-  id: string,
+  sessionId: string,
   opts: {
     roleId?: string;
     mtimeMs: number;
@@ -102,18 +102,18 @@ async function writeSession(
   const meta = {
     roleId: opts.roleId ?? "general",
     startedAt: new Date(opts.mtimeMs).toISOString(),
-    firstUserMessage: opts.firstUserMessage ?? `msg for ${id}`,
+    firstUserMessage: opts.firstUserMessage ?? `msg for ${sessionId}`,
   };
-  await writeFile(path.join(chatDir, `${id}.json`), JSON.stringify(meta));
-  await writeFile(path.join(chatDir, `${id}.jsonl`), "");
+  await writeFile(path.join(chatDir, `${sessionId}.json`), JSON.stringify(meta));
+  await writeFile(path.join(chatDir, `${sessionId}.jsonl`), "");
   // Set both atime and mtime so the handler's stat.mtimeMs reads
   // what the test intends. Back-date the .json meta too — the cursor
   // derivation reads it alongside the .jsonl mtime (hasUnread writes
   // bump meta but not jsonl), so a freshly-written meta at "now"
   // would otherwise dominate the computed changeMs.
   const secs = opts.mtimeMs / 1000;
-  await utimes(path.join(chatDir, `${id}.jsonl`), secs, secs);
-  await utimes(path.join(chatDir, `${id}.json`), secs, secs);
+  await utimes(path.join(chatDir, `${sessionId}.jsonl`), secs, secs);
+  await utimes(path.join(chatDir, `${sessionId}.json`), secs, secs);
 
   if (opts.indexedAtMs !== undefined) {
     const manifestPath = path.join(manifestDir, "manifest.json");
@@ -124,12 +124,12 @@ async function writeSession(
       /* first write */
     }
     entries.push({
-      id,
+      id: sessionId,
       roleId: meta.roleId,
       startedAt: meta.startedAt,
       indexedAt: new Date(opts.indexedAtMs).toISOString(),
-      title: `AI title ${id}`,
-      summary: `AI summary ${id}`,
+      title: `AI title ${sessionId}`,
+      summary: `AI summary ${sessionId}`,
       keywords: ["k1"],
     });
     mkdirSync(path.dirname(manifestPath), { recursive: true });
