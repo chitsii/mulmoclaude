@@ -10,9 +10,12 @@
 //   TEAMS_ALLOWED_USERS     — CSV of AAD user object IDs (empty = all)
 //
 // Verification: Teams posts activities with Authorization: Bearer <JWT>.
-// The JWT's issuer + audience + signature are checked against Azure AD JWKS
-// (per-tenant URL for SingleTenant, well-known Bot Framework URL for
-// MultiTenant). Audience = MICROSOFT_APP_ID.
+// We check all of: issuer, audience (= MICROSOFT_APP_ID), exp, signature
+// against JWKS (per-tenant URL for SingleTenant, Bot Framework URL for
+// MultiTenant), `serviceurl` claim == activity.serviceUrl,
+// activity.channelId == "msteams", and — for MultiTenant — that the
+// signing key is endorsed for the `msteams` channel. See
+// teams-verify.ts for the pure validator functions.
 //
 // Replies: Teams needs an OAuth2 access token obtained from
 // login.microsoftonline.com with MICROSOFT_APP_ID + MICROSOFT_APP_PASSWORD
@@ -25,6 +28,7 @@ import { chunkText } from "@mulmobridge/client/text";
 import { PLATFORMS, type RelayMessage, type Env } from "../types.js";
 import { registerPlatform, CONNECTION_MODES, type PlatformPlugin } from "../platform.js";
 import { ONE_HOUR_MS, TEN_SECONDS_MS, FIFTEEN_SECONDS_MS } from "../time.js";
+import { validateTokenClaims, validateJwkEndorsement, isAllowedSender, type AppType } from "./teams-verify.js";
 
 const MULTITENANT_ISSUER = "https://api.botframework.com";
 const MULTITENANT_JWKS_URL = "https://login.botframework.com/v1/.well-known/keys";
@@ -42,7 +46,7 @@ function isObj(value: unknown): value is Record<string, unknown> {
 
 // ── Config helpers ──────────────────────────────────────────────
 
-function getAppType(env: Env): "MultiTenant" | "SingleTenant" {
+function getAppType(env: Env): AppType {
   const raw = typeof env.MICROSOFT_APP_TYPE === "string" ? env.MICROSOFT_APP_TYPE.trim() : "";
   return raw === "SingleTenant" ? "SingleTenant" : "MultiTenant";
 }
@@ -85,6 +89,9 @@ interface JwkKey {
   n: string;
   e: string;
   alg?: string;
+  // Bot Framework JWKS publishes per-key channel endorsements; we
+  // require `msteams` to be present for MultiTenant auth.
+  endorsements?: string[];
 }
 
 interface JwksCacheEntry {
@@ -103,7 +110,19 @@ async function fetchJwks(url: string): Promise<JwkKey[]> {
   if (!res.ok) return cached?.keys ?? [];
   const data: { keys?: unknown[] } = await res.json();
   if (!Array.isArray(data.keys)) return cached?.keys ?? [];
-  const keys = data.keys.filter((key): key is JwkKey => isObj(key) && typeof key.kid === "string" && typeof key.n === "string");
+  const keys = data.keys
+    .filter((key): key is Record<string, unknown> => isObj(key) && typeof key.kid === "string" && typeof key.n === "string")
+    .map((key): JwkKey => {
+      const endorsements = Array.isArray(key.endorsements) ? key.endorsements.filter((entry): entry is string => typeof entry === "string") : undefined;
+      return {
+        kid: String(key.kid),
+        kty: typeof key.kty === "string" ? key.kty : "RSA",
+        n: String(key.n),
+        e: typeof key.e === "string" ? key.e : "AQAB",
+        alg: typeof key.alg === "string" ? key.alg : undefined,
+        endorsements,
+      };
+    });
   jwksCache.set(url, { keys, expiresAt: Date.now() + JWKS_CACHE_TTL_MS });
   return keys;
 }
@@ -137,22 +156,25 @@ function parseJwt(token: string): ParsedJwt | null {
   }
 }
 
-async function verifyTeamsJwt(authHeader: string | undefined, env: Env): Promise<boolean> {
+// Verifies the JWT against all of: expected issuer/audience/exp, the
+// activity body (serviceUrl + channelId cross-checks), the JWKS key's
+// channel endorsements, and the RSA signature. All four must pass —
+// signing key alone is not enough; see teams-verify.ts for rationale.
+async function verifyTeamsJwt(authHeader: string | undefined, env: Env, activity: TeamsMessage): Promise<boolean> {
   if (!authHeader?.startsWith("Bearer ")) return false;
   const token = authHeader.slice(7).trim();
   const jwt = parseJwt(token);
   if (!jwt) return false;
 
   const { header, payload } = jwt;
-  const appId = String(env.MICROSOFT_APP_ID);
-  const expectedIssuer = getExpectedIssuer(env);
-
-  if (payload.iss !== expectedIssuer) return false;
-  // `aud` can be a string or an array depending on the issuer.
-  const aud = payload.aud;
-  const audMatches = typeof aud === "string" ? aud === appId : Array.isArray(aud) && aud.includes(appId);
-  if (!audMatches) return false;
-  if (typeof payload.exp === "number" && payload.exp < Date.now() / 1000) return false;
+  const claimsOk = validateTokenClaims({
+    payload,
+    appId: String(env.MICROSOFT_APP_ID),
+    expectedIssuer: getExpectedIssuer(env),
+    nowSeconds: Math.floor(Date.now() / 1000),
+    activity: { serviceUrl: activity.serviceUrl, channelId: activity.channelId },
+  });
+  if (!claimsOk) return false;
 
   const keyId = typeof header.kid === "string" ? header.kid : "";
   const alg = typeof header.alg === "string" ? header.alg : "RS256";
@@ -160,6 +182,8 @@ async function verifyTeamsJwt(authHeader: string | undefined, env: Env): Promise
   const keys = await fetchJwks(getJwksUrl(env));
   const jwk = keys.find((key) => key.kid === keyId);
   if (!jwk) return false;
+  if (!validateJwkEndorsement(jwk, getAppType(env))) return false;
+
   const pubKey = await crypto.subtle.importKey("jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: hashAlg }, false, ["verify"]);
   return crypto.subtle.verify("RSASSA-PKCS1-v1_5", pubKey, jwt.sig, new TextEncoder().encode(jwt.signInput));
 }
@@ -172,6 +196,7 @@ interface TeamsMessage {
   senderAadObjectId: string;
   text: string;
   serviceUrl: string;
+  channelId: string;
 }
 
 function parseActivity(body: unknown): TeamsMessage | null {
@@ -184,6 +209,7 @@ function parseActivity(body: unknown): TeamsMessage | null {
   const conversation = body.conversation;
   const from = body.from;
   const serviceUrl = typeof body.serviceUrl === "string" ? body.serviceUrl.trim() : "";
+  const channelId = typeof body.channelId === "string" ? body.channelId.trim() : "";
   if (!isObj(conversation) || typeof conversation.id !== "string") return null;
   if (!isObj(from) || typeof from.id !== "string") return null;
   if (!serviceUrl) return null;
@@ -193,6 +219,7 @@ function parseActivity(body: unknown): TeamsMessage | null {
     senderAadObjectId: typeof from.aadObjectId === "string" ? from.aadObjectId : "",
     text,
     serviceUrl,
+    channelId,
   };
 }
 
@@ -250,15 +277,20 @@ const teamsPlugin: PlatformPlugin = {
   },
 
   async handleWebhook(request: Request, body: string, env: Env): Promise<RelayMessage[]> {
-    const authHeader = request.headers.get("authorization") ?? undefined;
-    const valid = await verifyTeamsJwt(authHeader, env);
-    if (!valid) throw new Error("Teams JWT verification failed");
-
+    // Parse the activity first so the JWT verifier can cross-check the
+    // serviceUrl / channelId claims against the body. If parsing fails,
+    // the request is a non-message activity (typing, invoke, …) and
+    // still needs a 200 OK — but we skip signature checks since there's
+    // nothing to forward.
     const activity = parseActivity(JSON.parse(body));
     if (!activity) return []; // non-message or malformed — ack 200 OK
 
+    const authHeader = request.headers.get("authorization") ?? undefined;
+    const valid = await verifyTeamsJwt(authHeader, env, activity);
+    if (!valid) throw new Error("Teams JWT verification failed");
+
     const allowed = getAllowedUsers(env);
-    if (allowed.size > 0 && activity.senderAadObjectId && !allowed.has(activity.senderAadObjectId)) {
+    if (!isAllowedSender({ allowed, senderAadObjectId: activity.senderAadObjectId })) {
       // Drop messages from users not on the allowlist — still 200 OK
       // so the Bot Framework doesn't mark the endpoint as flaky.
       return [];
