@@ -16,21 +16,13 @@
 //   MULMOCLAUDE_AUTH_TOKEN     — bearer token (or read from workspace)
 
 import "dotenv/config";
-import { createHash } from "node:crypto";
 import { SocketModeClient } from "@slack/socket-mode";
 import { WebClient } from "@slack/web-api";
 import { createBridgeClient } from "@mulmobridge/client";
 import { buildExternalChatId, parseExternalChatId, parseGranularity } from "./sessionId.js";
+import { redactUser } from "./redactUser.js";
 
 const TRANSPORT_ID = "slack";
-
-// Slack user IDs (U...) are persistent PII. Hash to a short, stable
-// identifier so logs still correlate a user across messages without
-// exposing the raw ID if log files escape the host.
-function redactUser(userId: string | undefined): string {
-  if (!userId) return "?";
-  return `u_${createHash("sha256").update(userId).digest("hex").slice(0, 8)}`;
-}
 
 const botToken = process.env.SLACK_BOT_TOKEN;
 const appToken = process.env.SLACK_APP_TOKEN;
