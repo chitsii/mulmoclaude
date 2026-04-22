@@ -85,10 +85,13 @@
     <!-- Markdown content -->
     <div v-else class="flex-1 overflow-y-auto px-6 py-4 prose prose-sm max-w-none wiki-content" @click="handleContentClick" v-html="renderedContent" />
 
-    <!-- Per-page chat composer (leaf pages only). Sending spawns a
-         fresh chat session with a prepended "read this page first"
-         instruction — see AppApi.startNewChat. -->
-    <div v-if="action === 'page' && content" class="border-t border-gray-200 px-4 py-3 shrink-0 bg-gray-50">
+    <!-- Per-page chat composer (standalone /wiki route only). Sending
+         spawns a fresh chat session with a prepended "read this page
+         first" instruction — see AppApi.startNewChat. Hidden when
+         WikiView is mounted as a manageWiki tool result inside /chat:
+         the enclosing chat already has its own composer, and spawning
+         a nested new session from there is confusing. -->
+    <div v-if="action === 'page' && content && isStandaloneWikiRoute" class="border-t border-gray-200 px-4 py-3 shrink-0 bg-gray-50">
       <div class="flex gap-2">
         <textarea
           v-model="chatDraft"
@@ -301,6 +304,7 @@ function navigatePage(pageName: string) {
 const appApi = useAppApi();
 const chatDraft = ref("");
 
+const isStandaloneWikiRoute = computed(() => route.name === PAGE_ROUTES.wiki);
 const canSendChat = computed(() => chatDraft.value.trim().length > 0 && currentSlug() !== null);
 
 function currentSlug(): string | null {

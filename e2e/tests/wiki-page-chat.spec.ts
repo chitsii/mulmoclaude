@@ -103,3 +103,61 @@ test.describe("wiki page chat composer", () => {
     expect(page.url()).not.toContain("/wiki");
   });
 });
+
+test.describe("wiki page chat composer — tool-result context", () => {
+  // When WikiView is rendered as a manageWiki tool result inside
+  // /chat, the enclosing chat already has its own composer. Showing a
+  // second composer that spawns a NEW session from here would nest
+  // sessions in a confusing way, so the per-page composer is hidden.
+  test.beforeEach(async ({ page }) => {
+    await mockAllApis(page, {
+      sessions: [
+        {
+          id: "wiki-page-session",
+          title: "Wiki Page Session",
+          roleId: "general",
+          startedAt: "2026-04-22T10:00:00Z",
+          updatedAt: "2026-04-22T10:05:00Z",
+        },
+      ],
+    });
+    await mockWikiApi(page);
+
+    // Transcript: a single manageWiki tool result already showing the
+    // Onboarding leaf page.
+    await page.route(
+      (url) => url.pathname.startsWith("/api/sessions/") && url.pathname !== "/api/sessions",
+      (route) =>
+        route.fulfill({
+          json: [
+            { type: "session_meta", roleId: "general", sessionId: "wiki-page-session" },
+            { type: "text", source: "user", message: "Show me onboarding" },
+            {
+              type: "tool_result",
+              source: "tool",
+              result: {
+                uuid: "wiki-page-result",
+                toolName: "manageWiki",
+                title: PAGE_ONBOARDING.title,
+                message: "Page loaded",
+                data: PAGE_ONBOARDING,
+              },
+            },
+          ],
+        }),
+    );
+  });
+
+  test("composer hidden when page rendered as a manageWiki result in /chat", async ({ page }) => {
+    await page.goto("/chat/wiki-page-session");
+    // Preview label (`Wiki: Onboarding`) is unique to the sidebar
+    // card — using it avoids matching the `# Onboarding` heading
+    // that would appear in the canvas once the page renders.
+    await page.getByText("Wiki: Onboarding").click();
+    // The leaf-page heading confirms WikiView is rendering the page.
+    await expect(page.getByRole("heading", { level: 1, name: "Onboarding" })).toBeVisible();
+    // And the per-page composer must not appear.
+    await expect(page.getByTestId("wiki-page-chat-input")).toHaveCount(0);
+    await expect(page.getByTestId("wiki-page-chat-send")).toHaveCount(0);
+  });
+});
