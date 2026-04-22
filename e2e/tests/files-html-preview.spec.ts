@@ -87,13 +87,13 @@ test.describe("Files view — markdown image path rewrite", () => {
   });
 
   test("`![](images/foo.png)` renders as an `<img src=/api/files/raw?...>`", async ({ page }) => {
-    const md = `# Page\n\n![chart](images/foo.png)\n`;
-    await mockFileContent(page, "markdowns/sample.md", {
+    const markdown = `# Page\n\n![chart](images/foo.png)\n`;
+    await mockFileContent(page, "markdowns/sample.markdown", {
       kind: "text",
-      content: md,
+      content: markdown,
     });
 
-    await page.goto("/chat?view=files&path=markdowns/sample.md");
+    await page.goto("/chat?view=files&path=markdowns/sample.markdown");
     // Wait for the rendered markdown to surface a real <img>.
     await expect(page.locator("img[alt='chart']")).toBeVisible();
     const src = await page.locator("img[alt='chart']").getAttribute("src");
@@ -104,13 +104,13 @@ test.describe("Files view — markdown image path rewrite", () => {
   });
 
   test("`![](../../images/foo.png)` with relative-up prefix also resolves", async ({ page }) => {
-    const md = `![two](../../images/two.png)`;
-    await mockFileContent(page, "wiki/pages/a.md", {
+    const markdown = `![two](../../images/two.png)`;
+    await mockFileContent(page, "wiki/pages/a.markdown", {
       kind: "text",
-      content: md,
+      content: markdown,
     });
 
-    await page.goto("/chat?view=files&path=wiki/pages/a.md");
+    await page.goto("/chat?view=files&path=wiki/pages/a.markdown");
     await expect(page.locator("img[alt='two']")).toBeVisible();
     const src = await page.locator("img[alt='two']").getAttribute("src");
     expect(src).toContain("/api/files/raw");
@@ -120,15 +120,15 @@ test.describe("Files view — markdown image path rewrite", () => {
   });
 
   test("data: URIs and http URLs pass through untouched", async ({ page }) => {
-    const md = `
+    const markdown = `
 ![data](data:image/png;base64,AAA=)
 ![cdn](https://cdn.example.com/x.png)
 `;
-    await mockFileContent(page, "markdowns/pass.md", {
+    await mockFileContent(page, "markdowns/pass.markdown", {
       kind: "text",
-      content: md,
+      content: markdown,
     });
-    await page.goto("/chat?view=files&path=markdowns/pass.md");
+    await page.goto("/chat?view=files&path=markdowns/pass.markdown");
     const dataSrc = await page.locator("img[alt='data']").getAttribute("src");
     expect(dataSrc).toBe("data:image/png;base64,AAA=");
     const cdnSrc = await page.locator("img[alt='cdn']").getAttribute("src");

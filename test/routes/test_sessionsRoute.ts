@@ -8,9 +8,9 @@
 
 import { after, before, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import fs from "fs";
+import { mkdirSync, readFileSync } from "fs";
 import { mkdtemp, rm, writeFile, utimes } from "fs/promises";
-import os from "os";
+import { homedir, tmpdir } from "os";
 import path from "path";
 import type { Request, Response } from "express";
 import { encodeCursor } from "../../server/api/routes/sessionsCursor.js";
@@ -119,7 +119,7 @@ async function writeSession(
     const manifestPath = path.join(manifestDir, "manifest.json");
     let entries: unknown[] = [];
     try {
-      entries = JSON.parse(fs.readFileSync(manifestPath, "utf-8")).entries ?? [];
+      entries = JSON.parse(readFileSync(manifestPath, "utf-8")).entries ?? [];
     } catch {
       /* first write */
     }
@@ -132,7 +132,7 @@ async function writeSession(
       summary: `AI summary ${id}`,
       keywords: ["k1"],
     });
-    fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+    mkdirSync(path.dirname(manifestPath), { recursive: true });
     await writeFile(manifestPath, JSON.stringify({ version: 1, entries }));
   }
 }
@@ -140,15 +140,15 @@ async function writeSession(
 async function resetChatDir(): Promise<void> {
   await rm(chatDir, { recursive: true, force: true });
   await rm(manifestDir, { recursive: true, force: true });
-  fs.mkdirSync(chatDir, { recursive: true });
-  fs.mkdirSync(manifestDir, { recursive: true });
+  mkdirSync(chatDir, { recursive: true });
+  mkdirSync(manifestDir, { recursive: true });
 }
 
 before(async () => {
-  tmpRoot = await mkdtemp(path.join(os.tmpdir(), "mulmo-sessions-route-"));
+  tmpRoot = await mkdtemp(path.join(tmpdir(), "mulmo-sessions-route-"));
   originalHome = process.env.HOME;
   originalUserProfile = process.env.USERPROFILE;
-  // The workspace path resolves once at module load from os.homedir(),
+  // The workspace path resolves once at module load from homedir(),
   // so we have to steer it BEFORE importing the route module. This
   // mirrors the setup in test_configRoute.ts.
   process.env.HOME = tmpRoot;
@@ -161,8 +161,8 @@ before(async () => {
   const { workspacePath: workspacePth } = await import("../../server/workspace/workspace.js");
   chatDir = WORKSPACE_PATHS.chat;
   manifestDir = indexDirFor(workspacePth);
-  fs.mkdirSync(chatDir, { recursive: true });
-  fs.mkdirSync(manifestDir, { recursive: true });
+  mkdirSync(chatDir, { recursive: true });
+  mkdirSync(manifestDir, { recursive: true });
   const routeMod = await import("../../server/api/routes/sessions.js");
   getHandler = extractRouteHandler(routeMod, "/api/sessions", "get");
   markReadHandler = extractRouteHandler(routeMod, "/api/sessions/:id/mark-read", "post");
@@ -327,7 +327,7 @@ describe("POST /api/sessions/:id/mark-read", () => {
     const { res } = mockMarkReadRes();
     await markReadHandler({ params: { id: "s1" } } as unknown as Request, res);
 
-    const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
+    const meta = JSON.parse(readFileSync(metaPath, "utf-8"));
     assert.equal(meta.hasUnread, false);
   });
 });
