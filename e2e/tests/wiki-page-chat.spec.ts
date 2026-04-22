@@ -27,6 +27,16 @@ const LOG_PAYLOAD = {
   content: "## 2026-04-22\n- Did stuff",
 };
 
+// Simulates a traversal attempt where the server naively echoes the
+// slug back as a page response. The client-side safety net must
+// still refuse to send a chat prompt containing it.
+const PAGE_TRAVERSAL = {
+  action: "page",
+  title: "../secrets",
+  pageName: "../secrets",
+  content: "# Escape\nCompromised.",
+};
+
 async function mockWikiApi(page: Page): Promise<void> {
   await page.route(
     (url) => url.pathname === "/api/wiki",
@@ -35,12 +45,16 @@ async function mockWikiApi(page: Page): Promise<void> {
       if (req.method() === "GET") {
         const slug = new URL(req.url()).searchParams.get("slug");
         if (slug === "onboarding") return route.fulfill({ json: { data: PAGE_ONBOARDING } });
+        if (slug === "../secrets") return route.fulfill({ json: { data: PAGE_TRAVERSAL } });
         return route.fulfill({ json: { data: INDEX_PAYLOAD } });
       }
       if (req.method() === "POST") {
         const body = (req.postDataJSON() ?? {}) as { action?: string; pageName?: string };
         if (body.action === "page" && body.pageName === "onboarding") {
           return route.fulfill({ json: { data: PAGE_ONBOARDING } });
+        }
+        if (body.action === "page" && body.pageName === "../secrets") {
+          return route.fulfill({ json: { data: PAGE_TRAVERSAL } });
         }
         if (body.action === "log") return route.fulfill({ json: { data: LOG_PAYLOAD } });
         return route.fulfill({ json: { data: INDEX_PAYLOAD } });
@@ -80,6 +94,17 @@ test.describe("wiki page chat composer", () => {
     await expect(input).toBeVisible();
     await expect(page.getByTestId("wiki-page-chat-send")).toBeDisabled();
     await input.fill("   ");
+    await expect(page.getByTestId("wiki-page-chat-send")).toBeDisabled();
+  });
+
+  test("send stays disabled when the URL slug contains path-traversal tokens", async ({ page }) => {
+    // Defence-in-depth: even if the server returns a page payload
+    // for `?page=../secrets`, the client must refuse to interpolate
+    // the slug into `data/wiki/pages/${slug}.md` and fire off an
+    // agent run that could Read outside the wiki directory.
+    await page.goto("/wiki?page=" + encodeURIComponent("../secrets"));
+    await expect(page.getByTestId("wiki-page-chat-input")).toBeVisible();
+    await page.getByTestId("wiki-page-chat-input").fill("What's in here?");
     await expect(page.getByTestId("wiki-page-chat-send")).toBeDisabled();
   });
 

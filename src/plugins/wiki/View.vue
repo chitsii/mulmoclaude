@@ -307,14 +307,21 @@ const chatDraft = ref("");
 const isStandaloneWikiRoute = computed(() => route.name === PAGE_ROUTES.wiki);
 const canSendChat = computed(() => chatDraft.value.trim().length > 0 && currentSlug() !== null);
 
+// Reject path-traversal tokens so `?page=../secrets` can't be
+// interpolated into the prompt and escape `data/wiki/pages/`. Keeps
+// non-ASCII slugs (e.g. Japanese titles like `さくらインターネット`)
+// working — we only ban separators and `..`, not arbitrary unicode.
+function isSafeSlug(slug: string): boolean {
+  return slug.length > 0 && !slug.includes("/") && !slug.includes("\\") && !slug.includes("..");
+}
+
 function currentSlug(): string | null {
   // Prefer the URL on /wiki (source of truth for that route); fall
   // back to the tool-result payload when WikiView is mounted as a
   // manageWiki result inside /chat.
-  if (route.name === PAGE_ROUTES.wiki && typeof route.query.page === "string" && route.query.page.length > 0) {
-    return route.query.page;
-  }
-  return props.selectedResult?.data?.pageName ?? null;
+  const raw = route.name === PAGE_ROUTES.wiki && typeof route.query.page === "string" ? route.query.page : (props.selectedResult?.data?.pageName ?? null);
+  if (!raw || !isSafeSlug(raw)) return null;
+  return raw;
 }
 
 function submitChat() {
