@@ -555,10 +555,14 @@ function createNewSession(roleId?: string): ActiveSession {
 }
 
 function onRoleChange() {
-  // Both the user dropdown click and the agent-triggered role switch
-  // (EVENT_TYPES.switchRole) end up in a fresh chat session —
-  // createNewSession navigates to /chat, so any non-chat page yields
-  // automatically.
+  // On non-chat pages (wiki, files, etc.) the user is just picking
+  // the role that future new-chat actions should use — don't yank
+  // them onto /chat by creating a session here. currentRoleId is
+  // already updated by RoleSelector's v-model, so future "+" clicks
+  // or composer sends will pick it up. Agent-triggered role switches
+  // (EVENT_TYPES.switchRole) always fire during an active run on
+  // /chat, so the guard doesn't affect them.
+  if (!isChatPage.value) return;
   const session = createNewSession(currentRoleId.value);
   maybeSeedRoleDefault(session);
 }
