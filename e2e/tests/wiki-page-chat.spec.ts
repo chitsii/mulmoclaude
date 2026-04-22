@@ -127,6 +127,24 @@ test.describe("wiki page chat composer", () => {
     await page.waitForURL(/\/chat\//);
     expect(page.url()).not.toContain("/wiki");
   });
+
+  test("browser Back after sending returns to the originating wiki page", async ({ page }) => {
+    // createNewSession defaults to router.replace (cheaper for
+    // intra-chat /chat/:old → /chat/:new transitions), but the
+    // cross-route flow from /wiki must push so the wiki URL stays in
+    // history. Otherwise the user loses their way back after a quick
+    // handoff.
+    await page.goto("/wiki?page=onboarding");
+    await expect(page.getByTestId("wiki-page-chat-input")).toBeVisible();
+
+    await page.getByTestId("wiki-page-chat-input").fill("What does onboarding cover?");
+    await page.getByTestId("wiki-page-chat-send").click();
+    await page.waitForURL(/\/chat\//);
+
+    await page.goBack();
+    await page.waitForURL(/\/wiki\?page=onboarding/);
+    await expect(page.getByRole("heading", { level: 1, name: "Onboarding" })).toBeVisible();
+  });
 });
 
 test.describe("wiki page chat composer — tool-result context", () => {
