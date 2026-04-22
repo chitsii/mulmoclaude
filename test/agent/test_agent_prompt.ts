@@ -11,6 +11,7 @@ import {
   prependJournalPointer,
   buildInlinedHelpFiles,
   summarizeHelpContent,
+  buildPluginPromptSections,
 } from "../../server/agent/prompt.js";
 import { WORKSPACE_FILES } from "../../server/workspace/paths.js";
 import { dirname } from "path";
@@ -213,8 +214,9 @@ describe("buildSystemPrompt", () => {
   });
 
   it("includes plugin prompt sections from ToolDefinition.prompt", () => {
-    // manageTodoList has a prompt in its definition.ts — it should
-    // appear in the system prompt when included in availablePlugins.
+    // manageTodoList has a single-paragraph prompt in its
+    // definition.ts, so it should render in the compact bullet form
+    // (`- **name**: body`) under the "Plugin Instructions" heading.
     const role = makeRole({ availablePlugins: ["manageTodoList"] });
     const result = buildSystemPrompt({
       role,
@@ -222,8 +224,10 @@ describe("buildSystemPrompt", () => {
       useDocker: false,
     });
     assert.ok(result.includes("## Plugin Instructions"));
-    assert.ok(result.includes("### manageTodoList"));
+    assert.ok(result.includes("- **manageTodoList**: "));
     assert.ok(result.includes("todo list"));
+    // Compact form must not revert to the old heading layout.
+    assert.ok(!result.includes("### manageTodoList"));
   });
 
   it("emits the Sandbox Tools hint when useDocker is true", () => {
@@ -401,5 +405,34 @@ describe("buildInlinedHelpFiles", () => {
     writeHelp("empty.md", "   \n\n   ");
     const result = buildInlinedHelpFiles("Read helps/empty.md", workspace);
     assert.deepEqual(result, []);
+  });
+});
+
+describe("buildPluginPromptSections", () => {
+  it("returns compact bullet form for a short single-paragraph plugin prompt", () => {
+    // manageTodoList's real definition has a ~114-char single-paragraph
+    // prompt, so it must collapse to the `- **name**: body` shape.
+    const role = makeRole({ availablePlugins: ["manageTodoList"] });
+    const sections = buildPluginPromptSections(role);
+    assert.equal(sections.length, 1);
+    assert.ok(sections[0].startsWith("- **manageTodoList**: "));
+    assert.ok(!sections[0].includes("\n"));
+  });
+
+  it("returns heading form for a multi-paragraph plugin prompt", () => {
+    // presentDocument's real prompt is multi-paragraph (two paragraphs
+    // joined by \n\n), so it keeps the heading layout so structure
+    // survives.
+    const role = makeRole({ availablePlugins: ["presentDocument"] });
+    const sections = buildPluginPromptSections(role);
+    assert.equal(sections.length, 1);
+    assert.ok(sections[0].startsWith("### presentDocument\n\n"));
+    // Body retains its paragraph break
+    assert.ok(sections[0].includes("\n\n"));
+  });
+
+  it("returns empty array when the role has no matching plugins", () => {
+    const role = makeRole({ availablePlugins: [] });
+    assert.deepEqual(buildPluginPromptSections(role), []);
   });
 });
