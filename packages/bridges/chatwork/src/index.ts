@@ -9,9 +9,19 @@
 //   CHATWORK_API_TOKEN — API token from My → Service Integration
 //
 // Optional:
-//   CHATWORK_ALLOWED_ROOMS  — CSV of room_ids the bot should listen in
-//                             (empty = every room the bot is a member of)
-//   CHATWORK_POLL_INTERVAL_SEC — poll interval seconds (default 5)
+//   CHATWORK_ALLOWED_ROOMS      — CSV of room_ids the bot should listen in
+//                                 (empty = every room the bot is a member of)
+//   CHATWORK_POLL_INTERVAL_SEC  — poll interval seconds (default 5)
+//   CHATWORK_ROOMS_TTL_SEC      — TTL for the GET /rooms cache used in
+//                                 "allow all" mode (default 180)
+//
+// Rate-limit posture (Chatwork's published cap is 300 requests / 5 min):
+//   - When CHATWORK_ALLOWED_ROOMS is set, every cycle costs
+//     (rooms_in_allowlist) GET /rooms/{id}/messages.
+//   - Otherwise it additionally costs ~1 GET /rooms per CHATWORK_ROOMS_TTL_SEC
+//     window (cached between calls — we don't re-enumerate every poll).
+//   - A 429 response triggers exponential backoff (1s → 2s → 4s … capped
+//     at 60s) and honours Retry-After when the server supplies it.
 
 import "dotenv/config";
 import { createBridgeClient, chunkText } from "@mulmobridge/client";
@@ -35,6 +45,7 @@ const allowedRooms = new Set(
 );
 const allowAll = allowedRooms.size === 0;
 const pollIntervalSec = Math.max(2, Number(process.env.CHATWORK_POLL_INTERVAL_SEC) || 5);
+const roomsTtlMs = Math.max(30, Number(process.env.CHATWORK_ROOMS_TTL_SEC) || 180) * 1000;
 
 const mulmo = createBridgeClient({ transportId: TRANSPORT_ID });
 
@@ -50,7 +61,34 @@ function isObj(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null;
 }
 
+// Shared 429 backoff — any 429 response pauses all subsequent
+// requests until `retryAfter`. Keeps multiple concurrent callers
+// (e.g. sendMessage during a poll cycle) from hammering the API
+// once the cap has been hit.
+let retryAfter = 0;
+let backoffStreakMs = 1000;
+
+async function waitForRateLimit(): Promise<void> {
+  const now = Date.now();
+  if (retryAfter > now) {
+    await sleep(retryAfter - now);
+  }
+}
+
+function sleep(delayMs: number): Promise<void> {
+  return new Promise((done) => setTimeout(done, delayMs));
+}
+
+function parseRetryAfter(headerValue: string | null): number {
+  if (!headerValue) return 0;
+  const seconds = Number(headerValue);
+  if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
+  const when = Date.parse(headerValue);
+  return Number.isFinite(when) ? Math.max(0, when - Date.now()) : 0;
+}
+
 async function cwFetch(method: "GET" | "POST" | "PUT", path: string, form?: Record<string, string>): Promise<unknown> {
+  await waitForRateLimit();
   const headers: Record<string, string> = { "X-ChatWorkToken": apiToken! };
   let body: string | undefined;
   if (form) {
@@ -63,11 +101,23 @@ async function cwFetch(method: "GET" | "POST" | "PUT", path: string, form?: Reco
     body,
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
-  if (res.status === 204) return null;
+  if (res.status === 204) {
+    backoffStreakMs = 1000;
+    return null;
+  }
+  if (res.status === 429) {
+    const headerDelay = parseRetryAfter(res.headers.get("retry-after"));
+    const delay = Math.min(60_000, Math.max(headerDelay, backoffStreakMs));
+    retryAfter = Date.now() + delay;
+    backoffStreakMs = Math.min(60_000, backoffStreakMs * 2);
+    console.warn(`[chatwork] 429 rate-limited — backing off ${delay}ms (source: ${headerDelay ? "retry-after" : "exp"})`);
+    throw new Error(`${method} ${path}: 429 rate-limited (retry after ${delay}ms)`);
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`${method} ${path}: ${res.status} ${text.slice(0, 200)}`);
   }
+  backoffStreakMs = 1000;
   return res.json();
 }
 
@@ -81,10 +131,29 @@ async function getBotAccountId(): Promise<number> {
   return profile.account_id;
 }
 
+// Cache the GET /rooms result in "allow all" mode. Without this
+// the bridge burns one extra request per poll interval just to
+// discover the same room list — 5s interval × 1 req = 12 req/min
+// on top of the messages polls. Room membership changes are rare
+// in practice, so a few-minute TTL is a reasonable default.
+interface RoomsCache {
+  ids: string[];
+  fetchedAt: number;
+}
+let roomsCache: RoomsCache | null = null;
+
 async function getRoomIds(): Promise<string[]> {
+  const now = Date.now();
+  if (roomsCache && now - roomsCache.fetchedAt < roomsTtlMs) {
+    return roomsCache.ids;
+  }
   const rooms = await cwFetch("GET", "/rooms");
-  if (!Array.isArray(rooms)) return [];
-  return rooms.filter((room): room is JsonRecord => isObj(room) && typeof room.room_id === "number").map((room) => String(room.room_id));
+  if (!Array.isArray(rooms)) {
+    return roomsCache?.ids ?? [];
+  }
+  const ids = rooms.filter((room): room is JsonRecord => isObj(room) && typeof room.room_id === "number").map((room) => String(room.room_id));
+  roomsCache = { ids, fetchedAt: now };
+  return ids;
 }
 
 // ── Send / receive ──────────────────────────────────────────────

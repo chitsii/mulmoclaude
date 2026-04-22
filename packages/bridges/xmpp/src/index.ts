@@ -15,6 +15,14 @@
 // Optional:
 //   XMPP_ALLOWED_JIDS — CSV of bare JIDs allowed to converse (empty = all)
 //   XMPP_RESOURCE     — resource identifier (default "mulmobridge")
+//   XMPP_REPLY_MODE   — "bare" (default) or "full".
+//                       "bare" sends to user@domain, letting the server
+//                       route to whichever resource is currently active —
+//                       the portable default that works for multi-device
+//                       users. "full" echoes the sender's full JID back
+//                       (user@domain/resource), useful for deployments
+//                       where the roster / carbons config doesn't forward
+//                       bare-addressed messages to every resource.
 
 import "dotenv/config";
 import xmppPkg, { type XmlElement } from "@xmpp/client";
@@ -34,6 +42,12 @@ if (!jid || !password || !service) {
 }
 
 const resource = process.env.XMPP_RESOURCE ?? "mulmobridge";
+const replyMode = (process.env.XMPP_REPLY_MODE ?? "bare").toLowerCase();
+if (replyMode !== "bare" && replyMode !== "full") {
+  console.error(`XMPP_REPLY_MODE must be "bare" or "full" — got "${replyMode}"`);
+  process.exit(1);
+}
+const replyWithFullJid = replyMode === "full";
 const allowedJids = new Set(
   (process.env.XMPP_ALLOWED_JIDS ?? "")
     .split(",")
@@ -100,15 +114,22 @@ async function handleStanza(stanza: XmlElement): Promise<void> {
     return;
   }
 
-  console.log(`[xmpp] message from=${senderBare} len=${body.length}`);
+  // chatId stays bare so session identity is stable across reconnects
+  // (same user talking from their phone later still lands on the same
+  // chat). The outbound address differs only when XMPP_REPLY_MODE=full
+  // is explicitly requested — see env doc at top of file.
+  const replyTo = replyWithFullJid ? from : senderBare;
+
+  const replyToHint = replyWithFullJid ? ` replyTo=${from}` : "";
+  console.log(`[xmpp] message from=${senderBare} len=${body.length}${replyToHint}`);
 
   try {
     const ack = await mulmo.send(senderBare, body);
     if (ack.ok) {
-      await sendChat(senderBare, ack.reply ?? "");
+      await sendChat(replyTo, ack.reply ?? "");
     } else {
       const status = ack.status ? ` (${ack.status})` : "";
-      await sendChat(senderBare, `Error${status}: ${ack.error ?? "unknown"}`);
+      await sendChat(replyTo, `Error${status}: ${ack.error ?? "unknown"}`);
     }
   } catch (err) {
     console.error(`[xmpp] handleStanza error: ${err}`);
@@ -141,6 +162,7 @@ async function main(): Promise<void> {
   console.log("MulmoClaude XMPP bridge");
   console.log(`JID: ${username}@${domain}/${resource}`);
   console.log(`Service: ${service}`);
+  console.log(`Reply mode: ${replyWithFullJid ? "full (include resource)" : "bare"}`);
   console.log(`Allowlist: ${allowAll ? "(all)" : [...allowedJids].join(", ")}`);
 
   await xmpp.start();

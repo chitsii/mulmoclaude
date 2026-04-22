@@ -58,8 +58,10 @@
           class="mx-4 mt-3 mb-2 rounded border border-yellow-400 bg-yellow-50 p-3 text-xs text-yellow-700 shrink-0"
         >
           <span class="material-icons text-xs align-middle mr-1">warning</span>
-          Image generation requires
-          <code class="font-mono">GEMINI_API_KEY</code>. Add it to <code class="font-mono">.env</code> and restart the app.
+          <i18n-t keypath="app.geminiRequired" tag="span">
+            <template #envKey><code class="font-mono">GEMINI_API_KEY</code></template>
+            <template #envFile><code class="font-mono">.env</code></template>
+          </i18n-t>
         </div>
 
         <!-- Tool result previews -->
@@ -90,8 +92,10 @@
           class="mx-3 mt-2 rounded border border-yellow-400 bg-yellow-50 p-2 text-xs text-yellow-700 shrink-0"
         >
           <span class="material-icons text-xs align-middle mr-1">warning</span>
-          Image generation requires
-          <code class="font-mono">GEMINI_API_KEY</code>. Add it to <code class="font-mono">.env</code> and restart the app.
+          <i18n-t keypath="app.geminiRequired" tag="span">
+            <template #envKey><code class="font-mono">GEMINI_API_KEY</code></template>
+            <template #envFile><code class="font-mono">.env</code></template>
+          </i18n-t>
         </div>
 
         <div ref="canvasRef" class="flex-1 overflow-hidden outline-none min-h-0" tabindex="0" @mousedown="activePane = 'main'" @keydown="handleCanvasKeydown">
@@ -108,7 +112,7 @@
               <pre class="text-sm text-gray-700 whitespace-pre-wrap">{{ JSON.stringify(selectedResult, null, 2) }}</pre>
             </div>
             <div v-else class="flex items-center justify-center h-full text-gray-600">
-              <p>Start a conversation</p>
+              <p>{{ t("app.startConversation") }}</p>
             </div>
           </template>
           <!-- Stack mode -->
@@ -162,7 +166,10 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, reactive } from "vue";
+import { useI18n } from "vue-i18n";
 import { v4 as uuidv4 } from "uuid";
+
+const { t } = useI18n();
 import { getPlugin } from "./tools";
 import type { ToolResultComplete } from "gui-chat-protocol/vue";
 import RightSidebar from "./components/RightSidebar.vue";
@@ -223,6 +230,7 @@ import { useRoute, useRouter } from "vue-router";
 import { apiGet } from "./utils/api";
 import { API_ROUTES } from "./config/apiRoutes";
 import { needsGemini } from "./utils/role/plugins";
+import { classifyWorkspacePath } from "./utils/path/workspaceLinkRouter";
 
 // --- Per-session state ---
 // Declared early so that pub/sub callbacks and function declarations
@@ -671,10 +679,42 @@ const { handler: handleClickOutsideHistory } = useClickOutside({
   popupRef: historyPopupRef,
 });
 
+// Route workspace-internal links (wiki pages, files, sessions) to the
+// appropriate canvas view. Called from plugin Views via AppApi.
+//
+// Use a single router.push instead of setCanvasViewMode + router.push
+// to avoid double navigation entries. The route watcher in
+// useCanvasViewMode updates canvasViewMode from route.query.view.
+function navigateToWorkspacePath(href: string): void {
+  const target = classifyWorkspacePath(href);
+  if (!target) return;
+
+  // Clean view-specific query params before building the new query.
+  const query: Record<string, string> = {};
+  for (const [key, val] of Object.entries(route.query)) {
+    if (key !== "path" && key !== "page" && typeof val === "string") {
+      query[key] = val;
+    }
+  }
+
+  switch (target.kind) {
+    case "wiki":
+      router.push({ query: { ...query, view: CANVAS_VIEW.wiki, page: target.slug } }).catch(() => {});
+      break;
+    case "file":
+      router.push({ query: { ...query, view: CANVAS_VIEW.files, path: target.path } }).catch(() => {});
+      break;
+    case "session":
+      handleSessionSelect(target.sessionId);
+      break;
+  }
+}
+
 // Plugin Views call back into App.vue via provide/inject (#227).
 provideAppApi({
   refreshRoles,
   sendMessage: (message: string) => sendMessage(message),
+  navigateToWorkspacePath: (href: string) => navigateToWorkspacePath(href),
 });
 // Plugin Views that need to tag background work with the current
 // session (e.g. MulmoScript generations) inject this.

@@ -49,6 +49,7 @@ const dmOnly = (process.env.MASTODON_DM_ONLY ?? "true").toLowerCase() !== "false
 const mulmo = createBridgeClient({ transportId: TRANSPORT_ID });
 const apiBase = `${instanceUrl.replace(/\/$/, "")}/api/v1`;
 const streamUrl = `${instanceUrl.replace(/^http/, "ws").replace(/\/$/, "")}/api/v1/streaming?stream=user:notification&access_token=${encodeURIComponent(accessToken)}`;
+let reconnectBackoffMs = RECONNECT_BASE_MS;
 
 mulmo.onPush((pushEvent) => {
   postStatus(pushEvent.chatId, pushEvent.message, null, "direct").catch((err) => console.error(`[mastodon] push send failed: ${err}`));
@@ -271,11 +272,10 @@ function parseFrame(raw: unknown): StreamFrame | null {
 
 function connect(): void {
   const socket = new WebSocket(streamUrl);
-  let backoffMs = RECONNECT_BASE_MS;
 
   socket.on("open", () => {
     console.log(`[mastodon] stream connected: ${instanceUrl}`);
-    backoffMs = RECONNECT_BASE_MS;
+    reconnectBackoffMs = RECONNECT_BASE_MS;
   });
 
   socket.on("message", (buffer) => {
@@ -289,11 +289,12 @@ function connect(): void {
   });
 
   socket.on("close", (code, reason) => {
-    console.warn(`[mastodon] stream closed code=${code} reason=${reason.toString().slice(0, 100)}; reconnecting in ${backoffMs}ms`);
+    const retryDelayMs = reconnectBackoffMs;
+    console.warn(`[mastodon] stream closed code=${code} reason=${reason.toString().slice(0, 100)}; reconnecting in ${retryDelayMs}ms`);
     setTimeout(() => {
-      backoffMs = Math.min(backoffMs * 2, RECONNECT_MAX_MS);
+      reconnectBackoffMs = Math.min(reconnectBackoffMs * 2, RECONNECT_MAX_MS);
       connect();
-    }, backoffMs);
+    }, retryDelayMs);
   });
 }
 
