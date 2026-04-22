@@ -230,7 +230,15 @@ async function pollLoop(): Promise<void> {
     try {
       const rooms = await listDmRoomIds();
       for (const roomId of rooms) {
-        if (!cursors.has(roomId)) cursors.set(roomId, new Date().toISOString());
+        // First time we see a room, rewind the cursor by one poll
+        // interval so the message that triggered room creation (often
+        // the user's first DM) is still captured on the next
+        // /im.history call. A pure `new Date().toISOString()` cursor
+        // would place the `oldest` boundary at or after the first
+        // message's ts, dropping it with `inclusive: "false"`.
+        if (!cursors.has(roomId)) {
+          cursors.set(roomId, new Date(Date.now() - pollIntervalSec * 1000).toISOString());
+        }
         try {
           const newestIso = await pollRoom(roomId, cursors.get(roomId)!);
           cursors.set(roomId, newestIso);

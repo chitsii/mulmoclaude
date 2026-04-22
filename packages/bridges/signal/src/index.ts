@@ -124,15 +124,26 @@ function parseEnvelope(raw: string): IncomingSignal | null {
   const envelope = isObj(parsed.envelope) ? parsed.envelope : null;
   if (!envelope) return null;
 
-  const source = typeof envelope.sourceNumber === "string" ? envelope.sourceNumber : typeof envelope.source === "string" ? envelope.source : "";
+  // Signal envelopes carry both `source` (may be phone or UUID) and
+  // `sourceNumber` (E.164 phone or null). The `/v2/send` API requires
+  // E.164 phone numbers as recipients, so a UUID fallback will 400.
+  // Username-only senders (no phone on file) will have sourceNumber:
+  // null — we can't reply to them at all, so drop the message rather
+  // than attempt a failing send. See CodeRabbit review on #611.
+  const sourceNumber = typeof envelope.sourceNumber === "string" && E164_PHONE.test(envelope.sourceNumber) ? envelope.sourceNumber : "";
   const dataMessage = isObj(envelope.dataMessage) ? envelope.dataMessage : null;
   const text = dataMessage && typeof dataMessage.message === "string" ? dataMessage.message.trim() : "";
-  if (!source || !text || !dataMessage) return null;
+  if (!sourceNumber || !text || !dataMessage) return null;
 
   const groupId = extractGroupId(dataMessage);
-  const chatId = groupId ? `group.${groupId}` : source;
-  return { sourceNumber: source, chatId, isGroup: Boolean(groupId), text };
+  const chatId = groupId ? `group.${groupId}` : sourceNumber;
+  return { sourceNumber, chatId, isGroup: Boolean(groupId), text };
 }
+
+// E.164: `+` followed by 1-15 digits, first digit non-zero. Signal
+// accepts this exact shape; the bot can only reply to senders whose
+// phone is on file.
+const E164_PHONE = /^\+[1-9]\d{1,14}$/;
 
 async function handleEnvelope(raw: string): Promise<void> {
   const msg = parseEnvelope(raw);
