@@ -45,15 +45,17 @@ Send a Nostr DM to the bot's `npub` from any Nostr client — you'll get a reply
 | `NOSTR_PRIVATE_KEY`      | yes      | —       | 64-char hex or `nsec1…` bech32 bot secret key |
 | `NOSTR_RELAYS`           | yes      | —       | CSV of `wss://` relay URLs |
 | `NOSTR_ALLOWED_PUBKEYS`  | no       | (all)   | CSV of hex pubkeys allowed to DM the bot (lower-case). Empty = everyone |
+| `NOSTR_CURSOR_FILE`      | no       | `~/.mulmoclaude/nostr-cursor.json` | Path for the persisted last-seen event timestamp. Set to an absolute path if you run multiple bots on the same machine |
 | `MULMOCLAUDE_AUTH_TOKEN` | no       | auto    | MulmoClaude bearer token override |
 | `MULMOCLAUDE_API_URL`    | no       | `http://localhost:3001` | MulmoClaude server URL |
 
 ## How it works
 
 1. Bridge derives the bot's pubkey from the secret key and opens WebSocket subscriptions to every relay in `NOSTR_RELAYS`.
-2. Filter: `kinds=[4]` + `#p=<botPubkey>` + `since=now-60s` (avoids re-processing historical events on restart).
-3. For each inbound event, we verify (`nostr-tools` does it), decrypt with NIP-04 ECDH + AES-CBC, check the sender against the allowlist, and forward the plaintext to MulmoClaude keyed by `sender pubkey (hex)`.
-4. Replies are encrypted back with the sender's pubkey, signed as a fresh `kind=4` event, and broadcast to all relays. Any relay accepting it = successful delivery (clients will see the message).
+2. Filter: `kinds=[4]` + `#p=<botPubkey>` + `since=<cursor>`. The cursor is the `created_at` of the last event we've committed to processing, persisted to `NOSTR_CURSOR_FILE` so restarts don't lose DMs delivered while the bridge was offline. On cold start (no cursor file) we fall back to `now-60s` to avoid replaying ancient history.
+3. Every 5 minutes we reopen the subscription on every relay. `nostr-tools`' `SimplePool` does not auto-resume subscriptions when a relay drops the WebSocket, so without this we would silently stop receiving after the first relay hiccup. Duplicate deliveries across the reopen boundary are filtered by event-id dedup.
+4. For each inbound event, we verify (`nostr-tools` does it), decrypt with NIP-04 ECDH + AES-CBC, check the sender against the allowlist, and forward the plaintext to MulmoClaude keyed by `sender pubkey (hex)`.
+5. Replies are encrypted back with the sender's pubkey, signed as a fresh `kind=4` event, and broadcast to all relays. Any relay accepting it = successful delivery (clients will see the message).
 
 ## Troubleshooting
 
