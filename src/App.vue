@@ -582,6 +582,12 @@ async function resumeOrCreateChatSession(): Promise<void> {
     return;
   }
   await loadSession(topId);
+  // loadSession silently returns on fetch failure (stale summary,
+  // transient API error). Without a fallback, /chat is left with no
+  // active session and sendMessage becomes a no-op.
+  if (!sessionMap.has(topId)) {
+    createNewSession();
+  }
 }
 
 function activateSession(sessionId: string, roleId: string, replace: boolean): void {
