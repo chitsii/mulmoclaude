@@ -1,11 +1,18 @@
 // Dynamic favicon that changes color based on agent state (#470).
 //
-// Uses Canvas API to draw a rounded-square icon with the letter "M"
-// in the center. Color reflects the current state:
+// Uses Canvas API to draw a rounded-square icon containing the
+// MulmoClaude mascot logo. Agent state appears as a 2 px colored ring
+// around the frame (so the mascot stays visible):
 //   idle (gray) → running (blue, pulse) → done (green) → error (red)
 //   notification badge (orange dot) overlaid when unread count > 0.
+//
+// The logo PNG is loaded once on first render via Vite's asset-URL
+// import and cached as an HTMLImageElement. If it fails to decode we
+// fall back to the earlier "M"-letter variant so the tab icon never
+// disappears entirely.
 
 import { watch, type Ref, type ComputedRef } from "vue";
+import logoUrl from "../assets/mulmo_bw.png";
 
 export const FAVICON_STATES = {
   idle: "idle",
@@ -26,6 +33,34 @@ const STATE_COLORS: Record<FaviconState, string> = {
 const NOTIFICATION_DOT_COLOR = "#F97316"; // orange-500
 const SIZE = 32;
 const RADIUS = 6;
+const RING_WIDTH = 2;
+
+// Load the logo PNG once and memoize the decoded <img>. Multiple
+// concurrent calls before the first resolve share the same promise so
+// we don't kick off N redundant decodes during a burst of state
+// changes. A failed load falls through to the "M" fallback for the
+// rest of the session.
+let logoImage: HTMLImageElement | null = null;
+let logoLoadFailed = false;
+let logoLoadPromise: Promise<HTMLImageElement> | null = null;
+
+function loadLogo(): Promise<HTMLImageElement> {
+  if (logoImage) return Promise.resolve(logoImage);
+  if (logoLoadPromise) return logoLoadPromise;
+  logoLoadPromise = new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      logoImage = img;
+      resolve(img);
+    };
+    img.onerror = (err) => {
+      logoLoadFailed = true;
+      reject(err instanceof Error ? err : new Error("favicon logo failed to load"));
+    };
+    img.src = logoUrl;
+  });
+  return logoLoadPromise;
+}
 
 function drawRoundedRect(ctx: CanvasRenderingContext2D, posX: number, posY: number, width: number, height: number, radius: number): void {
   ctx.beginPath();
@@ -41,54 +76,106 @@ function drawRoundedRect(ctx: CanvasRenderingContext2D, posX: number, posY: numb
   ctx.closePath();
 }
 
-function renderFavicon(state: FaviconState, hasNotification: boolean): string {
-  const canvas = document.createElement("canvas");
-  canvas.width = SIZE;
-  canvas.height = SIZE;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return "";
+// Aspect-preserving letterbox: scale the logo to fit the inner frame
+// without distorting the mascot, then center the leftover space. With
+// a transparent PNG the leftover is transparent (white fill below);
+// with the current opaque PNG the leftover matches the PNG's white
+// background so the two blend seamlessly.
+function drawLogoCentered(ctx: CanvasRenderingContext2D, img: HTMLImageElement, inset: number): void {
+  const available = SIZE - inset * 2;
+  const aspect = img.width / img.height;
+  const drawW = aspect >= 1 ? available : available * aspect;
+  const drawH = aspect >= 1 ? available / aspect : available;
+  const drawX = inset + (available - drawW) / 2;
+  const drawY = inset + (available - drawH) / 2;
+  ctx.drawImage(img, drawX, drawY, drawW, drawH);
+}
 
-  // Background: rounded square
-  const color = STATE_COLORS[state];
-  drawRoundedRect(ctx, 1, 1, SIZE - 2, SIZE - 2, RADIUS);
-  ctx.fillStyle = color;
-  ctx.fill();
-
-  // Subtle shadow/depth
-  ctx.strokeStyle = "rgba(0,0,0,0.15)";
-  ctx.lineWidth = 1;
-  drawRoundedRect(ctx, 1, 1, SIZE - 2, SIZE - 2, RADIUS);
+function drawStateRing(ctx: CanvasRenderingContext2D, state: FaviconState): void {
+  // Ring sits ON the edge of the rounded square rather than inside, so
+  // the full 32×32 is used for the mascot. `lineWidth = RING_WIDTH`
+  // with a half-inset keeps strokes on-pixel.
+  const half = RING_WIDTH / 2;
+  ctx.strokeStyle = STATE_COLORS[state];
+  ctx.lineWidth = RING_WIDTH;
+  drawRoundedRect(ctx, half, half, SIZE - RING_WIDTH, SIZE - RING_WIDTH, RADIUS);
   ctx.stroke();
 
-  // "M" letter
+  // Running: a second inner ring at lower alpha reads as a subtle
+  // glow / pulse cue at 32 px.
+  if (state === FAVICON_STATES.running) {
+    ctx.strokeStyle = "rgba(59, 130, 246, 0.35)"; // matches blue-500 state
+    ctx.lineWidth = 2;
+    drawRoundedRect(ctx, 4, 4, SIZE - 8, SIZE - 8, Math.max(RADIUS - 2, 2));
+    ctx.stroke();
+  }
+}
+
+function drawNotificationDot(ctx: CanvasRenderingContext2D): void {
+  const dotR = 5;
+  const dotX = SIZE - dotR - 1;
+  const dotY = dotR + 1;
+  ctx.beginPath();
+  ctx.arc(dotX, dotY, dotR, 0, Math.PI * 2);
+  ctx.fillStyle = NOTIFICATION_DOT_COLOR;
+  ctx.fill();
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+// Fallback for when the logo PNG fails to decode (or before the first
+// decode completes). Same geometry as the previous implementation so
+// the favicon never looks broken during the first paint.
+function renderFallbackFavicon(ctx: CanvasRenderingContext2D, state: FaviconState, hasNotification: boolean): void {
+  drawRoundedRect(ctx, 1, 1, SIZE - 2, SIZE - 2, RADIUS);
+  ctx.fillStyle = STATE_COLORS[state];
+  ctx.fill();
+
   ctx.fillStyle = "white";
   ctx.font = "bold 20px -apple-system, BlinkMacSystemFont, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("M", SIZE / 2, SIZE / 2 + 1);
 
-  // Running state: subtle glow ring
-  if (state === FAVICON_STATES.running) {
-    ctx.strokeStyle = "rgba(255,255,255,0.4)";
-    ctx.lineWidth = 2;
-    drawRoundedRect(ctx, 3, 3, SIZE - 6, SIZE - 6, RADIUS - 1);
-    ctx.stroke();
+  if (hasNotification) drawNotificationDot(ctx);
+}
+
+function renderLogoFavicon(ctx: CanvasRenderingContext2D, img: HTMLImageElement, state: FaviconState, hasNotification: boolean): void {
+  // Clip to the rounded square so the PNG's corners don't bleed
+  // outside the frame.
+  ctx.save();
+  drawRoundedRect(ctx, 0, 0, SIZE, SIZE, RADIUS);
+  ctx.clip();
+  // White backing so transparent regions of the PNG (none today, but
+  // future-proof) don't render with the browser's tab-bar color.
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  drawLogoCentered(ctx, img, RING_WIDTH);
+  ctx.restore();
+
+  drawStateRing(ctx, state);
+  if (hasNotification) drawNotificationDot(ctx);
+}
+
+async function renderFavicon(state: FaviconState, hasNotification: boolean): Promise<string> {
+  const canvas = document.createElement("canvas");
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "";
+
+  if (!logoLoadFailed) {
+    try {
+      const img = await loadLogo();
+      renderLogoFavicon(ctx, img, state, hasNotification);
+      return canvas.toDataURL("image/png");
+    } catch {
+      // fall through — renderFallbackFavicon below handles it.
+    }
   }
 
-  // Notification badge (orange dot, top-right)
-  if (hasNotification) {
-    const dotR = 5;
-    const dotX = SIZE - dotR - 1;
-    const dotY = dotR + 1;
-    ctx.beginPath();
-    ctx.arc(dotX, dotY, dotR, 0, Math.PI * 2);
-    ctx.fillStyle = NOTIFICATION_DOT_COLOR;
-    ctx.fill();
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  }
-
+  renderFallbackFavicon(ctx, state, hasNotification);
   return canvas.toDataURL("image/png");
 }
 
@@ -106,10 +193,16 @@ function applyFavicon(dataUrl: string): void {
 }
 
 export function useDynamicFavicon(opts: { state: Ref<FaviconState> | ComputedRef<FaviconState>; hasNotification: Ref<boolean> | ComputedRef<boolean> }): void {
-  function update(): void {
-    const dataUrl = renderFavicon(opts.state.value, opts.hasNotification.value);
+  async function update(): Promise<void> {
+    const dataUrl = await renderFavicon(opts.state.value, opts.hasNotification.value);
     applyFavicon(dataUrl);
   }
 
-  watch([opts.state, opts.hasNotification], update, { immediate: true });
+  watch(
+    [opts.state, opts.hasNotification],
+    () => {
+      update().catch((err) => console.warn("[favicon] render failed", err));
+    },
+    { immediate: true },
+  );
 }
