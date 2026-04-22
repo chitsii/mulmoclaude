@@ -44,8 +44,9 @@
       </div>
     </div>
 
-    <div class="flex-1 p-4 overflow-hidden">
+    <div ref="containerRef" class="flex-1 p-4 overflow-hidden">
       <VueDrawingCanvas
+        v-if="isSized"
         ref="canvasRef"
         :key="`${selectedResult?.uuid || 'default'}-${canvasRenderKey}`"
         v-model:image="canvasImage"
@@ -59,9 +60,8 @@
         :line-width="brushSize"
         :color="brushColor"
         :background-color="'#FFFFFF'"
-        :background-image="undefined"
+        :background-image="backgroundImage"
         :watermark="undefined"
-        :initial-image="initialStrokes"
         save-as="png"
         :styles="{
           border: '1px solid #ddd',
@@ -87,20 +87,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import VueDrawingCanvas from "vue-drawing-canvas";
 import type { ToolResult } from "gui-chat-protocol/vue";
-import type { ImageToolData, CanvasDrawingState } from "./definition";
-import { apiPost, apiPut } from "../../utils/api";
+import type { ImageToolData } from "./definition";
+import { apiPut } from "../../utils/api";
 import { API_ROUTES } from "../../config/apiRoutes";
+import { resolveImageSrc } from "../../utils/image/resolve";
+import { bumpImage } from "../../utils/image/cacheBust";
 
 const props = defineProps<{
   selectedResult: ToolResult<ImageToolData> | null;
   sendTextMessage?: (text: string) => void;
-}>();
-
-const emit = defineEmits<{
-  updateResult: [result: ToolResult<ImageToolData>];
 }>();
 
 const artStyles = [
@@ -124,205 +122,136 @@ const applyStyle = (style: { id: string; label: string }) => {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const canvasRef = ref<any>(null);
+const containerRef = ref<HTMLDivElement | null>(null);
 const canvasImage = ref("");
 const brushSize = ref(5);
 const brushColor = ref("#000000");
-const initialStrokes = ref([]);
-const canvasWidth = ref(800);
-const canvasHeight = ref(600);
+const canvasWidth = ref(0);
+const canvasHeight = ref(0);
 const canvasRenderKey = ref(0);
+// Gates the child render until the container has been measured. If we
+// mount at a default 800×600 and then resize to fit the real container
+// a tick later, the child's remount races its in-flight background-
+// image fetch and the canvas ends up blank on reload.
+const isSized = ref(false);
 
-// Track the server-side image path for this canvas instance.
-// Initialized from existing result data (if reopening a saved canvas).
-const imagePath = ref(
-  props.selectedResult?.data?.imageData && !props.selectedResult.data.imageData.startsWith("data:") ? props.selectedResult.data.imageData : "",
-);
+// The PNG on disk is the source of truth. The path is baked into
+// the tool result at openCanvas time (server-allocated), so reload
+// finds the file with zero client→server sync. Every stroke PUTs
+// back to this same path.
+const imagePath = computed(() => {
+  const stored = props.selectedResult?.data?.imageData;
+  if (!stored || stored.startsWith("data:")) return "";
+  return stored;
+});
+
+// Per-mount cache buster for the VueDrawingCanvas child. The URL
+// must be stable for the lifetime of one canvas instance — if it
+// changes while the child is alive (e.g. from a post-save bump),
+// the library nulls its cached `loadedImage` and the next redraw
+// races a fresh re-fetch against stroke painting, blanking the
+// canvas. Tying the token to `canvasRenderKey` (which increments
+// when we explicitly remount via :key on resize) gives us fresh
+// bytes on page reload and on resize, without mid-session churn.
+const setupTime = Date.now();
+const backgroundImage = computed(() => {
+  if (!imagePath.value) return undefined;
+  const base = resolveImageSrc(imagePath.value);
+  const sep = base.includes("?") ? "&" : "?";
+  return `${base}${sep}mt=${setupTime}-${canvasRenderKey.value}`;
+});
+
 let uploadInFlight = false;
 let pendingSave = false;
 
-const restoreDrawingState = () => {
-  if (props.selectedResult?.viewState?.drawingState) {
-    const state = props.selectedResult.viewState.drawingState as CanvasDrawingState;
-
-    brushSize.value = state.brushSize || 5;
-    brushColor.value = state.brushColor || "#000000";
-    canvasWidth.value = state.canvasWidth || 800;
-    canvasHeight.value = state.canvasHeight || 600;
-
-    if (state.strokes) {
-      initialStrokes.value = state.strokes as never[];
-    } else {
-      initialStrokes.value = [];
-    }
-  } else {
-    initialStrokes.value = [];
-  }
-  // Reinitialise imagePath from the incoming result so autosaves
-  // after a selectedResult change don't upload against the old path.
-  imagePath.value =
-    props.selectedResult?.data?.imageData && !props.selectedResult.data.imageData.startsWith("data:") ? props.selectedResult.data.imageData : "";
-};
-restoreDrawingState();
-
-const undo = async () => {
-  if (canvasRef.value) {
-    try {
-      canvasRef.value.undo();
-      // Wait for the canvas to update, then save state
-      setTimeout(saveDrawingState, 50);
-    } catch (error) {
-      console.warn("Undo operation failed:", error);
-    }
+const undo = () => {
+  if (!canvasRef.value) return;
+  try {
+    canvasRef.value.undo();
+    setTimeout(saveDrawing, 50);
+  } catch (error) {
+    console.warn("Undo operation failed:", error);
   }
 };
 
-const redo = async () => {
-  if (canvasRef.value) {
-    try {
-      canvasRef.value.redo();
-      // Wait for the canvas to update, then save state
-      setTimeout(saveDrawingState, 50);
-    } catch (error) {
-      console.warn("Redo operation failed:", error);
-    }
+const redo = () => {
+  if (!canvasRef.value) return;
+  try {
+    canvasRef.value.redo();
+    setTimeout(saveDrawing, 50);
+  } catch (error) {
+    console.warn("Redo operation failed:", error);
   }
 };
 
 const clear = () => {
-  if (canvasRef.value) {
-    try {
-      canvasRef.value.reset();
-      saveDrawingState();
-    } catch (error) {
-      console.warn("Clear operation failed:", error);
-    }
+  if (!canvasRef.value) return;
+  try {
+    canvasRef.value.reset();
+    saveDrawing();
+  } catch (error) {
+    console.warn("Clear operation failed:", error);
   }
 };
 
 const handleDrawingEnd = () => {
-  saveDrawingState();
+  saveDrawing();
 };
 
-// Returns true if the drawing was successfully persisted, false
-// otherwise. Callers like applyStyle check the return value to avoid
-// sending a style request against stale image data.
-//
-// Captures a local snapshot of props.selectedResult and imagePath at
-// the start so an async upload never accidentally writes against a
-// different result that was swapped in mid-flight.
-const saveDrawingState = async (): Promise<boolean> => {
-  if (!canvasRef.value || !props.selectedResult) return false;
+// Grab the current bitmap and PUT it back to the pre-allocated
+// file. No result mutation — the path is fixed from canvas
+// creation, so nothing upstream needs to know about saves.
+const saveDrawing = async (): Promise<void> => {
+  if (!canvasRef.value || !imagePath.value) return;
   if (uploadInFlight) {
     pendingSave = true;
-    return false;
+    return;
   }
-  // Snapshot the current result and path *before* any await so a
-  // concurrent selectedResult swap doesn't silently redirect the
-  // upload.
-  const boundResult = props.selectedResult;
-  const boundImagePath = imagePath.value;
   uploadInFlight = true;
   try {
     const imageDataUri: string = await canvasRef.value.save();
-    const strokes = canvasRef.value.getAllStrokes();
-    const drawingState = {
-      strokes,
-      brushSize: brushSize.value,
-      brushColor: brushColor.value,
-      canvasWidth: canvasWidth.value,
-      canvasHeight: canvasHeight.value,
-    };
-
-    // If selectedResult changed while we were saving the canvas
-    // bitmap, abort — the upload would go to the wrong session.
-    if (boundResult !== props.selectedResult) return false;
-
-    const savedPath = boundImagePath
-      ? await (async () => {
-          const filename = boundImagePath.replace(/^images\//, "");
-          const result = await apiPut<{ path: string }>(API_ROUTES.image.update.replace(":filename", filename), { imageData: imageDataUri });
-          if (!result.ok) throw new Error(`PUT failed: ${result.error}`);
-          return result.data.path;
-        })()
-      : await (async () => {
-          const result = await apiPost<{ path: string }>(API_ROUTES.image.upload, {
-            imageData: imageDataUri,
-          });
-          if (!result.ok) throw new Error(`POST failed: ${result.error}`);
-          return result.data.path;
-        })();
-
-    imagePath.value = savedPath;
-
-    const updatedResult: ToolResult<ImageToolData> = {
-      ...boundResult,
-      data: {
-        prompt: boundResult.data?.prompt || "",
-        imageData: savedPath,
-      },
-      viewState: { drawingState },
-    };
-
-    emit("updateResult", updatedResult);
-    return true;
+    const filename = imagePath.value.replace(/^artifacts\/images\//, "").replace(/^images\//, "");
+    const result = await apiPut<{ path: string }>(API_ROUTES.image.update.replace(":filename", filename), { imageData: imageDataUri });
+    if (!result.ok) throw new Error(`PUT failed: ${result.error}`);
+    bumpImage(imagePath.value);
   } catch (error) {
-    console.error("Failed to save drawing state:", error);
-    return false;
+    console.error("Failed to save drawing:", error);
   } finally {
     uploadInFlight = false;
     if (pendingSave) {
       pendingSave = false;
-      void saveDrawingState();
+      void saveDrawing();
     }
   }
 };
 
-// Watch for selectedResult changes to restore drawing state
-watch(
-  () => props.selectedResult,
-  () => {
-    restoreDrawingState();
-  },
-  { immediate: false },
-);
-
-// Watch for changes to automatically save drawing state
-watch([brushSize, brushColor], () => {
-  saveDrawingState();
-});
-
-// Watch for canvas size changes and force re-mount
-watch([canvasWidth, canvasHeight], () => {
-  // Force canvas to re-mount with new dimensions by changing the key
-  canvasRenderKey.value++;
-});
 const updateCanvasSize = () => {
-  // Get the canvas container (the div with flex-1 p-4 overflow-hidden)
-  const canvasContainer = canvasRef.value?.$el?.parentElement;
-  if (canvasContainer) {
-    const containerRect = canvasContainer.getBoundingClientRect();
-
-    const padding = 32; // p-4 = 16px each side
-    const newWidth = Math.floor(containerRect.width - padding);
-    const newHeight = Math.floor((newWidth * 9) / 16);
-
-    // Only update if the size actually changed to avoid unnecessary re-renders
-    if (newWidth !== canvasWidth.value || newHeight !== canvasHeight.value) {
-      canvasWidth.value = newWidth;
-      canvasHeight.value = newHeight;
-    }
-  }
+  const container = containerRef.value;
+  if (!container) return;
+  const containerRect = container.getBoundingClientRect();
+  const padding = 32;
+  const newWidth = Math.floor(containerRect.width - padding);
+  const newHeight = Math.floor((newWidth * 9) / 16);
+  if (newWidth <= 0) return;
+  if (newWidth === canvasWidth.value && newHeight === canvasHeight.value) return;
+  canvasWidth.value = newWidth;
+  canvasHeight.value = newHeight;
+  if (!isSized.value) return;
+  // Post-initial resize: bump the shared preview cache-buster and
+  // remount the canvas child so it picks up the latest saved bitmap
+  // at the new dimensions.
+  if (imagePath.value) bumpImage(imagePath.value);
+  canvasRenderKey.value++;
 };
 
 onMounted(async () => {
   await nextTick();
   updateCanvasSize();
-
-  // Listen for window resize to update canvas size
+  // First paint now that we know the size.
+  isSized.value = true;
   window.addEventListener("resize", updateCanvasSize);
 });
 
-// Clean up resize listener
 onUnmounted(() => {
   window.removeEventListener("resize", updateCanvasSize);
 });
