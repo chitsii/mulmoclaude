@@ -94,6 +94,8 @@ Detailed setup: [Telegram README](https://github.com/receptron/mulmoclaude/blob/
 | **Bluesky** | [@mulmobridge/bluesky](https://www.npmjs.com/package/@mulmobridge/bluesky) | Experimental | [README](https://github.com/receptron/mulmoclaude/blob/main/packages/bridges/bluesky/README.md) |
 | **Chatwork** | [@mulmobridge/chatwork](https://www.npmjs.com/package/@mulmobridge/chatwork) | Experimental | [README](https://github.com/receptron/mulmoclaude/blob/main/packages/bridges/chatwork/README.md) |
 | **XMPP / Jabber** | [@mulmobridge/xmpp](https://www.npmjs.com/package/@mulmobridge/xmpp) | Experimental | [README](https://github.com/receptron/mulmoclaude/blob/main/packages/bridges/xmpp/README.md) |
+| **Rocket.Chat** | [@mulmobridge/rocketchat](https://www.npmjs.com/package/@mulmobridge/rocketchat) | Experimental | [README](https://github.com/receptron/mulmoclaude/blob/main/packages/bridges/rocketchat/README.md) |
+| **Signal** | [@mulmobridge/signal](https://www.npmjs.com/package/@mulmobridge/signal) | Experimental | [README](https://github.com/receptron/mulmoclaude/blob/main/packages/bridges/signal/README.md) |
 
 > **"Experimental" means** testing is limited and bugs are likely. Your feedback is very welcome!
 
@@ -202,6 +204,8 @@ Bridges are ~100 lines. See the [Bridge Protocol](bridge-protocol.md) for the wi
 | [@mulmobridge/bluesky](https://www.npmjs.com/package/@mulmobridge/bluesky) | Bluesky bridge | [npm](https://www.npmjs.com/package/@mulmobridge/bluesky) | [source](https://github.com/receptron/mulmoclaude/tree/main/packages/bridges/bluesky) |
 | [@mulmobridge/chatwork](https://www.npmjs.com/package/@mulmobridge/chatwork) | Chatwork bridge | [npm](https://www.npmjs.com/package/@mulmobridge/chatwork) | [source](https://github.com/receptron/mulmoclaude/tree/main/packages/bridges/chatwork) |
 | [@mulmobridge/xmpp](https://www.npmjs.com/package/@mulmobridge/xmpp) | XMPP / Jabber bridge | [npm](https://www.npmjs.com/package/@mulmobridge/xmpp) | [source](https://github.com/receptron/mulmoclaude/tree/main/packages/bridges/xmpp) |
+| [@mulmobridge/rocketchat](https://www.npmjs.com/package/@mulmobridge/rocketchat) | Rocket.Chat bridge | [npm](https://www.npmjs.com/package/@mulmobridge/rocketchat) | [source](https://github.com/receptron/mulmoclaude/tree/main/packages/bridges/rocketchat) |
+| [@mulmobridge/signal](https://www.npmjs.com/package/@mulmobridge/signal) | Signal bridge (via signal-cli-rest-api) | [npm](https://www.npmjs.com/package/@mulmobridge/signal) | [source](https://github.com/receptron/mulmoclaude/tree/main/packages/bridges/signal) |
 
 ### General tools (@receptron scope)
 

@@ -98,6 +98,8 @@ TELEGRAM_ALLOWED_CHAT_IDS=your-chat-id \
 | **Bluesky** | [@mulmobridge/bluesky](https://www.npmjs.com/package/@mulmobridge/bluesky) | 実験的 | [README](https://github.com/receptron/mulmoclaude/blob/main/packages/bridges/bluesky/README.md) |
 | **Chatwork** | [@mulmobridge/chatwork](https://www.npmjs.com/package/@mulmobridge/chatwork) | 実験的 | [README](https://github.com/receptron/mulmoclaude/blob/main/packages/bridges/chatwork/README.md) |
 | **XMPP / Jabber** | [@mulmobridge/xmpp](https://www.npmjs.com/package/@mulmobridge/xmpp) | 実験的 | [README](https://github.com/receptron/mulmoclaude/blob/main/packages/bridges/xmpp/README.md) |
+| **Rocket.Chat** | [@mulmobridge/rocketchat](https://www.npmjs.com/package/@mulmobridge/rocketchat) | 実験的 | [README](https://github.com/receptron/mulmoclaude/blob/main/packages/bridges/rocketchat/README.md) |
+| **Signal** | [@mulmobridge/signal](https://www.npmjs.com/package/@mulmobridge/signal) | 実験的 | [README](https://github.com/receptron/mulmoclaude/blob/main/packages/bridges/signal/README.md) |
 
 > **「実験的」とは？** テストが十分でなく、バグがある可能性があります。フィードバックをお待ちしています！
 
@@ -231,6 +233,8 @@ if (ack.ok) {
 | [@mulmobridge/bluesky](https://www.npmjs.com/package/@mulmobridge/bluesky) | Bluesky ブリッジ | [source](https://github.com/receptron/mulmoclaude/tree/main/packages/bridges/bluesky) |
 | [@mulmobridge/chatwork](https://www.npmjs.com/package/@mulmobridge/chatwork) | Chatwork ブリッジ | [source](https://github.com/receptron/mulmoclaude/tree/main/packages/bridges/chatwork) |
 | [@mulmobridge/xmpp](https://www.npmjs.com/package/@mulmobridge/xmpp) | XMPP / Jabber ブリッジ | [source](https://github.com/receptron/mulmoclaude/tree/main/packages/bridges/xmpp) |
+| [@mulmobridge/rocketchat](https://www.npmjs.com/package/@mulmobridge/rocketchat) | Rocket.Chat ブリッジ | [source](https://github.com/receptron/mulmoclaude/tree/main/packages/bridges/rocketchat) |
+| [@mulmobridge/signal](https://www.npmjs.com/package/@mulmobridge/signal) | Signal ブリッジ (signal-cli-rest-api 経由) | [source](https://github.com/receptron/mulmoclaude/tree/main/packages/bridges/signal) |
 
 ### 汎用ツール（@receptron スコープ）
 

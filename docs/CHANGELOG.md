@@ -14,6 +14,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Versions use [Se
 - `@mulmobridge/bluesky` (v0.1.0) — Bluesky bridge. Polls `chat.bsky.convo.getLog` via the atproto-proxy header, forwards DMs, auto-refreshes the session JWT on 401.
 - `@mulmobridge/chatwork` (v0.1.0) — Chatwork bridge (Japanese business chat). Polls unread messages per room via REST, sends replies back, strips Chatwork markup before forwarding.
 - `@mulmobridge/xmpp` (v0.1.0) — XMPP / Jabber bridge. Connects with JID + password to any XMPP server over TLS, handles `type=chat` message stanzas.
+- `@mulmobridge/rocketchat` (v0.1.0) — Rocket.Chat bridge. Polls the bot's DM rooms via REST with personal access token auth; chunked replies.
+- `@mulmobridge/signal` (v0.1.0) — Signal bridge. Talks to a locally running [signal-cli-rest-api](https://github.com/bbernhard/signal-cli-rest-api) daemon over WebSocket (receive) + REST (send); number-based allowlist.
 
 ---
 
