@@ -225,11 +225,11 @@ describe("PUT /api/images/:filename — overwrite pre-allocated file", () => {
     assert.match((state.body as ErrorBody).error ?? "", /imagedata/i);
   });
 
-  it("rejects a filename that doesn't end in .png (isImagePath gate)", async () => {
+  it("rejects a filename that doesn't end in .png (imagePathFromFilename gate)", async () => {
     const { state, res } = mockRes();
     await putImageHandler(req({ imageData: `data:image/png;base64,${TEST_PNG_BASE64}` }, { filename: "notes.txt" }), res);
     assert.equal(state.status, 400);
-    assert.match((state.body as ErrorBody).error ?? "", /invalid image path/i);
+    assert.match((state.body as ErrorBody).error ?? "", /invalid image filename/i);
   });
 
   it("returns 500 when the target file does not exist (safeResolve requires realpath)", async () => {
