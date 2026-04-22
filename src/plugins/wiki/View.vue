@@ -83,7 +83,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter, isNavigationFailure, type LocationQuery } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { marked } from "marked";
 import type { ToolResultComplete } from "gui-chat-protocol/vue";
@@ -94,9 +94,13 @@ import { renderWikiLinks } from "./helpers";
 import { rewriteMarkdownImageRefs } from "../../utils/image/rewriteMarkdownImageRefs";
 import { apiPost, apiFetchRaw } from "../../utils/api";
 import { API_ROUTES } from "../../config/apiRoutes";
+import { PAGE_ROUTES } from "../../router";
 import { errorMessage } from "../../utils/errors";
 
+type WikiTabView = "log" | "lint_report";
+
 const route = useRoute();
+const router = useRouter();
 const { t } = useI18n();
 
 const props = defineProps<{
@@ -140,14 +144,22 @@ watch(
   },
 );
 
-// Deep-link support: when navigated via ?page=slug (e.g. clicking a
-// wiki link in a text-response), load the page. immediate: true
-// handles mount with ?page= already set in the URL.
+// URL is the single source of truth for wiki navigation. Button
+// handlers push to the router; this watcher drives callApi(). Only
+// runs when WikiView is mounted as the /wiki page — when mounted as
+// a manageWiki tool-result inside /chat, the tool-result watcher
+// above seeds state and this watcher does nothing.
 watch(
-  () => route.query.page,
-  (newPage: string | null | (string | null)[]) => {
-    if (typeof newPage === "string" && newPage.length > 0) {
-      navigatePage(newPage);
+  () => (route.name === PAGE_ROUTES.wiki ? [route.query.page, route.query.view] : null),
+  (params) => {
+    if (!params) return;
+    const [page, view] = params;
+    if (typeof page === "string" && page.length > 0) {
+      callApi({ action: "page", pageName: page });
+    } else if (view === "log" || view === "lint_report") {
+      callApi({ action: view });
+    } else {
+      callApi({ action: "index" });
     }
   },
   { immediate: true },
@@ -198,12 +210,30 @@ async function callApi(body: Record<string, unknown>) {
   }
 }
 
-function navigate(newAction: string) {
-  callApi({ action: newAction });
+function dropKeys(query: LocationQuery, keys: string[]): LocationQuery {
+  const next: LocationQuery = {};
+  for (const [key, value] of Object.entries(query)) {
+    if (!keys.includes(key)) next[key] = value;
+  }
+  return next;
+}
+
+function pushWiki(query: LocationQuery) {
+  const target = route.name === PAGE_ROUTES.wiki ? { query } : { name: PAGE_ROUTES.wiki, query };
+  router.push(target).catch((err: unknown) => {
+    if (!isNavigationFailure(err)) {
+      console.error("[wiki] navigation failed:", err);
+    }
+  });
+}
+
+function navigate(newAction: "index" | WikiTabView) {
+  const query = newAction === "index" ? dropKeys(route.query, ["page", "view"]) : { ...dropKeys(route.query, ["page"]), view: newAction };
+  pushWiki(query);
 }
 
 function navigatePage(pageName: string) {
-  callApi({ action: "page", pageName });
+  pushWiki({ ...dropKeys(route.query, ["view"]), page: pageName });
 }
 
 async function downloadPdf() {
