@@ -184,6 +184,7 @@ import FilesView from "./components/FilesView.vue";
 import TodoExplorer from "./components/TodoExplorer.vue";
 import SchedulerView from "./plugins/scheduler/View.vue";
 import WikiView from "./plugins/wiki/View.vue";
+import { buildWikiRouteParams } from "./plugins/wiki/route";
 import SkillsView from "./plugins/manageSkills/View.vue";
 import RolesView from "./plugins/manageRoles/View.vue";
 import SettingsModal from "./components/SettingsModal.vue";
@@ -776,7 +777,7 @@ function navigateToWorkspacePath(href: string): void {
 
   switch (target.kind) {
     case "wiki":
-      router.push({ name: PAGE_ROUTES.wiki, query: { page: target.slug } }).catch(() => {});
+      router.push({ name: PAGE_ROUTES.wiki, params: buildWikiRouteParams({ kind: "page", slug: target.slug }) }).catch(() => {});
       break;
     case "file":
       // Path-based files URL (see plans/feat-files-path-url.md) — pass
