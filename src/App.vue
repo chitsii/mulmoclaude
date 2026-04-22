@@ -606,7 +606,13 @@ function activateSession(sessionId: string, roleId: string, replace: boolean): v
 }
 
 async function loadSession(sessionId: string) {
-  if (sessionId === currentSessionId.value && sessionMap.has(sessionId)) return;
+  // currentSessionId tracks "last active chat session" and is NOT
+  // reset when the user navigates to a non-chat page (/wiki, /files,
+  // …). Also checking the URL ensures that clicking the same session
+  // in the tab bar from /wiki still triggers a /chat navigation
+  // instead of silently no-opping.
+  const alreadyOnThatChat = sessionId === currentSessionId.value && sessionMap.has(sessionId) && route.params.sessionId === sessionId;
+  if (alreadyOnThatChat) return;
   const replaced = removeCurrentIfEmpty();
 
   const live = sessionMap.get(sessionId);
