@@ -44,10 +44,7 @@
       <!-- Sidebar (Single layout only) -->
       <div v-if="!isStackLayout" class="w-80 flex-shrink-0 border-r border-gray-200 flex flex-col bg-white text-gray-900 relative">
         <!-- Gemini API key warning -->
-        <div
-          v-if="!geminiAvailable && needsGeminiForRole(currentRoleId)"
-          class="mx-4 mt-3 mb-2 rounded border border-yellow-400 bg-yellow-50 p-3 text-xs text-yellow-700 shrink-0"
-        >
+        <div v-if="!geminiAvailable" class="mx-4 mt-3 mb-2 rounded border border-yellow-400 bg-yellow-50 p-3 text-xs text-yellow-700 shrink-0">
           <span class="material-icons text-xs align-middle mr-1">warning</span>
           <i18n-t keypath="app.geminiRequired" tag="span">
             <template #envKey><code class="font-mono">GEMINI_API_KEY</code></template>
@@ -84,10 +81,7 @@
       <!-- Canvas column -->
       <div class="flex-1 flex flex-col bg-white text-gray-900 min-w-0 overflow-hidden relative">
         <!-- Gemini API key warning (Stack layouts — no sidebar to host it) -->
-        <div
-          v-if="isStackLayout && !geminiAvailable && needsGeminiForRole(currentRoleId)"
-          class="mx-3 mt-2 rounded border border-yellow-400 bg-yellow-50 p-2 text-xs text-yellow-700 shrink-0"
-        >
+        <div v-if="isStackLayout && !geminiAvailable" class="mx-3 mt-2 rounded border border-yellow-400 bg-yellow-50 p-2 text-xs text-yellow-700 shrink-0">
           <span class="material-icons text-xs align-middle mr-1">warning</span>
           <i18n-t keypath="app.geminiRequired" tag="span">
             <template #envKey><code class="font-mono">GEMINI_API_KEY</code></template>
@@ -239,7 +233,6 @@ import { provideActiveSession } from "./composables/useActiveSession";
 import { useRoute, useRouter } from "vue-router";
 import { apiGet } from "./utils/api";
 import { API_ROUTES } from "./config/apiRoutes";
-import { needsGemini } from "./utils/role/plugins";
 import { classifyWorkspacePath } from "./utils/path/workspaceLinkRouter";
 
 // --- Per-session state ---
@@ -531,8 +524,6 @@ function handleUpdateResult(updatedResult: ToolResultComplete) {
 function onSidebarItemClick(uuid: string) {
   selectedResultUuid.value = uuid;
 }
-
-const needsGeminiForRole = (roleId: string) => needsGemini(roles.value, roleId);
 
 // Remove the current session from sessionMap if it's empty (no messages).
 // Returns true if a session was removed, so the caller can use
