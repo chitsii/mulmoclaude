@@ -531,6 +531,12 @@ function handleContentClick(event: MouseEvent) {
   margin-bottom: 0.75rem;
   color: #111827;
 }
+.wiki-content :deep(h1:first-child),
+.wiki-content :deep(h2:first-child),
+.wiki-content :deep(h3:first-child),
+.wiki-content :deep(p:first-child) {
+  margin-top: 0;
+}
 .wiki-content :deep(h2) {
   font-size: 1.2rem;
   font-weight: 600;
