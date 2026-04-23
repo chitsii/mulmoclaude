@@ -75,6 +75,20 @@
             <code class="bg-gray-100 px-1 rounded">mcp__</code>{{ t("settingsModal.invalidToolNamesSuffix") }}
             {{ invalidToolNames.join(", ") }}
           </p>
+          <div class="flex items-center gap-2">
+            <button
+              class="px-3 py-1.5 text-sm rounded bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              :disabled="toolsSaving || loading || !!loadError || !toolsDirty"
+              :title="loadError ? t('settingsModal.cannotSaveTooltip') : undefined"
+              data-testid="settings-tools-save-btn"
+              @click="saveTools"
+            >
+              {{ toolsSaving ? t("settingsModal.saving") : t("common.save") }}
+            </button>
+            <span v-if="toolsDirty" class="text-xs text-amber-600" data-testid="settings-tools-dirty">
+              {{ t("settingsModal.unsavedMarker") }}
+            </span>
+          </div>
         </div>
 
         <div v-else-if="activeTab === 'mcp'" class="space-y-3">
@@ -101,25 +115,16 @@
         <SettingsReferenceDirsTab v-else-if="activeTab === 'refs'" />
       </div>
 
-      <div class="px-5 py-3 border-t border-gray-200 flex items-center justify-between gap-3">
+      <!-- Footer: status strip only. MCP / Workspace Dirs / Reference
+           Dirs auto-save; Allowed Tools has its own Save button inside
+           the tab body. So no global Save/Cancel — close the modal
+           via the ✕ button in the header (which prompts on unsaved
+           tools edits or a pending MCP draft). -->
+      <div class="px-5 py-3 border-t border-gray-200 min-h-[2.75rem] flex items-center gap-3">
         <span v-if="statusMessage" class="text-xs" :class="statusError ? 'text-red-600' : 'text-green-600'" data-testid="settings-status">
           {{ statusMessage }}
         </span>
         <span v-else class="text-xs text-gray-500"> {{ t("settingsModal.changesHint") }} </span>
-        <div class="flex gap-2">
-          <button class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-600 hover:bg-gray-50" data-testid="settings-cancel-btn" @click="close">
-            {{ t("common.cancel") }}
-          </button>
-          <button
-            class="px-3 py-1.5 text-sm rounded bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-            :disabled="saving || loading || !!loadError"
-            :title="loadError ? t('settingsModal.cannotSaveTooltip') : undefined"
-            data-testid="settings-save-btn"
-            @click="save"
-          >
-            {{ saving ? t("settingsModal.saving") : loading ? t("settingsModal.loadingLabel") : t("common.save") }}
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -136,6 +141,18 @@ import { apiGet, apiPut } from "../utils/api";
 import { API_ROUTES } from "../config/apiRoutes";
 
 const { t } = useI18n();
+
+// Settings save model — per #716 follow-up.
+//
+// Only Allowed Tools needs a Save button: the textarea accumulates
+// free-form edits that can't be auto-persisted on every keystroke.
+// Every other tab (MCP, Workspace Dirs, Reference Dirs) is append/
+// remove only, so each mutation persists through its own endpoint
+// the moment it happens. Closing the modal just closes — no global
+// Save/Cancel buttons.
+//
+// If the user closes with unsaved Tools edits, a confirm dialog
+// asks whether to discard.
 
 interface Props {
   open: boolean;
@@ -155,26 +172,34 @@ const emit = defineEmits<{
   saved: [];
 }>();
 
-// Typed ref to the SettingsMcpTab so save() can flush a pending draft
-// before PUTing (eliminates the "user typed but forgot the inner Add
-// button" footgun). Null when the MCP tab isn't the active one.
-const mcpTabRef = ref<{ flushDraft: () => boolean } | null>(null);
+// Typed ref to the SettingsMcpTab. Needed so close() can check
+// whether the user has a pending draft MCP entry open — that's the
+// one remaining \"unsaved\" state on the MCP tab (individual add /
+// update / remove persist immediately).
+const mcpTabRef = ref<{ flushDraft: () => boolean; hasPendingDraft: () => boolean } | null>(null);
 
 const activeTab = ref<"tools" | "mcp" | "dirs" | "refs">("tools");
 const toolsText = ref("");
+// Server truth for tools — updated on load and on a successful Save
+// from the Tools tab. `toolsDirty` compares this against `toolsText`
+// so the close-with-unsaved confirm only fires when the user has
+// actually edited the list.
+const toolsSavedText = ref("");
 const mcpServers = ref<McpServerEntry[]>([]);
 const loadError = ref("");
 const statusMessage = ref("");
 const statusError = ref(false);
-const saving = ref(false);
+const toolsSaving = ref(false);
 // `true` from the moment the modal opens until the first loadConfig()
-// call resolves. Prevents the Save button from submitting the initial
+// call resolves. Prevents a user Save from submitting the initial
 // empty arrays before the real config arrives, and prevents stale
 // responses (from a previous open) from overwriting fresh input.
 const loading = ref(false);
 // Monotonically increasing token so an in-flight loadConfig() whose
 // modal has been reopened can notice it's stale and discard its result.
 let loadToken = 0;
+
+const toolsDirty = computed(() => toolsText.value !== toolsSavedText.value);
 
 const parsedToolNames = computed(() =>
   toolsText.value
@@ -203,64 +228,88 @@ async function loadConfig(): Promise<void> {
   if (!response.ok) {
     loadError.value = response.status === 0 ? response.error || "Network error" : `Failed to load settings (HTTP ${response.status})`;
   } else {
-    toolsText.value = response.data.settings.extraAllowedTools.join("\n");
+    const text = response.data.settings.extraAllowedTools.join("\n");
+    toolsText.value = text;
+    toolsSavedText.value = text;
     mcpServers.value = response.data.mcp?.servers ?? [];
   }
   if (token === loadToken) loading.value = false;
 }
 
-async function save(): Promise<void> {
-  // Extra safety: the button is already disabled while loading, but
-  // guard the function body too so any programmatic caller can't
-  // submit a half-loaded form.
+// Tools tab — Save button hits the settings-only endpoint. MCP
+// state is untouched by this path, so an unsaved MCP draft can't
+// piggyback on a Tools save.
+async function saveTools(): Promise<void> {
   if (loading.value) return;
-  // Auto-commit any half-entered draft on the MCP tab. If the draft
-  // is invalid the tab sets its own inline error — abort the save so
-  // the user can fix it.
-  if (mcpTabRef.value && !mcpTabRef.value.flushDraft()) {
-    statusError.value = true;
-    statusMessage.value = "Finish or cancel the pending MCP server entry first.";
-    return;
-  }
-  saving.value = true;
+  toolsSaving.value = true;
   statusMessage.value = "";
   statusError.value = false;
-  // Single atomic endpoint — avoids the partial-save state where
-  // extraAllowedTools is persisted but MCP config write fails.
-  const response = await apiPut<unknown>(API_ROUTES.config.base, {
-    settings: { extraAllowedTools: parsedToolNames.value },
-    mcp: { servers: mcpServers.value },
+  const response = await apiPut<unknown>(API_ROUTES.config.settings, {
+    extraAllowedTools: parsedToolNames.value,
   });
   if (!response.ok) {
     statusError.value = true;
     statusMessage.value = response.error || "Save failed";
   } else {
+    toolsSavedText.value = parsedToolNames.value.join("\n");
     emit("saved");
-    // Close on success. Changes take effect on the next message, so
-    // the user has no reason to stay in the modal after a good save.
-    close();
+    statusError.value = false;
+    statusMessage.value = t("common.saved");
+    setTimeout(() => {
+      if (statusMessage.value === t("common.saved")) statusMessage.value = "";
+    }, 2000);
   }
-  saving.value = false;
+  toolsSaving.value = false;
 }
 
-function close(): void {
-  emit("update:open", false);
+// MCP mutations — each add/update/remove persists to the mcp-only
+// endpoint. Optimistic: the local array updates first so the UI is
+// snappy; on failure we roll back and surface the error.
+async function persistMcp(next: McpServerEntry[], previous: McpServerEntry[]): Promise<void> {
+  mcpServers.value = next;
+  const response = await apiPut<unknown>(API_ROUTES.config.mcp, { servers: next });
+  if (!response.ok) {
+    mcpServers.value = previous;
+    statusError.value = true;
+    statusMessage.value = response.error || "MCP save failed";
+    return;
+  }
+  emit("saved");
+  statusError.value = false;
+  statusMessage.value = "";
 }
 
 function addMcpServer(entry: McpServerEntry): void {
-  mcpServers.value = [...mcpServers.value, entry];
+  const previous = mcpServers.value.slice();
+  void persistMcp([...previous, entry], previous);
 }
 
 function updateMcpServer(index: number, entry: McpServerEntry): void {
-  const next = [...mcpServers.value];
+  const previous = mcpServers.value.slice();
+  const next = [...previous];
   next[index] = entry;
-  mcpServers.value = next;
+  void persistMcp(next, previous);
 }
 
 function removeMcpServer(index: number): void {
-  const next = [...mcpServers.value];
-  next.splice(index, 1);
-  mcpServers.value = next;
+  const previous = mcpServers.value.slice();
+  const next = previous.filter((_, i) => i !== index);
+  void persistMcp(next, previous);
+}
+
+function close(): void {
+  // Guard against silent data loss. The draft forms and dirty text
+  // belong to different tabs; warn about each so the user knows
+  // which is at risk. English-only confirms — this is an
+  // infrequent, destructive prompt and window.confirm is the only
+  // blocking primitive we have.
+  if (toolsDirty.value) {
+    if (!window.confirm("Allowed Tools has unsaved changes. Close anyway?")) return;
+  }
+  if (mcpTabRef.value?.hasPendingDraft()) {
+    if (!window.confirm("MCP server draft is still open. Close anyway?")) return;
+  }
+  emit("update:open", false);
 }
 
 watch(

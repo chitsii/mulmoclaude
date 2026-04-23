@@ -132,6 +132,7 @@ const esMessages = {
     cannotSaveTooltip: "No se puede guardar hasta que los ajustes se carguen correctamente",
     saving: "Guardando…",
     loadingLabel: "Cargando…",
+    unsavedMarker: "●",
   },
   canvasViewToggle: {
     stackViewTooltip: "Vista apilada · haz clic para cambiar a vista única (⌘1)",

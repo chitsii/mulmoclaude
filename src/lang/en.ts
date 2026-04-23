@@ -149,6 +149,7 @@ const enMessages = {
     cannotSaveTooltip: "Cannot save until settings load successfully",
     saving: "Saving…",
     loadingLabel: "Loading…",
+    unsavedMarker: "●",
   },
   canvasViewToggle: {
     stackViewTooltip: "Stack view · click to switch to Single (⌘1)",

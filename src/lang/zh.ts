@@ -131,6 +131,7 @@ const zhMessages = {
     cannotSaveTooltip: "设置加载失败前无法保存",
     saving: "保存中…",
     loadingLabel: "加载中…",
+    unsavedMarker: "●",
   },
   canvasViewToggle: {
     stackViewTooltip: "堆叠视图 · 点击切换到单一视图 (⌘1)",

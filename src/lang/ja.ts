@@ -132,6 +132,7 @@ const jaMessages = {
     cannotSaveTooltip: "設定の読み込みに成功するまで保存できません",
     saving: "保存中…",
     loadingLabel: "読み込み中…",
+    unsavedMarker: "●",
   },
   canvasViewToggle: {
     stackViewTooltip: "スタック表示・クリックで Single に切替 (⌘1)",

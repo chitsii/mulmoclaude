@@ -133,6 +133,7 @@ const koMessages = {
     cannotSaveTooltip: "설정을 성공적으로 불러오기 전에는 저장할 수 없습니다",
     saving: "저장 중…",
     loadingLabel: "불러오는 중…",
+    unsavedMarker: "●",
   },
   canvasViewToggle: {
     stackViewTooltip: "스택 보기 · 클릭하여 단일 보기로 전환 (⌘1)",

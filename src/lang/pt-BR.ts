@@ -127,6 +127,7 @@ const ptBRMessages = {
     cannotSaveTooltip: "Não é possível salvar até as configurações carregarem com sucesso",
     saving: "Salvando…",
     loadingLabel: "Carregando…",
+    unsavedMarker: "●",
   },
   canvasViewToggle: {
     stackViewTooltip: "Visão em pilha · clique para alternar para visão única (⌘1)",

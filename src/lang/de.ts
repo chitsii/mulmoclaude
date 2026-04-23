@@ -127,6 +127,7 @@ const deMessages = {
     cannotSaveTooltip: "Kann nicht gespeichert werden, bis die Einstellungen erfolgreich geladen sind",
     saving: "Wird gespeichert…",
     loadingLabel: "Wird geladen…",
+    unsavedMarker: "●",
   },
   canvasViewToggle: {
     stackViewTooltip: "Stapelansicht · klicken, um zur Einzelansicht zu wechseln (⌘1)",

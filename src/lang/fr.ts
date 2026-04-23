@@ -127,6 +127,7 @@ const frMessages = {
     cannotSaveTooltip: "Impossible d'enregistrer tant que les paramètres ne sont pas chargés",
     saving: "Enregistrement…",
     loadingLabel: "Chargement…",
+    unsavedMarker: "●",
   },
   canvasViewToggle: {
     stackViewTooltip: "Vue empilée · cliquez pour passer à la vue simple (⌘1)",
