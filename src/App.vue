@@ -74,6 +74,8 @@
           :is-running="isRunning"
           :status-message="statusMessage"
           :pending-calls="pendingCalls"
+          :session-role-name="sessionRoleName"
+          :session-role-icon="sessionRoleIcon"
           @select="onSidebarItemClick"
           @activate="activePane = 'sidebar'"
         />
@@ -122,6 +124,8 @@
             :selected-result-uuid="selectedResultUuid"
             :result-timestamps="activeSession?.resultTimestamps ?? new Map()"
             :send-text-message="sendMessage"
+            :session-role-name="sessionRoleName"
+            :session-role-icon="sessionRoleIcon"
             @select="(uuid) => (selectedResultUuid = uuid)"
             @update-result="handleUpdateResult"
           />
@@ -209,6 +213,7 @@ import { buildAgentRequestBody, postAgentRun } from "./utils/agent/request";
 import { applyAgentEvent, type AgentEventContext } from "./utils/agent/eventDispatch";
 import { pushErrorMessage, beginUserTurn, updateResult } from "./utils/session/sessionHelpers";
 import { maybeSeedRoleDefault } from "./utils/session/seedRoleDefault";
+import { roleName, roleIcon } from "./utils/role/icon";
 import { createEmptySession } from "./utils/session/sessionFactory";
 import { buildLoadedSession, parseSessionEntries } from "./utils/session/sessionEntries";
 import { resolveNotificationTarget } from "./utils/notification/dispatch";
@@ -336,6 +341,20 @@ const { selectedResultUuid } = useSelectedResult({
   activeSession,
   sessionMap,
   currentSessionId,
+});
+
+// Display name and icon of the role the active session was created
+// under, so the message list can show which role is driving the
+// conversation (independent of what the dropdown currently shows).
+const sessionRoleName = computed(() => {
+  const roleId = activeSession.value?.roleId;
+  if (!roleId) return "";
+  return roleName(roles.value, roleId);
+});
+const sessionRoleIcon = computed(() => {
+  const roleId = activeSession.value?.roleId;
+  if (!roleId) return "";
+  return roleIcon(roles.value, roleId);
 });
 
 // ── Dynamic favicon (#470) ──────────────────────────────────
