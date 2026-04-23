@@ -58,8 +58,24 @@
       {{ navError }}
     </div>
 
-    <!-- Empty state -->
-    <div v-if="!content && !navError" class="flex-1 flex items-center justify-center text-gray-400 text-sm">
+    <!-- Empty state: specific page -->
+    <div v-if="!content && !navError && action === 'page'" class="flex-1 flex items-center justify-center text-gray-400 text-sm">
+      <div class="text-center space-y-4">
+        <span class="material-icons text-4xl text-gray-300">article</span>
+        <p>{{ t("pluginWiki.emptyPage", { title: title }) }}</p>
+        <button
+          data-testid="wiki-create-page-button"
+          class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+          @click="requestCreatePage"
+        >
+          <span class="material-icons text-base">auto_fix_high</span>
+          {{ t("pluginWiki.createPage") }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty state: index or other -->
+    <div v-else-if="!content && !navError" class="flex-1 flex items-center justify-center text-gray-400 text-sm">
       <div class="text-center space-y-2">
         <span class="material-icons text-4xl text-gray-300">menu_book</span>
         <p>{{ t("pluginWiki.empty") }}</p>
@@ -292,6 +308,10 @@ const chatDraft = ref("");
 
 const isStandaloneWikiRoute = computed(() => route.name === PAGE_ROUTES.wiki);
 const canSendChat = computed(() => chatDraft.value.trim().length > 0 && currentSlug() !== null);
+
+function requestCreatePage() {
+  appApi.startNewChat(t("pluginWiki.createPagePrompt", { title: title.value }));
+}
 
 function currentSlug(): string | null {
   // Prefer the URL on /wiki (source of truth for that route); fall

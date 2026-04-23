@@ -347,6 +347,9 @@ const enMessages = {
     previewMore: "+ {count} more…",
     chatPlaceholder: "Ask about this page…",
     chatSend: "Start a new chat about this page",
+    emptyPage: 'The page "{title}" does not exist yet.',
+    createPage: "Create this wiki page",
+    createPagePrompt: 'Create a wiki page about "{title}". Research the topic and write a comprehensive article in data/wiki/pages/.',
   },
   pluginPresentHtml: {
     saveAsPdf: "Save as PDF (opens print dialog)",

@@ -327,6 +327,9 @@ const deMessages = {
     previewMore: "+ {count} weitere…",
     chatPlaceholder: "Fragen Sie zu dieser Seite…",
     chatSend: "Neuen Chat zu dieser Seite starten",
+    emptyPage: 'Die Seite „{title}" existiert noch nicht.',
+    createPage: "Diese Wiki-Seite erstellen",
+    createPagePrompt: 'Erstelle eine Wiki-Seite über „{title}". Recherchiere das Thema und schreibe einen umfassenden Artikel in data/wiki/pages/.',
   },
   pluginPresentHtml: {
     saveAsPdf: "Als PDF speichern (öffnet Druckdialog)",
