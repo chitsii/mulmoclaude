@@ -107,7 +107,7 @@
           <span v-if="entry.description" class="text-xs text-gray-500 truncate">
             {{ entry.description }}
           </span>
-          <span v-if="entry.tags.length > 0" class="flex gap-1 flex-wrap shrink-0">
+          <span v-if="entry.tags && entry.tags.length > 0" class="flex gap-1 flex-wrap shrink-0">
             <button
               v-for="tag in entry.tags"
               :key="tag"
@@ -277,13 +277,13 @@ watch(
 const allTags = computed<[string, number][]>(() => {
   const counts = new Map<string, number>();
   for (const entry of pageEntries.value) {
-    for (const tag of entry.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    for (const tag of entry.tags ?? []) counts.set(tag, (counts.get(tag) ?? 0) + 1);
   }
   return [...counts.entries()].filter(([, count]) => count > 1).sort(([tagA, countA], [tagB, countB]) => countB - countA || tagA.localeCompare(tagB));
 });
 
 const visibleEntries = computed(() =>
-  selectedTag.value === null ? pageEntries.value : pageEntries.value.filter((entry) => entry.tags.includes(selectedTag.value as string)),
+  selectedTag.value === null ? pageEntries.value : pageEntries.value.filter((entry) => (entry.tags ?? []).includes(selectedTag.value as string)),
 );
 
 function toggleTagFilter(tag: string) {
