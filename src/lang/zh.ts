@@ -529,7 +529,6 @@ const zhMessages = {
     cancel: "取消",
   },
   pluginSpreadsheet: {
-    previewLabel: "📊 电子表格",
     previewUntitled: "电子表格",
     previewSheets: "{count} 个工作表",
     untitled: "电子表格",

@@ -527,7 +527,6 @@ const frMessages = {
     cancel: "Annuler",
   },
   pluginSpreadsheet: {
-    previewLabel: "📊 Tableur",
     previewUntitled: "Tableur",
     previewSheets: "{count} feuille | {count} feuilles",
     untitled: "Tableur",

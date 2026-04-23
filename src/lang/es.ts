@@ -535,7 +535,6 @@ const esMessages = {
     cancel: "Cancelar",
   },
   pluginSpreadsheet: {
-    previewLabel: "📊 Hoja de cálculo",
     previewUntitled: "Hoja de cálculo",
     previewSheets: "{count} hoja | {count} hojas",
     untitled: "Hoja de cálculo",

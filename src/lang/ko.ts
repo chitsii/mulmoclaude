@@ -533,7 +533,6 @@ const koMessages = {
     cancel: "취소",
   },
   pluginSpreadsheet: {
-    previewLabel: "📊 스프레드시트",
     previewUntitled: "스프레드시트",
     previewSheets: "{count}개 시트",
     untitled: "스프레드시트",

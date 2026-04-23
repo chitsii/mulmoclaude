@@ -533,7 +533,6 @@ const jaMessages = {
     cancel: "キャンセル",
   },
   pluginSpreadsheet: {
-    previewLabel: "📊 スプレッドシート",
     previewUntitled: "スプレッドシート",
     previewSheets: "{count} シート",
     untitled: "スプレッドシート",
