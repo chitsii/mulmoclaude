@@ -12,33 +12,35 @@
     <template v-for="i in 6" :key="i">
       <button
         v-if="sessions[i - 1]"
-        class="relative flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 px-1 py-0.5 rounded transition-colors"
+        class="relative flex-1 min-w-0 flex items-center justify-start gap-1.5 pl-2 pr-2 py-1 rounded overflow-hidden transition-colors"
         :class="sessions[i - 1].id === currentSessionId ? 'border border-gray-300 bg-white shadow-sm' : 'hover:bg-gray-100'"
         :title="tabTooltip(sessions[i - 1])"
         :data-testid="`session-tab-${sessions[i - 1].id}`"
         @click="emit('loadSession', sessions[i - 1].id)"
       >
+        <!-- Origin side-stripe — 2px colour accent on the left edge of
+             non-human-started sessions. Keeps the tab surface calm
+             (no second icon competing with the role glyph) while
+             still giving scheduler / skill / bridge a recognisable
+             signature. -->
         <span
-          class="material-icons text-base leading-none"
+          v-if="originStripeColor(sessions[i - 1].origin)"
+          class="absolute left-0 top-0 bottom-0 w-0.5"
+          :class="originStripeColor(sessions[i - 1].origin)"
+          :aria-label="originTooltip(sessions[i - 1].origin)"
+        />
+        <span
+          class="material-icons text-base leading-none shrink-0"
           :class="[tabColor(sessions[i - 1]), sessions[i - 1].isRunning ? 'animate-spin [animation-duration:3s]' : '']"
           >{{ roleIcon(roles, sessions[i - 1].roleId) }}</span
         >
-        <span class="text-[10px] leading-none text-gray-600 truncate max-w-full">{{ tabLabel(sessions[i - 1]) }}</span>
+        <span class="text-xs text-gray-700 truncate min-w-0">{{ tabLabel(sessions[i - 1]) }}</span>
         <!-- Unread dot — inactive sessions only; active tab is what the user's looking at. -->
         <span
           v-if="sessions[i - 1].hasUnread && sessions[i - 1].id !== currentSessionId"
-          class="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full"
-          :title="t('sessionTabBar.unreadDot')"
+          class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"
           :aria-label="t('sessionTabBar.unreadDot')"
         />
-        <!-- Origin glyph — marks non-human-started sessions (scheduler / skill / bridge). -->
-        <span
-          v-if="originIcon(sessions[i - 1].origin)"
-          class="material-icons absolute top-0 left-0.5 text-[10px] text-gray-400 leading-none"
-          :title="originTooltip(sessions[i - 1].origin)"
-          :aria-label="originTooltip(sessions[i - 1].origin)"
-          >{{ originIcon(sessions[i - 1].origin) }}</span
-        >
       </button>
       <div v-else class="flex-1" />
     </template>
@@ -100,12 +102,14 @@ function tabColor(session: SessionSummary): string {
   return "text-gray-400";
 }
 
-// Short label shown under the role icon so users can tell sessions
-// apart at a glance. Prefers the indexer-generated `summary`
-// (title-like), falls back to the first user message `preview`,
-// finally the role name so a brand-new empty session still has a
-// visible identifier.
-const MAX_LABEL_CHARS = 10;
+// Short label shown next to the role icon so users can tell
+// sessions apart at a glance. Prefers the indexer-generated
+// `summary` (title-like), falls back to the first user-message
+// `preview`, finally the role name so a brand-new empty session
+// still has a visible identifier. We rely on CSS `truncate` for
+// the visual cap; this char cap just keeps the DOM text short
+// enough that layout doesn't overflow before clipping kicks in.
+const MAX_LABEL_CHARS = 20;
 function tabLabel(session: SessionSummary): string {
   const src = (session.summary ?? session.preview ?? "").trim();
   if (src.length > 0) return src.slice(0, MAX_LABEL_CHARS);
@@ -116,11 +120,15 @@ function tabTooltip(session: SessionSummary): string {
   return session.summary || session.preview || roleName(props.roles, session.roleId);
 }
 
-function originIcon(origin: SessionOrigin | undefined): string | null {
+// Left-edge colour accent for non-human-started sessions. Keeps
+// the tab surface calm (no extra icon competing with the role
+// glyph) while still giving scheduler / skill / bridge tabs a
+// recognisable signature at a glance.
+function originStripeColor(origin: SessionOrigin | undefined): string | null {
   if (!origin || origin === SESSION_ORIGINS.human) return null;
-  if (origin === SESSION_ORIGINS.scheduler) return "schedule";
-  if (origin === SESSION_ORIGINS.skill) return "build";
-  if (origin === SESSION_ORIGINS.bridge) return "sync_alt";
+  if (origin === SESSION_ORIGINS.scheduler) return "bg-blue-400";
+  if (origin === SESSION_ORIGINS.skill) return "bg-emerald-400";
+  if (origin === SESSION_ORIGINS.bridge) return "bg-purple-400";
   return null;
 }
 
