@@ -160,6 +160,7 @@ const koMessages = {
     todos: { label: "할 일", title: "할 일 열기 (⌘4)" },
     scheduler: { label: "일정", title: "일정 열기 (⌘5)" },
     wiki: { label: "위키", title: "위키 열기 (⌘6)" },
+    sources: { label: "소스", title: "정보 소스 열기" },
     skills: { label: "스킬", title: "스킬 열기 (⌘7)" },
     roles: { label: "역할", title: "역할 열기 (⌘8)" },
     files: { label: "파일", title: "워크스페이스 파일 열기 (⌘3)" },

@@ -154,6 +154,7 @@ const ptBRMessages = {
     todos: { label: "Tarefas", title: "Abrir tarefas (⌘4)" },
     scheduler: { label: "Agenda", title: "Abrir agenda (⌘5)" },
     wiki: { label: "Wiki", title: "Abrir wiki (⌘6)" },
+    sources: { label: "Fontes", title: "Abrir fontes de informação" },
     skills: { label: "Skills", title: "Abrir skills (⌘7)" },
     roles: { label: "Papéis", title: "Abrir papéis (⌘8)" },
     files: { label: "Arquivos", title: "Abrir arquivos do workspace (⌘3)" },

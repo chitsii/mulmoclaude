@@ -125,6 +125,7 @@
           <WikiView v-else-if="currentPage === 'wiki'" />
           <SkillsView v-else-if="currentPage === 'skills'" />
           <RolesView v-else-if="currentPage === 'roles'" />
+          <SourcesView v-else-if="currentPage === 'sources'" />
           <SessionHistoryPanel
             v-else-if="currentPage === 'history'"
             :sessions="mergedSessions"
@@ -188,6 +189,7 @@ import WikiView from "./plugins/wiki/View.vue";
 import { buildWikiRouteParams } from "./plugins/wiki/route";
 import SkillsView from "./plugins/manageSkills/View.vue";
 import RolesView from "./plugins/manageRoles/View.vue";
+import SourcesView from "./components/SourcesView.vue";
 import SettingsModal from "./components/SettingsModal.vue";
 import NotificationToast from "./components/NotificationToast.vue";
 import type { NotificationAction } from "./types/notification";

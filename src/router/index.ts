@@ -27,6 +27,7 @@ export const PAGE_ROUTES = {
   skills: "skills",
   roles: "roles",
   history: "history",
+  sources: "sources",
 } as const;
 
 export type PageRouteName = (typeof PAGE_ROUTES)[keyof typeof PAGE_ROUTES];
@@ -54,6 +55,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/skills", name: PAGE_ROUTES.skills, component: Stub },
   { path: "/roles", name: PAGE_ROUTES.roles, component: Stub },
   { path: "/history", name: PAGE_ROUTES.history, component: Stub },
+  { path: "/sources", name: PAGE_ROUTES.sources, component: Stub },
   { path: "/:pathMatch(.*)*", redirect: "/chat" },
 ];
 

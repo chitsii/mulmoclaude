@@ -155,6 +155,7 @@ const frMessages = {
     todos: { label: "Tâches", title: "Ouvrir les tâches (⌘4)" },
     scheduler: { label: "Planning", title: "Ouvrir le planning (⌘5)" },
     wiki: { label: "Wiki", title: "Ouvrir le wiki (⌘6)" },
+    sources: { label: "Sources", title: "Ouvrir les sources d'information" },
     skills: { label: "Skills", title: "Ouvrir les skills (⌘7)" },
     roles: { label: "Rôles", title: "Ouvrir les rôles (⌘8)" },
     files: { label: "Fichiers", title: "Ouvrir les fichiers du workspace (⌘3)" },

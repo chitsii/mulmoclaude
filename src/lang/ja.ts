@@ -159,6 +159,7 @@ const jaMessages = {
     todos: { label: "Todo", title: "Todo を開く (⌘4)" },
     scheduler: { label: "スケジュール", title: "スケジュールを開く (⌘5)" },
     wiki: { label: "Wiki", title: "Wiki を開く (⌘6)" },
+    sources: { label: "ソース", title: "情報ソースを開く" },
     skills: { label: "スキル", title: "スキルを開く (⌘7)" },
     roles: { label: "ロール", title: "ロールを開く (⌘8)" },
     files: { label: "ファイル", title: "ワークスペースファイルを開く (⌘3)" },

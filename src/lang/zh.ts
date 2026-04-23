@@ -157,6 +157,7 @@ const zhMessages = {
     todos: { label: "待办", title: "打开待办 (⌘4)" },
     scheduler: { label: "日程", title: "打开日程 (⌘5)" },
     wiki: { label: "百科", title: "打开 Wiki (⌘6)" },
+    sources: { label: "信息源", title: "打开信息源" },
     skills: { label: "技能", title: "打开技能 (⌘7)" },
     roles: { label: "角色", title: "打开角色 (⌘8)" },
     files: { label: "文件", title: "打开工作区文件 (⌘3)" },

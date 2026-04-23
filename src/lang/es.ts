@@ -160,6 +160,7 @@ const esMessages = {
     todos: { label: "Tareas", title: "Abrir tareas (⌘4)" },
     scheduler: { label: "Agenda", title: "Abrir agenda (⌘5)" },
     wiki: { label: "Wiki", title: "Abrir wiki (⌘6)" },
+    sources: { label: "Fuentes", title: "Abrir fuentes de información" },
     skills: { label: "Skills", title: "Abrir skills (⌘7)" },
     roles: { label: "Roles", title: "Abrir roles (⌘8)" },
     files: { label: "Archivos", title: "Abrir archivos del área de trabajo (⌘3)" },
