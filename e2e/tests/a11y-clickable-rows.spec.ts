@@ -52,6 +52,23 @@ test.describe("clickable-region a11y", () => {
     expect(label).toBeTruthy();
   });
 
+  test("auto-repeat (keydown with event.repeat) does not re-fire activation", async ({ page }) => {
+    // Held Space / Enter on a native <button> activates once per
+    // physical press, not per OS auto-repeat tick. Mirror that by
+    // ignoring events where `event.repeat === true`.
+    await page.goto("/history");
+    const row = page.getByTestId(`session-item-${SESSION_A.id}`);
+    await expect(row).toBeVisible();
+    const startUrl = page.url();
+
+    await row.evaluate((rowEl) => {
+      rowEl.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true, cancelable: true, repeat: true }));
+    });
+
+    await page.waitForTimeout(100);
+    expect(page.url()).toBe(startUrl);
+  });
+
   test("focused /history session row does not fire activation when Space is pressed on a non-self target", async ({ page }) => {
     // Regression guard for the `.self` modifier added to keydown
     // handlers. The session row currently has no inner interactive

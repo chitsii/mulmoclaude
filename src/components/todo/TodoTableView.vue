@@ -13,11 +13,11 @@
             :key="col.key"
             tabindex="0"
             :aria-sort="sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'"
-            :aria-label="t('todoTableList.sortColumnAria', { column: col.label })"
+            :aria-label="t('todoTableList.sortColumnAria', { column: col.ariaLabel ?? col.label })"
             class="px-3 py-2 cursor-pointer hover:bg-gray-100 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
             @click="setSort(col.key)"
-            @keydown.enter.prevent.self="setSort(col.key)"
-            @keydown.space.prevent.self="setSort(col.key)"
+            @keydown.enter.prevent.self="(e) => !e.repeat && setSort(col.key)"
+            @keydown.space.prevent.self="(e) => !e.repeat && setSort(col.key)"
           >
             {{ col.label }}
             <span v-if="sortKey === col.key" class="material-icons text-xs align-middle">{{ sortDir === "asc" ? "arrow_upward" : "arrow_downward" }}</span>
@@ -40,8 +40,8 @@
               :aria-label="t('todoTableList.expandRowAria', { task: item.text })"
               class="px-3 py-2 max-w-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
               @click="toggleExpand(item.id)"
-              @keydown.enter.prevent.self="toggleExpand(item.id)"
-              @keydown.space.prevent.self="toggleExpand(item.id)"
+              @keydown.enter.prevent.self="(e) => !e.repeat && toggleExpand(item.id)"
+              @keydown.space.prevent.self="(e) => !e.repeat && toggleExpand(item.id)"
             >
               <div :class="item.completed ? 'line-through text-gray-400' : 'text-gray-800'">
                 {{ item.text }}
@@ -110,10 +110,13 @@ type SortDir = "asc" | "desc";
 interface ColumnDef {
   key: SortKey;
   label: string;
+  // Fallback name for screen readers when `label` is empty or is a
+  // glyph / checkbox indicator that wouldn't survive being spoken.
+  ariaLabel?: string;
 }
 
 const COLUMNS: ColumnDef[] = [
-  { key: "completed", label: "" },
+  { key: "completed", label: "", ariaLabel: "Completion" },
   { key: "text", label: "Text" },
   { key: "status", label: "Status" },
   { key: "priority", label: "Priority" },
