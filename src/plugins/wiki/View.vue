@@ -92,7 +92,7 @@
           v-if="isStandaloneWikiRoute"
           data-testid="wiki-update-page-button"
           class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-          @click="requestCreatePage"
+          @click="requestUpdatePage"
         >
           <span class="material-icons text-base">auto_fix_high</span>
           {{ t("pluginWiki.updatePage") }}
@@ -427,6 +427,12 @@ const canSendChat = computed(() => chatDraft.value.trim().length > 0 && currentS
 
 function requestCreatePage() {
   appApi.startNewChat(`Create a wiki page about ${JSON.stringify(title.value)}. Research the topic and write a comprehensive article in data/wiki/pages/.`);
+}
+
+function requestUpdatePage() {
+  appApi.startNewChat(
+    `Update the existing wiki page about ${JSON.stringify(title.value)}. The page file exists but has no content. Research the topic and write a comprehensive article in data/wiki/pages/.`,
+  );
 }
 
 function currentSlug(): string | null {
