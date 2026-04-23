@@ -527,7 +527,6 @@ const deMessages = {
     cancel: "Abbrechen",
   },
   pluginSpreadsheet: {
-    previewLabel: "📊 Tabelle",
     previewUntitled: "Tabelle",
     previewSheets: "{count} Blatt | {count} Blätter",
     untitled: "Tabelle",

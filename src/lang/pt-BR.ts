@@ -525,7 +525,6 @@ const ptBRMessages = {
     cancel: "Cancelar",
   },
   pluginSpreadsheet: {
-    previewLabel: "📊 Planilha",
     previewUntitled: "Planilha",
     previewSheets: "{count} aba | {count} abas",
     untitled: "Planilha",

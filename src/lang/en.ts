@@ -549,7 +549,6 @@ const enMessages = {
     cancel: "Cancel",
   },
   pluginSpreadsheet: {
-    previewLabel: "📊 Spreadsheet",
     previewUntitled: "Spreadsheet",
     previewSheets: "{count} sheet | {count} sheets",
     untitled: "Spreadsheet",
