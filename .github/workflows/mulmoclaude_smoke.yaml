@@ -96,7 +96,14 @@ jobs:
           chmod +x "$HOME/.local/bin/claude"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
+      # DISABLE_SANDBOX=1 short-circuits the Docker sandbox probe
+      # before it stats ~/.claude/.* — those files only exist on a
+      # machine where `claude` has been run interactively. Without
+      # this the launcher calls process.exit(1) during startup on
+      # CI's pristine $HOME.
       - name: Run publish smoke
+        env:
+          DISABLE_SANDBOX: "1"
         run: node scripts/mulmoclaude/smoke.mjs
 
       # Launcher stdout/stderr teed to /tmp/mc-smoke-*/launcher.log
