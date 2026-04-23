@@ -13,6 +13,7 @@
           @notification-navigate="handleNotificationNavigate"
           @toggle-right-sidebar="toggleRightSidebar"
           @open-settings="showSettings = true"
+          @home="handleHomeClick"
         />
         <div class="flex-1 min-w-0">
           <PluginLauncher :active-tool-name="selectedResult?.toolName ?? null" :active-view-mode="currentPage" @navigate="onPluginNavigate" />
@@ -436,6 +437,10 @@ function handleNewSessionClick(): void {
   createNewSession();
 }
 
+function handleHomeClick(): void {
+  resumeOrCreateChatSession().catch((err) => console.error("[home] resume failed:", err));
+}
+
 const rightSidebarRef = ref<InstanceType<typeof RightSidebar> | null>(null);
 
 const { availableTools, toolDescriptions, mcpToolsError, fetchMcpToolsStatus } = useMcpTools({
@@ -569,6 +574,11 @@ function onRoleChange() {
 async function resumeOrCreateChatSession(): Promise<void> {
   const topId = mergedSessions.value[0]?.id;
   if (!topId) {
+    const currentSession = sessionMap.get(currentSessionId.value);
+    if (currentSession && currentSession.toolResults.length === 0) {
+      navigateToSession(currentSession.id);
+      return;
+    }
     createNewSession();
     return;
   }
