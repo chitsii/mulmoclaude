@@ -165,9 +165,13 @@ src/components/SessionTabBar.vue    (modified — testid 追加)
 src/components/ToolResultsPanel.vue (modified — testid 追加)
 ```
 
+## Decisions
+
+- **ファイル粒度**: 元 PR #620 は 1 ファイルにまとめていたが、既存テストの粒度に合わせてカテゴリ別 spec に分割する → **確定**
+- **Multi-tab 同期**: `BroadcastChannel` 未実装のため skip 付き骨格のみ → **確定**
+- **PR 分割**: Phase 1 (data-testid 追加) は別 PR で先行する。Phase 2 (E2E テスト) はその後の PR で実装する → **確定**
+
 ## Notes
 
-- 元 PR #620 は全 16 カテゴリを 1 ファイルにまとめていたが、既存テストのファイル粒度に合わせてカテゴリ別に分割する
-- Multi-tab 同期は `BroadcastChannel` 未実装のため skip 付き骨格のみ
 - Gemini 警告テストは `needsGemini()` の判定ロジック (`src/utils/role/plugins.ts`) に依存 — mock roles に `generateImage` を含める必要あり
 - 背景生成テストは `pendingGenerations` の SSE イベント形式に依存 — `eventDispatch.ts` の `generation_started` / `generation_completed` を参照
