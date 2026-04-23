@@ -27,6 +27,12 @@ const koMessages = {
     // pluralization 규약에 맞추기 위해 `|` 구분자를 유지합니다.
     activeSessions: "활성 세션 {count}개 (에이전트 실행 중)",
     unreadReplies: "읽지 않은 답장 {count}개",
+    unreadDot: "새 답장",
+    origin: {
+      scheduler: "스케줄러에서 시작됨",
+      skill: "스킬에서 시작됨",
+      bridge: "브리지에서 시작됨",
+    },
   },
   chatInput: {
     placeholder: "작업을 입력하거나 파일을 드래그 / 붙여넣기 / 첨부하세요…",
@@ -54,6 +60,7 @@ const koMessages = {
     running: "실행 중",
     unread: "읽지 않음",
     noMessages: "(메시지 없음)",
+    openRowAria: "세션 열기: {preview}",
   },
   notificationBell: {
     notifications: "알림",
@@ -160,6 +167,7 @@ const koMessages = {
     todos: { label: "할 일", title: "할 일 열기 (⌘4)" },
     scheduler: { label: "일정", title: "일정 열기 (⌘5)" },
     wiki: { label: "위키", title: "위키 열기 (⌘6)" },
+    sources: { label: "소스", title: "정보 소스 열기" },
     skills: { label: "스킬", title: "스킬 열기 (⌘7)" },
     roles: { label: "역할", title: "역할 열기 (⌘8)" },
     files: { label: "파일", title: "워크스페이스 파일 열기 (⌘3)" },
@@ -316,9 +324,12 @@ const koMessages = {
     deleteColumn: "칼럼 삭제",
     columnActions: "칼럼 작업",
     addCard: "+ 카드 추가",
+    openCardAria: "작업 열기: {task}",
   },
   todoTableList: {
     noMatchingFilter: "현재 필터와 일치하는 항목이 없습니다",
+    sortColumnAria: "{column} 기준으로 정렬",
+    expandRowAria: "작업 펼치기: {task}",
   },
   pluginWiki: {
     backToIndex: "목차로 돌아가기",
@@ -335,6 +346,9 @@ const koMessages = {
     emptyContent: "「{title}」 페이지는 존재하지만 내용이 없습니다.",
     createPage: "이 Wiki 페이지 작성 요청",
     updatePage: "이 Wiki 페이지 업데이트 요청",
+    tagFilterAll: "전체",
+    noMatches: "#{tag} 태그가 달린 페이지가 없습니다",
+    lintChat: "Wiki 점검",
   },
   pluginPresentHtml: {
     saveAsPdf: "PDF 로 저장 (인쇄 대화 상자 열기)",
@@ -392,6 +406,15 @@ const koMessages = {
     flashPresetAlreadyRegistered: '"{label}" 의 모든 소스가 이미 등록되어 있습니다.',
     flashPresetRegistered: '"{label}" 에서 {count}개 소스를 등록했습니다. 수집 중…',
     flashPresetPartial: "{ok}/{total} 등록. 오류: {errors}",
+    errPrimaryRequired: "URL / 쿼리 필드를 입력하세요.",
+    errRssUrlProtocol: "RSS 피드 URL은 http:// 또는 https://로 시작해야 합니다.",
+    errRssUrlInvalid: "RSS 피드 URL이 유효한 URL이 아닙니다.",
+    errRssUrlHost: "RSS 피드 URL에는 호스트가 포함되어야 합니다.",
+    errGithubInvalid: "GitHub 리포지토리 URL (https://github.com/owner/repo) 또는 owner/repo를 입력하세요.",
+    errUnsupportedKind: "지원하지 않는 fetcher 종류입니다.",
+    initialLoading: "소스를 불러오는 중…",
+    initialLoadFailed: "소스를 불러오지 못했습니다.",
+    retryLabel: "다시 시도",
   },
   pluginManageSkills: {
     deleteProjectSkill: "이 프로젝트 스킬 삭제",

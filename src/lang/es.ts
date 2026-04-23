@@ -25,6 +25,12 @@ const esMessages = {
     sessionHistory: "Historial de sesiones",
     activeSessions: "{count} sesión activa (agente en ejecución) | {count} sesiones activas (agente en ejecución)",
     unreadReplies: "{count} respuesta sin leer | {count} respuestas sin leer",
+    unreadDot: "Nueva respuesta",
+    origin: {
+      scheduler: "Iniciada por el programador",
+      skill: "Iniciada por una skill",
+      bridge: "Iniciada por un bridge",
+    },
   },
   chatInput: {
     placeholder: "Escribe una tarea, o arrastra / pega / adjunta un archivo…",
@@ -52,6 +58,7 @@ const esMessages = {
     running: "En ejecución",
     unread: "Sin leer",
     noMessages: "(sin mensajes)",
+    openRowAria: "Abrir sesión: {preview}",
   },
   notificationBell: {
     notifications: "Notificaciones",
@@ -160,6 +167,7 @@ const esMessages = {
     todos: { label: "Tareas", title: "Abrir tareas (⌘4)" },
     scheduler: { label: "Agenda", title: "Abrir agenda (⌘5)" },
     wiki: { label: "Wiki", title: "Abrir wiki (⌘6)" },
+    sources: { label: "Fuentes", title: "Abrir fuentes de información" },
     skills: { label: "Skills", title: "Abrir skills (⌘7)" },
     roles: { label: "Roles", title: "Abrir roles (⌘8)" },
     files: { label: "Archivos", title: "Abrir archivos del área de trabajo (⌘3)" },
@@ -317,9 +325,12 @@ const esMessages = {
     deleteColumn: "Eliminar columna",
     columnActions: "Acciones de columna",
     addCard: "+ Añadir tarjeta",
+    openCardAria: "Abrir tarea: {task}",
   },
   todoTableList: {
     noMatchingFilter: "Ningún elemento coincide con el filtro actual",
+    sortColumnAria: "Ordenar por {column}",
+    expandRowAria: "Expandir tarea: {task}",
   },
   pluginWiki: {
     backToIndex: "Volver al índice",
@@ -336,6 +347,9 @@ const esMessages = {
     emptyContent: 'La página "{title}" existe pero no tiene contenido.',
     createPage: "Solicitar la creación de esta página wiki",
     updatePage: "Solicitar la actualización de esta página wiki",
+    tagFilterAll: "Todas",
+    noMatches: "No hay páginas con la etiqueta #{tag}",
+    lintChat: "Revisar mi wiki",
   },
   pluginPresentHtml: {
     saveAsPdf: "Guardar como PDF (abre el diálogo de impresión)",
@@ -393,6 +407,15 @@ const esMessages = {
     flashPresetAlreadyRegistered: 'Todas las fuentes de "{label}" ya están registradas.',
     flashPresetRegistered: 'Registrada {count} fuente de "{label}". Obteniendo…|Registradas {count} fuentes de "{label}". Obteniendo…',
     flashPresetPartial: "Registradas {ok}/{total}. Errores: {errors}",
+    errPrimaryRequired: "Por favor, rellena el campo URL / consulta.",
+    errRssUrlProtocol: "La URL del feed RSS debe empezar por http:// o https://",
+    errRssUrlInvalid: "La URL del feed RSS no es una URL válida.",
+    errRssUrlHost: "La URL del feed RSS debe incluir un host.",
+    errGithubInvalid: "Introduce una URL de repositorio de GitHub (https://github.com/owner/repo) o owner/repo.",
+    errUnsupportedKind: "Tipo de fetcher no compatible.",
+    initialLoading: "Cargando fuentes…",
+    initialLoadFailed: "No se pudieron cargar las fuentes.",
+    retryLabel: "Reintentar",
   },
   pluginManageSkills: {
     deleteProjectSkill: "Eliminar esta skill de proyecto",

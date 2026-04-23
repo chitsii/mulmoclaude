@@ -25,6 +25,12 @@ const zhMessages = {
     // 中文无单复数之分，但仍保留 `|` 分隔符以对齐 vue-i18n 的 pluralization 约定。
     activeSessions: "{count} 个活动会话（代理运行中）",
     unreadReplies: "{count} 条未读回复",
+    unreadDot: "新回复",
+    origin: {
+      scheduler: "由调度器启动",
+      skill: "由技能启动",
+      bridge: "由桥接启动",
+    },
   },
   chatInput: {
     placeholder: "输入任务,或拖放 / 粘贴 / 附加文件…",
@@ -52,6 +58,7 @@ const zhMessages = {
     running: "运行中",
     unread: "未读",
     noMessages: "(无消息)",
+    openRowAria: "打开会话: {preview}",
   },
   notificationBell: {
     notifications: "通知",
@@ -157,6 +164,7 @@ const zhMessages = {
     todos: { label: "待办", title: "打开待办 (⌘4)" },
     scheduler: { label: "日程", title: "打开日程 (⌘5)" },
     wiki: { label: "百科", title: "打开 Wiki (⌘6)" },
+    sources: { label: "信息源", title: "打开信息源" },
     skills: { label: "技能", title: "打开技能 (⌘7)" },
     roles: { label: "角色", title: "打开角色 (⌘8)" },
     files: { label: "文件", title: "打开工作区文件 (⌘3)" },
@@ -313,9 +321,12 @@ const zhMessages = {
     deleteColumn: "删除列",
     columnActions: "列操作",
     addCard: "+ 添加卡片",
+    openCardAria: "打开任务: {task}",
   },
   todoTableList: {
     noMatchingFilter: "没有项目匹配当前筛选",
+    sortColumnAria: "按 {column} 排序",
+    expandRowAria: "展开任务: {task}",
   },
   pluginWiki: {
     backToIndex: "返回目录",
@@ -332,6 +343,9 @@ const zhMessages = {
     emptyContent: "页面「{title}」已存在，但没有内容。",
     createPage: "请求创建此 Wiki 页面",
     updatePage: "请求更新此 Wiki 页面",
+    tagFilterAll: "全部",
+    noMatches: "没有带 #{tag} 标签的页面",
+    lintChat: "检查 Wiki",
   },
   pluginPresentHtml: {
     saveAsPdf: "另存为 PDF(打开打印对话框)",
@@ -389,6 +403,15 @@ const zhMessages = {
     flashPresetAlreadyRegistered: '"{label}" 中的所有信息源均已注册。',
     flashPresetRegistered: '已从 "{label}" 注册 {count} 个信息源。正在抓取…',
     flashPresetPartial: "已注册 {ok}/{total}。错误: {errors}",
+    errPrimaryRequired: "请填写 URL / 查询字段。",
+    errRssUrlProtocol: "RSS 源 URL 必须以 http:// 或 https:// 开头。",
+    errRssUrlInvalid: "RSS 源 URL 不是有效的 URL。",
+    errRssUrlHost: "RSS 源 URL 必须包含主机名。",
+    errGithubInvalid: "请输入 GitHub 仓库 URL (https://github.com/owner/repo) 或 owner/repo。",
+    errUnsupportedKind: "不支持的 fetcher 类型。",
+    initialLoading: "正在加载信息源…",
+    initialLoadFailed: "加载信息源失败。",
+    retryLabel: "重试",
   },
   pluginManageSkills: {
     deleteProjectSkill: "删除此项目级技能",

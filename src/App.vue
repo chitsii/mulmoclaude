@@ -26,6 +26,7 @@
         <SessionTabBar
           :sessions="tabSessions"
           :current-session-id="displayedCurrentSessionId"
+          :is-chat-page="isChatPage"
           :roles="roles"
           :active-session-count="activeSessionCount"
           :unread-count="unreadCount"
@@ -125,6 +126,7 @@
           <WikiView v-else-if="currentPage === 'wiki'" />
           <SkillsView v-else-if="currentPage === 'skills'" />
           <RolesView v-else-if="currentPage === 'roles'" />
+          <SourcesView v-else-if="currentPage === 'sources'" />
           <SessionHistoryPanel
             v-else-if="currentPage === 'history'"
             :sessions="mergedSessions"
@@ -188,6 +190,7 @@ import WikiView from "./plugins/wiki/View.vue";
 import { buildWikiRouteParams } from "./plugins/wiki/route";
 import SkillsView from "./plugins/manageSkills/View.vue";
 import RolesView from "./plugins/manageRoles/View.vue";
+import SourcesView from "./components/SourcesView.vue";
 import SettingsModal from "./components/SettingsModal.vue";
 import NotificationToast from "./components/NotificationToast.vue";
 import type { NotificationAction } from "./types/notification";
@@ -213,6 +216,7 @@ import { useSessionDerived } from "./composables/useSessionDerived";
 import { useFaviconState } from "./composables/useFaviconState";
 import { useMergedSessions } from "./composables/useMergedSessions";
 import { useLayoutMode } from "./composables/useLayoutMode";
+import { useHistoryEntrance } from "./composables/useHistoryEntrance";
 import { useSelectedResult } from "./composables/useSelectedResult";
 import { useMcpTools } from "./composables/useMcpTools";
 import { useRoles } from "./composables/useRoles";
@@ -330,7 +334,7 @@ const { markSessionRead } = useSessionSync({
   currentSessionId,
   fetchSessions,
 });
-const { geminiAvailable, sandboxEnabled, fetchHealth } = useHealth();
+const { geminiAvailable, sandboxEnabled, cpuLoadRatio, fetchHealth } = useHealth();
 
 const { activeSession, toolResults, sidebarResults, currentSummary, isRunning, statusMessage, toolCallHistory, activeSessionCount, unreadCount } =
   useSessionDerived({ sessionMap, currentSessionId, sessions });
@@ -345,7 +349,7 @@ const { selectedResultUuid } = useSelectedResult({
 // `unreadCount` covers every session (not just the active tab), so
 // the favicon badge lights up when a background session gets a new
 // reply even though the user is looking at a different session.
-useFaviconState({ isRunning, currentSummary, activeSession, sessionsUnreadCount: unreadCount });
+useFaviconState({ isRunning, currentSummary, activeSession, sessionsUnreadCount: unreadCount, cpuLoadRatio });
 
 const toolResultsPanelRef = ref<{ root: HTMLDivElement | null } | null>(null);
 const canvasRef = ref<HTMLDivElement | null>(null);
@@ -361,6 +365,7 @@ const { showRightSidebar, toggleRightSidebar } = useRightSidebar();
 const showSettings = ref(false);
 
 const { layoutMode, setLayoutMode, toggleLayoutMode } = useLayoutMode();
+const { preHistoryUrl } = useHistoryEntrance();
 
 // Current page derives from the route. The chat page has a layout
 // preference on top (single vs. stack); other pages are distinct
@@ -583,10 +588,13 @@ async function resumeOrCreateChatSession(): Promise<void> {
     return;
   }
   if (sessionMap.has(topId)) {
-    // Already in memory — navigate explicitly. loadSession would
-    // early-return here if topId === currentSessionId, skipping the
-    // URL push we need when arriving from a non-chat page.
-    navigateToSession(topId);
+    // Already in memory — activate so the role selector re-syncs to
+    // the session's role. Going through navigateToSession alone would
+    // push `/chat/:topId` without touching `currentRoleId`, leaving
+    // the selector stuck on whatever role the user picked on the
+    // page they're coming from.
+    const live = sessionMap.get(topId)!;
+    activateSession(topId, live.roleId, false);
     return;
   }
   await loadSession(topId);
@@ -763,22 +771,19 @@ async function sendMessage(text?: string) {
 }
 
 // History is a page route (/history) now — no click-outside handling
-// needed. Clicking the history button toggles between /history and the
-// previous page via router.back / router.push.
+// needed. Clicking the history button from elsewhere opens /history;
+// clicking it while on /history "closes" by pushing forward to the
+// page the user came from (remembered by useHistoryEntrance). Close
+// is an explicit user intent — it should create a new history entry,
+// not rewind, so browser-back from the target still reveals the last
+// /history/<filter> the user was looking at.
 function handleHistoryClick(): void {
   if (currentPage.value !== PAGE_ROUTES.history) {
     router.push({ name: PAGE_ROUTES.history }).catch(() => {});
     return;
   }
-  // Direct-link to /history has no prior entry to go back to.
-  // vue-router exposes the previous entry on window.history.state.back;
-  // when null, fall back to /chat so the button still closes the panel.
-  const hasBack = typeof window !== "undefined" && window.history.state?.back != null;
-  if (hasBack) {
-    router.back();
-  } else {
-    router.push({ name: PAGE_ROUTES.chat }).catch(() => {});
-  }
+  const target = preHistoryUrl.value ?? { name: PAGE_ROUTES.chat };
+  router.push(target).catch(() => {});
 }
 
 // Fetch the session list when entering /history. Not `immediate` on
@@ -819,13 +824,24 @@ function navigateToWorkspacePath(href: string): void {
   }
 }
 
-function startNewChat(message: string): void {
+function startNewChat(message: string, roleId?: string): void {
   // createNewSession sets currentSessionId synchronously (see the
   // comment on its declaration), so the follow-up sendMessage lands
   // in the new session rather than whatever was previously active.
   // Cross-route push behaviour (so browser Back returns to /wiki)
   // is now handled inside createNewSession via the isChatPage check.
-  createNewSession(currentRoleId.value);
+  const previousRoleId = currentRoleId.value;
+  createNewSession(roleId ?? previousRoleId);
+  // `createNewSession` mutates `currentRoleId.value` to the role it
+  // just used. When the caller passed an explicit `roleId` override
+  // (e.g. wiki Lint spawns a General-role chat regardless of the
+  // role the user is currently viewing the wiki under), restore the
+  // previously-selected role afterwards so future `+` clicks and
+  // role-aware UI don't inherit this one-shot override. The newly-
+  // created session keeps the overridden role on its own record.
+  if (roleId && roleId !== previousRoleId) {
+    currentRoleId.value = previousRoleId;
+  }
   void sendMessage(message);
 }
 
@@ -833,7 +849,7 @@ function startNewChat(message: string): void {
 provideAppApi({
   refreshRoles,
   sendMessage: (message: string) => sendMessage(message),
-  startNewChat: (message: string) => startNewChat(message),
+  startNewChat: (message: string, roleId?: string) => startNewChat(message, roleId),
   navigateToWorkspacePath: (href: string) => navigateToWorkspacePath(href),
 });
 // Plugin Views that need to tag background work with the current

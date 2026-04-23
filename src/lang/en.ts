@@ -42,6 +42,12 @@ const enMessages = {
     // based on the number. `{count}` is interpolated.
     activeSessions: "{count} active session (agent running) | {count} active sessions (agent running)",
     unreadReplies: "{count} unread reply | {count} unread replies",
+    unreadDot: "New reply",
+    origin: {
+      scheduler: "Started by scheduler",
+      skill: "Started by skill",
+      bridge: "Started by bridge",
+    },
   },
   chatInput: {
     placeholder: "Type a task, or drop / paste / attach a file…",
@@ -69,6 +75,7 @@ const enMessages = {
     running: "Running",
     unread: "Unread",
     noMessages: "(no messages)",
+    openRowAria: "Open session: {preview}",
   },
   notificationBell: {
     notifications: "Notifications",
@@ -176,6 +183,7 @@ const enMessages = {
     todos: { label: "Todos", title: "Open todos (⌘4)" },
     scheduler: { label: "Schedule", title: "Open schedule (⌘5)" },
     wiki: { label: "Wiki", title: "Open wiki (⌘6)" },
+    sources: { label: "Sources", title: "Open information sources" },
     skills: { label: "Skills", title: "Open skills (⌘7)" },
     roles: { label: "Roles", title: "Open roles (⌘8)" },
     files: { label: "Files", title: "Open workspace files (⌘3)" },
@@ -332,9 +340,12 @@ const enMessages = {
     deleteColumn: "Delete column",
     columnActions: "Column actions",
     addCard: "+ Add card",
+    openCardAria: "Open task: {task}",
   },
   todoTableList: {
     noMatchingFilter: "No items match the current filter",
+    sortColumnAria: "Sort by {column}",
+    expandRowAria: "Expand task: {task}",
   },
   pluginWiki: {
     backToIndex: "Back to index",
@@ -351,6 +362,9 @@ const enMessages = {
     emptyContent: 'The page "{title}" exists but has no content.',
     createPage: "Request creation of this wiki page",
     updatePage: "Request update of this wiki page",
+    tagFilterAll: "All",
+    noMatches: "No pages tagged #{tag}",
+    lintChat: "Lint My Wiki",
   },
   pluginPresentHtml: {
     saveAsPdf: "Save as PDF (opens print dialog)",
@@ -408,6 +422,15 @@ const enMessages = {
     flashPresetAlreadyRegistered: 'All sources in "{label}" are already registered.',
     flashPresetRegistered: 'Registered {count} source from "{label}". Fetching…|Registered {count} sources from "{label}". Fetching…',
     flashPresetPartial: "Registered {ok}/{total}. Errors: {errors}",
+    errPrimaryRequired: "Please fill in the URL / query field.",
+    errRssUrlProtocol: "RSS feed URL must start with http:// or https://",
+    errRssUrlInvalid: "RSS feed URL is not a valid URL.",
+    errRssUrlHost: "RSS feed URL must include a host.",
+    errGithubInvalid: "Enter a GitHub repo URL (https://github.com/owner/repo) or owner/repo.",
+    errUnsupportedKind: "Unsupported fetcher kind.",
+    initialLoading: "Loading sources…",
+    initialLoadFailed: "Failed to load sources.",
+    retryLabel: "Retry",
   },
   pluginManageSkills: {
     deleteProjectSkill: "Delete this project-scope skill",

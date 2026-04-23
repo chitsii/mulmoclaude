@@ -27,6 +27,12 @@ const jaMessages = {
     // pluralization API に合わせて `|` 区切りで揃える。
     activeSessions: "{count} 件のアクティブセッション（エージェント実行中）",
     unreadReplies: "{count} 件の未読返信",
+    unreadDot: "新しい返信",
+    origin: {
+      scheduler: "スケジューラから開始",
+      skill: "スキルから開始",
+      bridge: "ブリッジから開始",
+    },
   },
   chatInput: {
     placeholder: "タスクを入力、またはファイルをドロップ・ペースト・添付…",
@@ -54,6 +60,7 @@ const jaMessages = {
     running: "実行中",
     unread: "未読",
     noMessages: "（メッセージなし）",
+    openRowAria: "セッションを開く: {preview}",
   },
   notificationBell: {
     notifications: "通知",
@@ -159,6 +166,7 @@ const jaMessages = {
     todos: { label: "Todo", title: "Todo を開く (⌘4)" },
     scheduler: { label: "スケジュール", title: "スケジュールを開く (⌘5)" },
     wiki: { label: "Wiki", title: "Wiki を開く (⌘6)" },
+    sources: { label: "ソース", title: "情報ソースを開く" },
     skills: { label: "スキル", title: "スキルを開く (⌘7)" },
     roles: { label: "ロール", title: "ロールを開く (⌘8)" },
     files: { label: "ファイル", title: "ワークスペースファイルを開く (⌘3)" },
@@ -316,9 +324,12 @@ const jaMessages = {
     deleteColumn: "列を削除",
     columnActions: "列のアクション",
     addCard: "+ カードを追加",
+    openCardAria: "タスクを開く: {task}",
   },
   todoTableList: {
     noMatchingFilter: "現在のフィルタに一致する項目はありません",
+    sortColumnAria: "{column} で並べ替え",
+    expandRowAria: "タスクを展開: {task}",
   },
   pluginWiki: {
     backToIndex: "インデックスに戻る",
@@ -335,6 +346,9 @@ const jaMessages = {
     emptyContent: "「{title}」のページは存在しますが、内容がありません。",
     createPage: "この Wiki ページの作成をお願いする",
     updatePage: "この Wiki ページの更新をお願いする",
+    tagFilterAll: "すべて",
+    noMatches: "#{tag} タグのページがありません",
+    lintChat: "Wiki を Lint",
   },
   pluginPresentHtml: {
     saveAsPdf: "PDF として保存（印刷ダイアログを開きます）",
@@ -392,6 +406,15 @@ const jaMessages = {
     flashPresetAlreadyRegistered: "「{label}」のソースはすべて登録済みです。",
     flashPresetRegistered: "「{label}」から {count} 件のソースを登録しました。取得中…",
     flashPresetPartial: "登録 {ok}/{total} 件。エラー: {errors}",
+    errPrimaryRequired: "URL / クエリを入力してください。",
+    errRssUrlProtocol: "RSS フィード URL は http:// または https:// で始めてください。",
+    errRssUrlInvalid: "RSS フィード URL が有効な URL ではありません。",
+    errRssUrlHost: "RSS フィード URL にはホスト名が必要です。",
+    errGithubInvalid: "GitHub リポジトリの URL (https://github.com/owner/repo) または owner/repo を入力してください。",
+    errUnsupportedKind: "未対応の fetcher 種別です。",
+    initialLoading: "ソース一覧を読み込み中…",
+    initialLoadFailed: "ソース一覧の読み込みに失敗しました。",
+    retryLabel: "再試行",
   },
   pluginManageSkills: {
     deleteProjectSkill: "このプロジェクト限定スキルを削除",

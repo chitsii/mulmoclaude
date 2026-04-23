@@ -20,6 +20,12 @@ const deMessages = {
     sessionHistory: "Sitzungsverlauf",
     activeSessions: "{count} aktive Sitzung (Agent läuft) | {count} aktive Sitzungen (Agent läuft)",
     unreadReplies: "{count} ungelesene Antwort | {count} ungelesene Antworten",
+    unreadDot: "Neue Antwort",
+    origin: {
+      scheduler: "Vom Scheduler gestartet",
+      skill: "Von einer Skill gestartet",
+      bridge: "Von einem Bridge gestartet",
+    },
   },
   chatInput: {
     placeholder: "Aufgabe eingeben oder Datei ziehen / einfügen / anhängen…",
@@ -47,6 +53,7 @@ const deMessages = {
     running: "Läuft",
     unread: "Ungelesen",
     noMessages: "(keine Nachrichten)",
+    openRowAria: "Sitzung öffnen: {preview}",
   },
   notificationBell: {
     notifications: "Benachrichtigungen",
@@ -155,6 +162,7 @@ const deMessages = {
     todos: { label: "To-dos", title: "To-dos öffnen (⌘4)" },
     scheduler: { label: "Zeitplan", title: "Zeitplan öffnen (⌘5)" },
     wiki: { label: "Wiki", title: "Wiki öffnen (⌘6)" },
+    sources: { label: "Quellen", title: "Informationsquellen öffnen" },
     skills: { label: "Skills", title: "Skills öffnen (⌘7)" },
     roles: { label: "Rollen", title: "Rollen öffnen (⌘8)" },
     files: { label: "Dateien", title: "Workspace-Dateien öffnen (⌘3)" },
@@ -312,9 +320,12 @@ const deMessages = {
     deleteColumn: "Spalte löschen",
     columnActions: "Spaltenaktionen",
     addCard: "+ Karte hinzufügen",
+    openCardAria: "Aufgabe öffnen: {task}",
   },
   todoTableList: {
     noMatchingFilter: "Keine Einträge passen zum aktuellen Filter",
+    sortColumnAria: "Nach {column} sortieren",
+    expandRowAria: "Aufgabe ausklappen: {task}",
   },
   pluginWiki: {
     backToIndex: "Zurück zum Index",
@@ -331,6 +342,9 @@ const deMessages = {
     emptyContent: "Die Seite „{title}“ existiert, hat aber keinen Inhalt.",
     createPage: "Erstellung dieser Wiki-Seite anfordern",
     updatePage: "Aktualisierung dieser Wiki-Seite anfordern",
+    tagFilterAll: "Alle",
+    noMatches: "Keine Seiten mit dem Tag #{tag}",
+    lintChat: "Wiki prüfen",
   },
   pluginPresentHtml: {
     saveAsPdf: "Als PDF speichern (öffnet Druckdialog)",
@@ -389,6 +403,15 @@ const deMessages = {
     flashPresetAlreadyRegistered: 'Alle Quellen in "{label}" sind bereits registriert.',
     flashPresetRegistered: '{count} Quelle aus "{label}" registriert. Wird abgerufen…|{count} Quellen aus "{label}" registriert. Wird abgerufen…',
     flashPresetPartial: "{ok}/{total} registriert. Fehler: {errors}",
+    errPrimaryRequired: "Bitte das Feld URL / Abfrage ausfüllen.",
+    errRssUrlProtocol: "RSS-Feed-URL muss mit http:// oder https:// beginnen.",
+    errRssUrlInvalid: "RSS-Feed-URL ist keine gültige URL.",
+    errRssUrlHost: "RSS-Feed-URL muss einen Host enthalten.",
+    errGithubInvalid: "Bitte eine GitHub-Repo-URL (https://github.com/owner/repo) oder owner/repo angeben.",
+    errUnsupportedKind: "Nicht unterstützter Fetcher-Typ.",
+    initialLoading: "Quellen werden geladen…",
+    initialLoadFailed: "Quellen konnten nicht geladen werden.",
+    retryLabel: "Erneut versuchen",
   },
   pluginManageSkills: {
     deleteProjectSkill: "Diese Projekt-Skill löschen",

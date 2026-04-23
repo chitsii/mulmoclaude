@@ -20,6 +20,12 @@ const frMessages = {
     sessionHistory: "Historique des sessions",
     activeSessions: "{count} session active (agent en cours d'exécution) | {count} sessions actives (agent en cours d'exécution)",
     unreadReplies: "{count} réponse non lue | {count} réponses non lues",
+    unreadDot: "Nouvelle réponse",
+    origin: {
+      scheduler: "Démarrée par le planificateur",
+      skill: "Démarrée par une skill",
+      bridge: "Démarrée par un bridge",
+    },
   },
   chatInput: {
     placeholder: "Saisissez une tâche, ou glissez / collez / joignez un fichier…",
@@ -47,6 +53,7 @@ const frMessages = {
     running: "En cours",
     unread: "Non lu",
     noMessages: "(aucun message)",
+    openRowAria: "Ouvrir la session : {preview}",
   },
   notificationBell: {
     notifications: "Notifications",
@@ -155,6 +162,7 @@ const frMessages = {
     todos: { label: "Tâches", title: "Ouvrir les tâches (⌘4)" },
     scheduler: { label: "Planning", title: "Ouvrir le planning (⌘5)" },
     wiki: { label: "Wiki", title: "Ouvrir le wiki (⌘6)" },
+    sources: { label: "Sources", title: "Ouvrir les sources d'information" },
     skills: { label: "Skills", title: "Ouvrir les skills (⌘7)" },
     roles: { label: "Rôles", title: "Ouvrir les rôles (⌘8)" },
     files: { label: "Fichiers", title: "Ouvrir les fichiers du workspace (⌘3)" },
@@ -312,9 +320,12 @@ const frMessages = {
     deleteColumn: "Supprimer la colonne",
     columnActions: "Actions de colonne",
     addCard: "+ Ajouter une carte",
+    openCardAria: "Ouvrir la tâche : {task}",
   },
   todoTableList: {
     noMatchingFilter: "Aucun élément ne correspond au filtre actuel",
+    sortColumnAria: "Trier par {column}",
+    expandRowAria: "Développer la tâche : {task}",
   },
   pluginWiki: {
     backToIndex: "Retour à l'index",
@@ -331,6 +342,9 @@ const frMessages = {
     emptyContent: "La page « {title} » existe mais n'a pas de contenu.",
     createPage: "Demander la création de cette page wiki",
     updatePage: "Demander la mise à jour de cette page wiki",
+    tagFilterAll: "Toutes",
+    noMatches: "Aucune page avec le tag #{tag}",
+    lintChat: "Vérifier mon wiki",
   },
   pluginPresentHtml: {
     saveAsPdf: "Enregistrer en PDF (ouvre la boîte de dialogue d'impression)",
@@ -389,6 +403,15 @@ const frMessages = {
     flashPresetAlreadyRegistered: 'Toutes les sources de "{label}" sont déjà enregistrées.',
     flashPresetRegistered: '{count} source enregistrée depuis "{label}". Récupération…|{count} sources enregistrées depuis "{label}". Récupération…',
     flashPresetPartial: "Enregistrées {ok}/{total}. Erreurs : {errors}",
+    errPrimaryRequired: "Veuillez remplir le champ URL / requête.",
+    errRssUrlProtocol: "L'URL du flux RSS doit commencer par http:// ou https://",
+    errRssUrlInvalid: "L'URL du flux RSS n'est pas une URL valide.",
+    errRssUrlHost: "L'URL du flux RSS doit inclure un hôte.",
+    errGithubInvalid: "Saisissez une URL de dépôt GitHub (https://github.com/owner/repo) ou owner/repo.",
+    errUnsupportedKind: "Type de fetcher non pris en charge.",
+    initialLoading: "Chargement des sources…",
+    initialLoadFailed: "Impossible de charger les sources.",
+    retryLabel: "Réessayer",
   },
   pluginManageSkills: {
     deleteProjectSkill: "Supprimer cette skill de projet",
