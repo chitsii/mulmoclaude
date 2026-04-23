@@ -165,12 +165,14 @@ router.get(API_ROUTES.wiki.base, async (req: Request, res: Response<WikiResponse
     const filePath = await resolvePagePath(slug);
     const content = filePath ? readFileOrEmpty(filePath) : "";
     const resolvedTitle = filePath ? path.basename(filePath, ".md") : slug;
+    const exists = !!filePath;
     res.json({
       data: {
         action: "page",
         title: resolvedTitle,
         content,
         pageName: resolvedTitle,
+        pageExists: exists,
         error: content ? undefined : `Page not found: ${slug}`,
       },
       message: content ? `Showing page: ${resolvedTitle}` : `Page not found: ${slug}`,
@@ -202,6 +204,7 @@ interface WikiData {
   content: string;
   pageEntries?: WikiPageEntry[];
   pageName?: string;
+  pageExists?: boolean;
   error?: string;
 }
 
@@ -233,18 +236,20 @@ async function buildPageResponse(action: string, pageName: string): Promise<Wiki
   const filePath = await resolvePagePath(pageName);
   const content = filePath ? readFileOrEmpty(filePath) : "";
   const resolvedTitle = filePath ? path.basename(filePath, ".md") : pageName;
-  const found = !!content;
+  const exists = !!filePath;
+  const hasContent = !!content;
   return {
     data: {
       action,
       title: resolvedTitle,
       content,
       pageName: resolvedTitle,
-      error: found ? undefined : `Page not found: ${pageName}`,
+      pageExists: exists,
+      error: hasContent ? undefined : `Page not found: ${pageName}`,
     },
-    message: found ? `Showing page: ${resolvedTitle}` : `Page not found: ${pageName}`,
+    message: hasContent ? `Showing page: ${resolvedTitle}` : `Page not found: ${pageName}`,
     title: resolvedTitle,
-    instructions: found
+    instructions: hasContent
       ? "The wiki page is now displayed on the canvas."
       : `Page not found: wiki/pages/${wikiSlugify(pageName)}.md does not exist. You can create it or check the slug in wiki/index.md.`,
     updating: true,

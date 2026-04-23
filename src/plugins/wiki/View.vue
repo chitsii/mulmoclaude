@@ -58,12 +58,15 @@
       {{ navError }}
     </div>
 
-    <!-- Empty state: specific page -->
-    <div v-if="!content && !navError && action === 'page'" class="flex-1 flex items-center justify-center text-gray-400 text-sm">
+    <!-- Empty state: specific page (standalone /wiki route only — inside
+         /chat tool results, spawning a fresh session is confusing, same
+         rationale as the per-page chat composer below) -->
+    <div v-if="!pageExists && !navError && action === 'page'" class="flex-1 flex items-center justify-center text-gray-400 text-sm">
       <div class="text-center space-y-4">
         <span class="material-icons text-4xl text-gray-300">article</span>
         <p>{{ t("pluginWiki.emptyPage", { title: title }) }}</p>
         <button
+          v-if="isStandaloneWikiRoute"
           data-testid="wiki-create-page-button"
           class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
           @click="requestCreatePage"
@@ -169,6 +172,7 @@ const action = ref(props.selectedResult?.data?.action ?? "index");
 const title = ref(props.selectedResult?.data?.title ?? "Wiki");
 const content = ref(props.selectedResult?.data?.content ?? "");
 const pageEntries = ref<WikiPageEntry[]>(props.selectedResult?.data?.pageEntries ?? []);
+const pageExists = ref(props.selectedResult?.data?.pageExists ?? true);
 // Declared up here — not next to callApi — because the URL watcher
 // below fires with `immediate: true`, which invokes callApi
 // synchronously during setup. If this ref were declared after the
@@ -189,6 +193,7 @@ const { refresh, abort: abortFreshFetch } = useFreshPluginData<WikiData>({
     title.value = data.title ?? "Wiki";
     content.value = data.content ?? "";
     pageEntries.value = data.pageEntries ?? [];
+    pageExists.value = data.pageExists ?? true;
   },
 });
 
@@ -210,6 +215,7 @@ watch(
       title.value = data.title ?? "Wiki";
       content.value = data.content ?? "";
       pageEntries.value = data.pageEntries ?? [];
+      pageExists.value = data.pageExists ?? true;
     }
     void refresh();
   },
@@ -265,6 +271,7 @@ async function callApi(body: Record<string, unknown>) {
       title?: string;
       content?: string;
       pageEntries?: WikiPageEntry[];
+      pageExists?: boolean;
     };
   }>(API_ROUTES.wiki.base, body);
   if (!response.ok) {
@@ -276,6 +283,7 @@ async function callApi(body: Record<string, unknown>) {
   title.value = result.data?.title ?? "Wiki";
   content.value = result.data?.content ?? "";
   pageEntries.value = result.data?.pageEntries ?? [];
+  pageExists.value = result.data?.pageExists ?? true;
   if (props.selectedResult) {
     emit("updateResult", {
       ...props.selectedResult,
