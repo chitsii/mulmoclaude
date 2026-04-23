@@ -50,7 +50,9 @@ export const ROLES: Role[] = [
     ],
     queries: [
       "Tell me about this app, MulmoClaude.",
-      "What is wiki in this app and how to use it?",
+      "What is the wiki in this app and how do I use it?",
+      "Tell me about the sandbox feature of this app.",
+      "What is the role of the Gemini API key in this app?",
       "How do I use the Telegram bridge to talk to MulmoClaude from my phone?",
       "Show my wiki index",
       "Lint my wiki",
@@ -148,6 +150,7 @@ export const ROLES: Role[] = [
       "Turn this drawing into Ghibli style image",
       "Generate an image of a big fat cat",
       "Simulate 100 fish boids using p5.js — they should flock together but avoid the mouse cursor",
+      "Create a new puzzle game in HTML. I like Sokoban, Samegame, Vexed, and 2048, but don't copy them — invent something different from any of them.",
     ],
   },
   {
