@@ -66,8 +66,10 @@ const TARGETS: PluginLauncherTarget[] = [
 ];
 
 // Index AFTER which the visual separator is inserted (between data
-// plugins on the left and management on the right).
-const SEPARATOR_AFTER_INDEX = 4;
+// plugins on the left and management on the right). Data plugins are
+// todos / calendar / automations / wiki / sources (indices 0-4), so
+// the divider renders before index 5 (skills).
+const SEPARATOR_AFTER_INDEX = 5;
 
 function isActive(target: PluginLauncherTarget): boolean {
   return props.activeViewMode === target.key;
