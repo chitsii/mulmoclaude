@@ -140,6 +140,10 @@ const esMessages = {
     cannotSaveTooltip: "No se puede guardar hasta que los ajustes se carguen correctamente",
     saving: "Guardando…",
     loadingLabel: "Cargando…",
+    unsavedMarker: "●",
+    unsavedToolsConfirm: "Allowed Tools tiene cambios sin guardar. ¿Cerrar de todos modos?",
+    unsavedMcpDraftConfirm: "Hay un borrador de servidor MCP abierto. ¿Cerrar de todos modos?",
+    mcpSaveFailed: "No se pudieron guardar los cambios de los servidores MCP.",
   },
   canvasViewToggle: {
     stackViewTooltip: "Vista apilada · haz clic para cambiar a vista única (⌘1)",

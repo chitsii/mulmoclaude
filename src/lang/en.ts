@@ -156,6 +156,10 @@ const enMessages = {
     cannotSaveTooltip: "Cannot save until settings load successfully",
     saving: "Saving…",
     loadingLabel: "Loading…",
+    unsavedMarker: "●",
+    unsavedToolsConfirm: "Allowed Tools has unsaved changes. Close anyway?",
+    unsavedMcpDraftConfirm: "An MCP server draft is still open. Close anyway?",
+    mcpSaveFailed: "Failed to save MCP server changes.",
   },
   canvasViewToggle: {
     stackViewTooltip: "Stack view · click to switch to Single (⌘1)",

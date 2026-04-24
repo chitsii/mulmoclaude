@@ -134,6 +134,10 @@ const frMessages = {
     cannotSaveTooltip: "Impossible d'enregistrer tant que les paramètres ne sont pas chargés",
     saving: "Enregistrement…",
     loadingLabel: "Chargement…",
+    unsavedMarker: "●",
+    unsavedToolsConfirm: "Allowed Tools contient des modifications non enregistrées. Fermer quand même ?",
+    unsavedMcpDraftConfirm: "Un brouillon de serveur MCP est encore ouvert. Fermer quand même ?",
+    mcpSaveFailed: "Impossible d'enregistrer les modifications des serveurs MCP.",
   },
   canvasViewToggle: {
     stackViewTooltip: "Vue empilée · cliquez pour passer à la vue simple (⌘1)",

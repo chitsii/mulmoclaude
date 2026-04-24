@@ -134,6 +134,10 @@ const ptBRMessages = {
     cannotSaveTooltip: "Não é possível salvar até as configurações carregarem com sucesso",
     saving: "Salvando…",
     loadingLabel: "Carregando…",
+    unsavedMarker: "●",
+    unsavedToolsConfirm: "Allowed Tools tem alterações não salvas. Fechar mesmo assim?",
+    unsavedMcpDraftConfirm: "Há um rascunho de servidor MCP aberto. Fechar mesmo assim?",
+    mcpSaveFailed: "Não foi possível salvar as alterações dos servidores MCP.",
   },
   canvasViewToggle: {
     stackViewTooltip: "Visão em pilha · clique para alternar para visão única (⌘1)",
