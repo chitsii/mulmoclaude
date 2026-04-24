@@ -47,7 +47,7 @@
          expand_more button above (which navigates to /history) —
          this one opens the SessionHistoryPanel as a standalone left
          column next to the canvas, persisted in localStorage. -->
-    <SessionHistoryToggleButton :model-value="showSessionHistory" @update:model-value="(value: boolean) => emit('update:showSessionHistory', value)" />
+    <SessionHistoryToggleButton :model-value="sidePanelVisible" @update:model-value="(value: boolean) => emit('update:sidePanelVisible', value)" />
   </div>
 </template>
 
@@ -75,14 +75,14 @@ const props = defineProps<{
   activeSessionCount: number;
   unreadCount: number;
   historyOpen: boolean;
-  showSessionHistory: boolean;
+  sidePanelVisible: boolean;
 }>();
 
 const emit = defineEmits<{
   newSession: [];
   loadSession: [id: string];
   toggleHistory: [];
-  "update:showSessionHistory": [value: boolean];
+  "update:sidePanelVisible": [value: boolean];
 }>();
 
 // Short label shown next to the role icon so users can tell
