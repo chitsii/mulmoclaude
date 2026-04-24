@@ -28,9 +28,11 @@
           :active-session-count="activeSessionCount"
           :unread-count="unreadCount"
           :history-open="currentPage === 'history'"
+          :show-session-history="showSessionHistory"
           @new-session="handleNewSessionClick"
           @load-session="handleSessionSelect"
           @toggle-history="handleHistoryClick"
+          @update:show-session-history="setShowSessionHistory"
         />
       </div>
     </div>
@@ -40,8 +42,27 @@
          The old absolute-positioned overlay is gone — browser
          back/forward drives open/close instead. -->
 
-    <!-- Body: sidebar (Single only) + canvas column + right sidebar -->
+    <!-- Body: optional session-history column + sidebar (Single only) + canvas column + right sidebar -->
     <div class="flex flex-1 min-h-0">
+      <!-- Session-history side panel. Opt-in column to the left of the
+           chat sidebar / canvas, toggled via SessionHistoryToggleButton
+           in the ToolResultsPanel / StackView header. Only renders on
+           /chat — the existing `/history` route still owns the full-
+           page experience on non-chat contexts. -->
+      <div
+        v-if="isChatPage && showSessionHistory"
+        class="w-80 flex-shrink-0 border-r border-gray-200 bg-white text-gray-900"
+        data-testid="session-history-side-panel"
+      >
+        <SessionHistoryPanel
+          :sessions="mergedSessions"
+          :current-session-id="currentSessionId"
+          :roles="roles"
+          :error-message="historyError"
+          @load-session="handleSessionSelect"
+        />
+      </div>
+
       <!-- Sidebar (Single layout only) -->
       <div v-if="!isStackLayout" class="w-80 flex-shrink-0 border-r border-gray-200 flex flex-col bg-white text-gray-900 relative">
         <!-- Tool result previews -->
@@ -208,6 +229,7 @@ import { useSessionDerived } from "./composables/useSessionDerived";
 import { useFaviconState } from "./composables/useFaviconState";
 import { useMergedSessions } from "./composables/useMergedSessions";
 import { useLayoutMode } from "./composables/useLayoutMode";
+import { useShowSessionHistory } from "./composables/useShowSessionHistory";
 import { useHistoryEntrance } from "./composables/useHistoryEntrance";
 import { useSelectedResult } from "./composables/useSelectedResult";
 import { useMcpTools } from "./composables/useMcpTools";
@@ -358,6 +380,7 @@ const { showRightSidebar, toggleRightSidebar } = useRightSidebar();
 const showSettings = ref(false);
 
 const { layoutMode, setLayoutMode, toggleLayoutMode } = useLayoutMode();
+const { showSessionHistory, setShowSessionHistory } = useShowSessionHistory();
 const { preHistoryUrl } = useHistoryEntrance();
 
 // Current page derives from the route. The chat page has a layout
