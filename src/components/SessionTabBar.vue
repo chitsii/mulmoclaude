@@ -1,18 +1,9 @@
 <template>
   <div class="flex-1 flex gap-1 items-center min-w-0">
-    <button
-      class="flex-shrink-0 flex items-center justify-center w-7 py-1 rounded border border-dashed border-gray-300 text-gray-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-      data-testid="new-session-btn"
-      :title="t('sessionTabBar.newSession')"
-      :aria-label="t('sessionTabBar.newSession')"
-      @click="emit('newSession')"
-    >
-      <span class="material-icons text-sm">add</span>
-    </button>
     <template v-for="i in 6" :key="i">
       <button
         v-if="sessions[i - 1]"
-        class="relative flex-1 min-w-0 flex items-center justify-start gap-1.5 pl-2 pr-2 py-1 rounded overflow-hidden transition-colors"
+        class="relative flex-1 min-w-0 h-8 flex items-center justify-start gap-1 px-2 rounded overflow-hidden transition-colors"
         :class="sessions[i - 1].id === currentSessionId ? 'border border-gray-300 bg-white shadow-sm' : 'hover:bg-gray-100'"
         :title="tabTooltip(sessions[i - 1])"
         :data-testid="`session-tab-${sessions[i - 1].id}`"
@@ -37,15 +28,6 @@
       </button>
       <div v-else class="flex-1" />
     </template>
-    <!-- Session-history side-panel toggle. Carries the aggregate
-         session-status badges (active = yellow, unread = red) that
-         used to live on the separate /history entry button. -->
-    <SessionHistoryToggleButton
-      :model-value="sidePanelVisible"
-      :active-session-count="activeSessionCount"
-      :unread-count="unreadCount"
-      @update:model-value="(value: boolean) => emit('update:sidePanelVisible', value)"
-    />
   </div>
 </template>
 
@@ -54,7 +36,6 @@ import { useI18n } from "vue-i18n";
 import type { Role } from "../config/roles";
 import { type SessionSummary } from "../types/session";
 import { roleName } from "../utils/role/icon";
-import SessionHistoryToggleButton from "./SessionHistoryToggleButton.vue";
 import SessionRoleIcon from "./SessionRoleIcon.vue";
 
 const { t } = useI18n();
@@ -69,15 +50,10 @@ const props = defineProps<{
   // the unread dot on its tab.
   isChatPage: boolean;
   roles: Role[];
-  activeSessionCount: number;
-  unreadCount: number;
-  sidePanelVisible: boolean;
 }>();
 
 const emit = defineEmits<{
-  newSession: [];
   loadSession: [id: string];
-  "update:sidePanelVisible": [value: boolean];
 }>();
 
 // Short label shown next to the role icon so users can tell
