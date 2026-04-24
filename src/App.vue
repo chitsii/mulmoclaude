@@ -29,11 +29,9 @@
           :roles="roles"
           :active-session-count="activeSessionCount"
           :unread-count="unreadCount"
-          :history-open="currentPage === 'history'"
           :side-panel-visible="sidePanelVisible"
           @new-session="handleNewSessionClick"
           @load-session="handleSessionSelect"
-          @toggle-history="handleHistoryClick"
           @update:side-panel-visible="setSidePanelVisible"
         />
       </div>
@@ -80,19 +78,17 @@
             </button>
           </div>
           <div class="flex items-center gap-1 px-2 pb-1">
-            <!-- /history entrypoint + per-session stats. Mirrored from
-                 the hidden Row 2 SessionTabBar so the full-page history
-                 view is still reachable in one click when the side
-                 panel is open. -->
-            <SessionHistoryNavButton
+            <SessionHistoryExpandButton
               class="ml-auto"
+              :model-value="sidePanelExpanded"
+              @update:model-value="(value: boolean) => (sidePanelExpanded = value)"
+            />
+            <SessionHistoryToggleButton
+              :model-value="sidePanelVisible"
               :active-session-count="activeSessionCount"
               :unread-count="unreadCount"
-              :history-open="currentPage === 'history'"
-              @toggle-history="handleHistoryClick"
+              @update:model-value="setSidePanelVisibleAndCollapse"
             />
-            <SessionHistoryExpandButton :model-value="sidePanelExpanded" @update:model-value="(value: boolean) => (sidePanelExpanded = value)" />
-            <SessionHistoryToggleButton :model-value="sidePanelVisible" @update:model-value="setSidePanelVisibleAndCollapse" />
           </div>
         </div>
         <div class="flex-1 min-h-0">
@@ -235,7 +231,6 @@ import SessionTabBar from "./components/SessionTabBar.vue";
 import SuggestionsPanel from "./components/SuggestionsPanel.vue";
 import ChatInput, { type PastedFile } from "./components/ChatInput.vue";
 import SessionHistoryExpandButton from "./components/SessionHistoryExpandButton.vue";
-import SessionHistoryNavButton from "./components/SessionHistoryNavButton.vue";
 import SessionHistoryPanel from "./components/SessionHistoryPanel.vue";
 import SessionHistoryToggleButton from "./components/SessionHistoryToggleButton.vue";
 import ToolResultsPanel from "./components/ToolResultsPanel.vue";
@@ -821,22 +816,6 @@ async function sendMessage(text?: string) {
     pushErrorMessage(session, result.error);
     unsubscribeSession(session.id);
   }
-}
-
-// History is a page route (/history) now — no click-outside handling
-// needed. Clicking the history button from elsewhere opens /history;
-// clicking it while on /history "closes" by pushing forward to the
-// page the user came from (remembered by useHistoryEntrance). Close
-// is an explicit user intent — it should create a new history entry,
-// not rewind, so browser-back from the target still reveals the last
-// /history/<filter> the user was looking at.
-function handleHistoryClick(): void {
-  if (currentPage.value !== PAGE_ROUTES.history) {
-    router.push({ name: PAGE_ROUTES.history }).catch(() => {});
-    return;
-  }
-  const target = preHistoryUrl.value ?? { name: PAGE_ROUTES.chat };
-  router.push(target).catch(() => {});
 }
 
 // Fetch the session list when entering /history. Not `immediate` on
