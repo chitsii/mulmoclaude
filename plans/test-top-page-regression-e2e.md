@@ -86,7 +86,7 @@ Gemini 警告バナーに testid を追加:
 | result クリックで `?result=` が URL に付く | URL query パラメータ同期 |
 | result に `ring-2` ハイライトが付与される | 選択状態のスタイル |
 
-Mock: `mockAllApis` + SSE で `tool_result` イベントを publish
+Mock: `mockAllApis` + `page.routeWebSocket()` で socket.io pubsub をモックし `tool_result` イベントを publish
 
 #### 2-2. 通知クリック遷移 (#8) — `e2e/tests/notification-navigation.spec.ts`
 
@@ -96,8 +96,10 @@ Mock: `mockAllApis` + SSE で `tool_result` イベントを publish
 | Session 通知クリック → 該当セッションに遷移 | `action.view === "chat"` + `action.sessionId` → URL が `/chat/:id` |
 | Scheduler 通知クリック → `/scheduler` に遷移 | `action.view === "scheduler"` → URL 確認 |
 
-Mock: `useNotifications` が返す通知リストを SSE 経由で注入。
+Mock: `page.routeWebSocket()` で socket.io `/ws/pubsub` をモックし、`PUBSUB_CHANNELS.notifications` に通知ペイロードを publish。
+`useNotifications()` → `usePubSub()` → socket.io 経路で受信される。
 既存 testid: `notification-bell`, `notification-panel`, `notification-item-{id}`
+参考: `chat-flow.spec.ts`, `streaming-autoscroll.spec.ts` の `page.routeWebSocket()` パターン
 
 #### 2-3. Multi-tab 同期 (#10) — `e2e/tests/multi-tab-sync.spec.ts`
 
@@ -129,8 +131,9 @@ Mock: `/api/health` で `geminiAvailable: false`、`/api/roles` で `needsGemini
 | `generation_started` → pending call 表示 | `pending-call-{toolUseId}` が visible |
 | `generation_completed` → インジケータ消滅 | 上記 3 要素が非表示 |
 
-Mock: SSE で `generation_started` / `generation_completed` イベントを publish。
-`pendingGenerations` に対応するセッション状態を設定。
+Mock: `page.routeWebSocket()` で socket.io `/ws/pubsub` をモックし、per-session channel に `generationStarted` / `generationFinished` イベントを publish。
+`eventDispatch.ts` が `session.pendingGenerations` を更新する経路を通る。
+参考: `chat-flow.spec.ts`, `streaming-autoscroll.spec.ts` の既存 websocket モックパターン
 
 #### 2-6. Arrow Key ナビゲーション (#15) — `e2e/tests/arrow-key-navigation.spec.ts`
 
@@ -174,4 +177,5 @@ src/components/ToolResultsPanel.vue (modified — testid 追加)
 ## Notes
 
 - Gemini 警告テストは `needsGemini()` の判定ロジック (`src/utils/role/plugins.ts`) に依存 — mock roles に `generateImage` を含める必要あり
-- 背景生成テストは `pendingGenerations` の SSE イベント形式に依存 — `eventDispatch.ts` の `generation_started` / `generation_completed` を参照
+- リアルタイム系テスト (#6, #8, #12) はすべて socket.io websocket (`/ws/pubsub`) ベース — SSE ではない。既存の `page.routeWebSocket()` パターン (`chat-flow.spec.ts`, `streaming-autoscroll.spec.ts`) に準拠する
+- 背景生成テストは `pendingGenerations` のイベント形式に依存 — `eventDispatch.ts` の `generationStarted` / `generationFinished` を参照
