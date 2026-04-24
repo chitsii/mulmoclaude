@@ -39,7 +39,7 @@ This replaces two concerns currently scattered through the code:
 
 ### Cmd+1 on non-chat → no-op
 
-`resumeOrCreateChatSession` and its `onMounted` call site are deleted. The `else` branch of `handleViewModeShortcut` becomes a bare return. Cmd+1 on /chat still toggles layout; on any other page it does nothing. Users who want to go to /chat can click a session in the history panel or use the URL.
+The `else` branch of `handleViewModeShortcut` becomes a bare return. Cmd+1 on /chat still toggles layout; on any other page it does nothing. Users who want to go to /chat can click a session in the history panel, click the app-home button, or use the URL. `resumeOrCreateChatSession` stays — it's still called from `onMounted` (initial /chat load) and `handleHomeClick` — and its dead "reuse current empty session" branch is dropped: with the new semantics, home-click on a truly empty /chat just creates a new session.
 
 ### Unread-clear paths
 

@@ -631,11 +631,11 @@ function onRoleChange() {
   maybeSeedRoleDefault(session);
 }
 
-// Land on /chat with no specific session in mind (initial load).
-// Prefer the most-recent session so the user resumes where they left
-// off; only create a fresh session when they have no chat history at
-// all. Explicit "+" clicks and role switches still create a new
-// session via createNewSession() directly.
+// Land on /chat with no specific session in mind (initial load or
+// home-button click). Prefer the most-recent session so the user
+// resumes where they left off; only create a fresh session when they
+// have no chat history at all. Explicit "+" clicks and role switches
+// still create a new session via createNewSession() directly.
 async function resumeOrCreateChatSession(): Promise<void> {
   const topId = mergedSessions.value[0]?.id;
   if (!topId) {
