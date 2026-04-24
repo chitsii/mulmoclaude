@@ -70,7 +70,7 @@ test.describe("session-history side-panel toggle", () => {
     await page.getByTestId("session-history-toggle-off").click();
     await expect(page.getByTestId("session-history-side-panel")).toBeVisible();
 
-    const stored = await page.evaluate(() => localStorage.getItem("chat_show_session_history"));
+    const stored = await page.evaluate(() => localStorage.getItem("side_panel_visible"));
     expect(stored).toBe("1");
 
     // Reload — panel should still be visible without clicking again.

@@ -15,7 +15,7 @@
     :title="t('sessionTabBar.sessionHistory')"
     @click="emit('toggleHistory')"
   >
-    <span class="material-icons text-base">expand_more</span>
+    <span class="material-icons text-base">history</span>
     <span
       v-if="activeSessionCount > 0"
       class="absolute -top-0.5 -left-0.5 min-w-[1rem] h-4 px-0.5 bg-yellow-400 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none cursor-help"

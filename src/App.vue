@@ -17,14 +17,9 @@
           <PluginLauncher :active-tool-name="selectedResult?.toolName ?? null" :active-view-mode="currentPage" @navigate="onPluginNavigate" />
         </div>
       </div>
-      <!-- Row 2: role selector + session tabs.
-           Hidden when the side-panel is actually on-screen (chat +
-           preference on) — in that "vertical" layout the panel
-           header carries RoleSelector + new-session + toggle, so
-           keeping this row would duplicate controls and steal
-           vertical canvas space. On non-chat pages the panel can't
-           render, so Row 2 stays as the only session UI even when
-           the preference is on. -->
+      <!-- Row 2: role selector + session tabs. Shown whenever the
+           side panel is hidden — Row 2 and the side panel are
+           mutually exclusive. -->
       <div v-if="!sidePanelVisible" class="flex items-center gap-3 px-3 py-2 border-b border-gray-100">
         <RoleSelector v-model:current-role-id="currentRoleId" :roles="roles" @change="onRoleChange" />
         <SessionTabBar
@@ -35,11 +30,11 @@
           :active-session-count="activeSessionCount"
           :unread-count="unreadCount"
           :history-open="currentPage === 'history'"
-          :show-session-history="showSessionHistory"
+          :side-panel-visible="sidePanelVisible"
           @new-session="handleNewSessionClick"
           @load-session="handleSessionSelect"
           @toggle-history="handleHistoryClick"
-          @update:show-session-history="setShowSessionHistory"
+          @update:side-panel-visible="setSidePanelVisible"
         />
       </div>
     </div>
@@ -51,11 +46,11 @@
 
     <!-- Body: optional session-history column + sidebar (Single only) + canvas column + right sidebar -->
     <div class="flex flex-1 min-h-0">
-      <!-- Session-history side panel. Opt-in column to the left of the
-           chat sidebar / canvas, toggled via SessionHistoryToggleButton
-           in the ToolResultsPanel / StackView header. Only renders on
-           /chat — the existing `/history` route still owns the full-
-           page experience on non-chat contexts. -->
+      <!-- Session-history side panel. Opt-in column to the left of
+           the chat sidebar / canvas, toggled via
+           SessionHistoryToggleButton. Renders on every page when
+           `sidePanelVisible` is true; the `/history` route still
+           owns the full-page experience. -->
       <div
         v-if="sidePanelVisible"
         class="w-72 flex-shrink-0 border-r border-gray-200 bg-white text-gray-900 flex flex-col"
@@ -95,7 +90,7 @@
               :history-open="currentPage === 'history'"
               @toggle-history="handleHistoryClick"
             />
-            <SessionHistoryToggleButton :model-value="showSessionHistory" @update:model-value="setShowSessionHistory" />
+            <SessionHistoryToggleButton :model-value="sidePanelVisible" @update:model-value="setSidePanelVisible" />
           </div>
         </div>
         <div class="flex-1 min-h-0">
@@ -277,7 +272,7 @@ import { useSessionDerived } from "./composables/useSessionDerived";
 import { useFaviconState } from "./composables/useFaviconState";
 import { useMergedSessions } from "./composables/useMergedSessions";
 import { useLayoutMode } from "./composables/useLayoutMode";
-import { useShowSessionHistory } from "./composables/useShowSessionHistory";
+import { useSidePanelVisible } from "./composables/useSidePanelVisible";
 import { useHistoryEntrance } from "./composables/useHistoryEntrance";
 import { useSelectedResult } from "./composables/useSelectedResult";
 import { useMcpTools } from "./composables/useMcpTools";
@@ -428,7 +423,7 @@ const { showRightSidebar, toggleRightSidebar } = useRightSidebar();
 const showSettings = ref(false);
 
 const { layoutMode, setLayoutMode, toggleLayoutMode } = useLayoutMode();
-const { showSessionHistory, setShowSessionHistory } = useShowSessionHistory();
+const { sidePanelVisible, setSidePanelVisible } = useSidePanelVisible();
 const { preHistoryUrl } = useHistoryEntrance();
 
 // Current page derives from the route. The chat page has a layout
@@ -439,13 +434,6 @@ const currentPage = computed<PageRouteName | null>(() => {
   const name = route.name;
   return typeof name === "string" && isPageRouteName(name) ? name : null;
 });
-
-// True when the SessionHistoryPanel is actually rendered as the
-// leftmost column. Gates both the panel itself and Row 2 (so the
-// two don't render the session UI twice). On non-chat pages the
-// panel is suppressed even when the preference is on, so Row 2
-// stays visible as the only session UI there.
-const sidePanelVisible = computed(() => isChatPage.value && showSessionHistory.value);
 
 // Refresh the files tree after each agent run so newly written files
 // appear without a manual reload.
