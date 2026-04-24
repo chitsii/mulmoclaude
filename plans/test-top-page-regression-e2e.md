@@ -40,7 +40,7 @@ PR #529 の 16 カテゴリのうち、既存テストの状態:
 | 15 | Arrow Key ナビゲーション | **未** | — |
 | 16 | History ドロワー | **済** | `history-panel.spec.ts` |
 
-**対象: 5 カテゴリ (6, 8, 10, 11, 12, 15) + data-testid 追加**
+**対象: 6 カテゴリ (6, 8, 10, 11, 12, 15) + data-testid 追加**
 
 ## Implementation Plan
 
@@ -62,14 +62,14 @@ Gemini 警告バナーに testid を追加:
 - アクティブセッションバッジ: `data-testid="active-session-badge"`
 - 未読セッションバッジ: `data-testid="unread-session-badge"`
 
-#### 1-3. `src/components/ToolResultsPanel.vue`
+#### 1-3. `src/components/ToolResultsPanel.vue` / `src/components/StackView.vue`
 
-結果カード・インジケータに testid を追加:
+結果カードは sidebar (`ToolResultsPanel.vue`) と stack mode (`StackView.vue`) の両方でレンダリングされる。testid は両方に追加する:
 
-- 個別結果カード: `data-testid="tool-result-{uuid}"`
-- Thinking インジケータ: `data-testid="thinking-indicator"`
-- ステータスメッセージ: `data-testid="status-message"`
-- 保留中ツール呼出し: `data-testid="pending-call-{toolUseId}"`
+- 個別結果カード (`ToolResultsPanel.vue` + `StackView.vue`): `data-testid="tool-result-{uuid}"`
+- Thinking インジケータ (`ToolResultsPanel.vue`): `data-testid="thinking-indicator"`
+- ステータスメッセージ (`ToolResultsPanel.vue`): `data-testid="status-message"`
+- 保留中ツール呼出し (`ToolResultsPanel.vue`): `data-testid="pending-call-{toolUseId}"`
 
 ### Phase 2: E2E テスト作成
 
@@ -110,7 +110,7 @@ Mock: `page.routeWebSocket()` で socket.io `/ws/pubsub` をモックし、`PUBS
 |---|---|
 | Tab A で送信 → Tab B に反映 | 2 ページ間で pub/sub イベント到達 |
 
-代替として、**同一タブ内**で SSE 再接続後にセッション状態が復元されることを検証するテストを追加する。
+代替として、**同一タブ内**で socket.io 再接続後にセッション状態が復元されることを検証するテストを追加する。
 
 #### 2-4. Gemini 警告バナー (#11) — `e2e/tests/gemini-warning.spec.ts`
 
@@ -154,7 +154,7 @@ Mock: `mockAllApis` + 複数 `tool_result` を含むセッション。
 
 ## File Structure (new/modified)
 
-```
+```text
 e2e/tests/
   tool-result-display.spec.ts       (new — #6)
   notification-navigation.spec.ts   (new — #8)
@@ -166,6 +166,7 @@ e2e/tests/
 src/App.vue                         (modified — testid 追加)
 src/components/SessionTabBar.vue    (modified — testid 追加)
 src/components/ToolResultsPanel.vue (modified — testid 追加)
+src/components/StackView.vue        (modified — testid 追加)
 ```
 
 ## Decisions
