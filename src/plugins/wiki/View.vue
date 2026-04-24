@@ -425,13 +425,22 @@ const chatDraft = ref("");
 const isStandaloneWikiRoute = computed(() => route.name === PAGE_ROUTES.wiki);
 const canSendChat = computed(() => chatDraft.value.trim().length > 0 && currentSlug() !== null);
 
+// Always route wiki create/update CTAs through BUILTIN_ROLE_IDS.general
+// (the wiki-capable role) so the new chat has the tools needed to
+// actually write the page. Omitting the role would fall through to
+// `currentRoleId`, which could be anything — including roles without
+// wiki tooling — and silently produce useless sessions.
 function requestCreatePage() {
-  appApi.startNewChat(`Create a wiki page about ${JSON.stringify(title.value)}. Research the topic and write a comprehensive article in data/wiki/pages/.`);
+  appApi.startNewChat(
+    `Create a wiki page about ${JSON.stringify(title.value)}. Research the topic and write a comprehensive article in data/wiki/pages/.`,
+    BUILTIN_ROLE_IDS.general,
+  );
 }
 
 function requestUpdatePage() {
   appApi.startNewChat(
     `Update the existing wiki page about ${JSON.stringify(title.value)}. The page file exists but has no content. Research the topic and write a comprehensive article in data/wiki/pages/.`,
+    BUILTIN_ROLE_IDS.general,
   );
 }
 

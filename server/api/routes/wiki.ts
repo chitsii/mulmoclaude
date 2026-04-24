@@ -311,6 +311,25 @@ async function buildPageResponse(action: string, pageName: string): Promise<Wiki
   const resolvedTitle = filePath ? path.basename(filePath, ".md") : pageName;
   const exists = !!filePath;
   const hasContent = !!content;
+  // Three states:
+  //   1. !exists              → page file is missing entirely.
+  //   2. exists && !hasContent → page file exists but is empty (e.g.,
+  //                              zero-byte placeholder waiting to be filled).
+  //   3. exists && hasContent  → normal page with body text.
+  // Previously every "no content" case collapsed into "Page not found",
+  // which mis-reported empty-but-existing pages. error / message /
+  // instructions now distinguish missing vs empty so the client and
+  // the agent get consistent signals.
+  const missing = !exists;
+  const empty = exists && !hasContent;
+  const slug = wikiSlugify(pageName);
+  const errorMessage = missing ? `Page not found: ${pageName}` : empty ? `Page is empty: ${pageName}` : undefined;
+  const statusMessage = hasContent ? `Showing page: ${resolvedTitle}` : missing ? `Page not found: ${pageName}` : `Page exists but is empty: ${resolvedTitle}`;
+  const statusInstructions = hasContent
+    ? "The wiki page is now displayed on the canvas."
+    : missing
+      ? `Page not found: wiki/pages/${slug}.md does not exist. You can create it or check the slug in wiki/index.md.`
+      : `Page exists but is empty: wiki/pages/${slug}.md has no content yet. Research the topic and write a comprehensive article, then save it to the same path.`;
   return {
     data: {
       action,
@@ -318,13 +337,11 @@ async function buildPageResponse(action: string, pageName: string): Promise<Wiki
       content,
       pageName: resolvedTitle,
       pageExists: exists,
-      error: hasContent ? undefined : `Page not found: ${pageName}`,
+      error: errorMessage,
     },
-    message: hasContent ? `Showing page: ${resolvedTitle}` : `Page not found: ${pageName}`,
+    message: statusMessage,
     title: resolvedTitle,
-    instructions: hasContent
-      ? "The wiki page is now displayed on the canvas."
-      : `Page not found: wiki/pages/${wikiSlugify(pageName)}.md does not exist. You can create it or check the slug in wiki/index.md.`,
+    instructions: statusInstructions,
     updating: true,
   };
 }
