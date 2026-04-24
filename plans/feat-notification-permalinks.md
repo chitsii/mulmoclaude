@@ -12,7 +12,7 @@ Result: the user can't jump straight to the todo card / scheduled task / source 
 
 1. **Router**: add permalink routes for the features that currently only support an index URL:
    - `/todos/:itemId`
-   - `/scheduler/tasks/:taskId`
+   - `/automations/:taskId` (scheduled tasks live on the Automations page after the #758 split)
    - `/sources/:slug`
 2. **Types**: replace the generic `path` / `itemId` / `sessionId` trio on `NotificationAction` with an explicit, discriminated-union `target` per view. The old shape is not load-bearing yet (only one publisher uses it, and the dispatcher ignores the extras), so migrating is safe.
 3. **Dispatcher** (`src/utils/notification/dispatch.ts`): return a richer `NotificationTarget` that carries params. `App.vue#handleNotificationNavigate` pushes them into `router.push`.
@@ -42,7 +42,8 @@ type NotificationAction =
 type NotificationTarget =
   | { view: "chat"; sessionId: string; resultUuid?: string }
   | { view: "todos"; itemId?: string }
-  | { view: "scheduler"; taskId?: string }
+  | { view: "calendar" } // index-only; no per-event deep-link yet
+  | { view: "automations"; taskId?: string }
   | { view: "sources"; slug?: string }
   | { view: "files"; path?: string }
   | { view: "wiki"; slug?: string; anchor?: string };
@@ -70,7 +71,7 @@ One-liner per view to build the matching `RouteLocationRaw` using `PAGE_ROUTES` 
 | Page | New param | Behaviour when present |
 |---|---|---|
 | TodosView | `itemId` | Scroll + highlight the matching card. No-op if the id doesn't exist (board might have been edited). |
-| Scheduler View | `taskId` | Force `activeTab = "tasks"`; scroll to row with matching id. |
+| AutomationsView (Scheduler / TasksTab) | `taskId` | Already forces `activeTab = "tasks"`; additionally scroll to row with matching id. |
 | SourcesView | `slug` | Select the feed (opens its per-feed panel if the UI has one; otherwise scrolls + flashes the row). |
 
 All three treat a missing / unknown id as "just render the index" — the URL stays canonical but nothing blocks the user.

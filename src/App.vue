@@ -319,11 +319,7 @@ function navigateToSession(sessionId: string, replace = false): void {
 function handleNotificationNavigate(action: NotificationAction): void {
   const target = resolveNotificationTarget(action);
   if (!target) return;
-  if (target.kind === "session") {
-    navigateToSession(target.sessionId);
-  } else {
-    router.push({ name: target.view }).catch(() => {});
-  }
+  router.push(target).catch(() => {});
 }
 
 // External URL changes (back/forward button, typed URL) → update ref.
