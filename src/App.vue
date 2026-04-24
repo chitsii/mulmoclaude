@@ -37,18 +37,14 @@
       </div>
     </div>
 
-    <!-- Session history is now a canvas-column view rendered under
-         the `/history` route (see plans/feat-history-url-route.md).
-         The old absolute-positioned overlay is gone — browser
-         back/forward drives open/close instead. -->
-
     <!-- Body: optional session-history column + sidebar (Single only) + canvas column + right sidebar -->
     <div class="flex flex-1 min-h-0">
       <!-- Session-history side panel. Opt-in column to the left of
            the chat sidebar / canvas, toggled via
            SessionHistoryToggleButton. Renders on every page when
-           `sidePanelVisible` is true; the `/history` route still
-           owns the full-page experience. -->
+           `sidePanelVisible` is true. Row 2 of the top bar hides when
+           the panel is open — the panel's own header supplies the
+           role selector + new-session button instead. -->
       <div
         v-if="sidePanelVisible"
         class="border-r border-gray-200 bg-white text-gray-900 flex flex-col min-w-0 overflow-hidden"
@@ -56,14 +52,13 @@
         data-testid="session-history-side-panel"
       >
         <!-- Panel header. Stacked over two rows because w-72 can't
-             fit RoleSelector (w-56) plus three 28–32px buttons on a
+             fit RoleSelector (w-56) plus two 28–32px buttons on a
              single line. Row 1 pairs the role picker with the new-
              session button so the `+` sits next to RoleSelector just
              like it does in the hidden SessionTabBar; Row 2 carries
-             the remaining actions (/history nav + close toggle).
-             These controls are the only session UI while the panel
-             is open (Row 2's SessionTabBar is hidden), so none can
-             be dropped. -->
+             the expand / close toggle pair. These controls are the
+             only session UI while the panel is open (Row 2's
+             SessionTabBar is hidden), so none can be dropped. -->
         <div class="border-b border-gray-100">
           <div class="flex items-center gap-1 px-2 py-1">
             <RoleSelector v-model:current-role-id="currentRoleId" :roles="roles" @change="onRoleChange" />
@@ -172,14 +167,6 @@
           <SkillsView v-else-if="currentPage === 'skills'" />
           <RolesView v-else-if="currentPage === 'roles'" />
           <SourcesView v-else-if="currentPage === 'sources'" />
-          <SessionHistoryPanel
-            v-else-if="currentPage === 'history'"
-            :sessions="mergedSessions"
-            :current-session-id="currentSessionId"
-            :roles="roles"
-            :error-message="historyError"
-            @load-session="handleSessionSelect"
-          />
         </div>
 
         <!-- Bottom bar (Stack chat only — plugin views have no
@@ -271,7 +258,6 @@ import { useFaviconState } from "./composables/useFaviconState";
 import { useMergedSessions } from "./composables/useMergedSessions";
 import { useLayoutMode } from "./composables/useLayoutMode";
 import { useSidePanelVisible } from "./composables/useSidePanelVisible";
-import { useHistoryEntrance } from "./composables/useHistoryEntrance";
 import { useSelectedResult } from "./composables/useSelectedResult";
 import { useMcpTools } from "./composables/useMcpTools";
 import { useRoles } from "./composables/useRoles";
@@ -430,7 +416,6 @@ function setSidePanelVisibleAndCollapse(value: boolean): void {
   setSidePanelVisible(value);
   if (!value) sidePanelExpanded.value = false;
 }
-const { preHistoryUrl } = useHistoryEntrance();
 
 // Current page derives from the route. The chat page has a layout
 // preference on top (single vs. stack); other pages are distinct
@@ -680,10 +665,10 @@ async function loadSession(sessionId: string) {
   const alreadyOnThatChat = sessionId === currentSessionId.value && sessionMap.has(sessionId) && route.params.sessionId === sessionId;
   if (alreadyOnThatChat) return;
   // Mirror createNewSession: only replace when we just discarded an
-  // empty session AND we're on that /chat/:emptyId URL. On /history
-  // (or any non-chat page) selecting a session must push, otherwise
-  // the /history entry would be skipped when the last chat happened
-  // to be empty.
+  // empty session AND we're on that /chat/:emptyId URL. On any
+  // non-chat page selecting a session must push, otherwise the
+  // current entry would be skipped when the last chat happened to
+  // be empty.
   const removedEmpty = removeCurrentIfEmpty();
   const replaced = removedEmpty && isChatPage.value;
 
@@ -817,22 +802,6 @@ async function sendMessage(text?: string) {
     unsubscribeSession(session.id);
   }
 }
-
-// Fetch the session list when entering /history. Not `immediate` on
-// purpose: onMounted() already fires fetchSessions() unconditionally,
-// so the direct-link /history case is already covered — adding an
-// immediate watcher would race two initial fetches against each other
-// (fetchSessions picks snapshot-vs-diff from the mutable cursor at
-// response time, and a late-arriving full snapshot could be misread
-// as a diff, leaving stale deleted sessions in the list).
-watch(
-  () => currentPage.value,
-  (page) => {
-    if (page === PAGE_ROUTES.history) {
-      fetchSessions().catch((err) => console.error("[history] fetch failed:", err));
-    }
-  },
-);
 
 // Route workspace-internal links (wiki pages, files, sessions) to the
 // appropriate page. Called from plugin Views via AppApi.
