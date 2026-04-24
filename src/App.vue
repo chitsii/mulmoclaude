@@ -247,6 +247,7 @@ import { useSidePanelVisible } from "./composables/useSidePanelVisible";
 import { useSelectedResult } from "./composables/useSelectedResult";
 import { useMcpTools } from "./composables/useMcpTools";
 import { useRoles } from "./composables/useRoles";
+import { useCurrentRole } from "./composables/useCurrentRole";
 import { BUILTIN_ROLE_IDS, type Role } from "./config/roles";
 import { usePubSub } from "./composables/usePubSub";
 import { sessionChannel } from "./config/pubsubChannels";
@@ -331,11 +332,17 @@ watch(
 );
 
 // --- Global state ---
-// `currentRoleId` / `currentRole` deliberately do NOT live here:
-// they're owned by SessionHeaderControls (via useCurrentRole). Code
-// that needs "the role of the conversation in progress" reads
+// `roles` is the merged list (built-in + custom). `currentRoleId`
+// is the role-selector dropdown's current pick — App.vue reads it
+// as the fallback in createNewSession() so plugin callers like
+// wiki's `appApi.startNewChat(message)` (no roleId) start their
+// chat in whatever role the user last selected, instead of silently
+// reverting to the first built-in role. Writes to `currentRoleId`
+// happen only inside SessionHeaderControls (the dropdown owner).
+// Code that needs "the role of the conversation in progress" reads
 // `sessionRole` below, which derives from the active session.
 const { roles, refreshRoles } = useRoles();
+const { currentRoleId } = useCurrentRole(roles);
 
 const userInput = ref("");
 const pastedFile = ref<PastedFile | null>(null);
@@ -630,11 +637,12 @@ function createNewSession(roleId?: string): ActiveSession {
   const removedEmpty = removeCurrentIfEmpty();
   const replace = removedEmpty && isChatPage.value;
   // The "+" button and role-change handler always supply roleId
-  // (read from SessionHeaderControls). The fallback covers callers
-  // that don't have a specific role in mind — initial bootstrap,
-  // post-failure recovery — where the first available role is the
-  // sensible default.
-  const rId = roleId ?? roles.value[0]?.id ?? "";
+  // (read from SessionHeaderControls). When omitted (plugin-driven
+  // startNewChat, initial bootstrap, post-failure recovery) inherit
+  // the dropdown's current selection so the new chat uses the role
+  // the user last picked. Final fallback to roles[0] only matters
+  // before the dropdown has seeded (very early bootstrap).
+  const rId = roleId ?? (currentRoleId.value || roles.value[0]?.id || "");
   const session = createEmptySession(uuidv4(), rId);
   sessionMap.set(session.id, session);
   navigateToSession(session.id, replace);

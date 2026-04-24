@@ -1,11 +1,10 @@
 // Singleton state for the role-selector dropdown's selected role.
 // Lives at module scope so SessionHeaderControls — which mounts and
 // unmounts whenever the session-history side panel toggles — keeps
-// the user's choice across remounts.
-//
-// Only SessionHeaderControls is allowed to import this composable;
-// every other consumer reads the role from the active session
-// (`activeSession.value.roleId`) instead.
+// the user's choice across remounts, and so App.vue can read the
+// current selection when creating a new session for callers that
+// don't pass an explicit roleId (e.g. wiki composer's
+// `appApi.startNewChat(message)` — see useAppApi).
 
 import { computed, ref, watch, type ComputedRef, type Ref } from "vue";
 import type { Role } from "../config/roles";
