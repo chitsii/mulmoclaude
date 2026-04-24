@@ -294,20 +294,34 @@ async function saveTools(): Promise<void> {
 }
 
 // MCP mutations — each add/update/remove persists to the mcp-only
-// endpoint. Optimistic: the local array updates first so the UI is
-// snappy; on failure we roll back and surface the error.
-async function persistMcp(next: McpServerEntry[], previous: McpServerEntry[]): Promise<void> {
+// endpoint. Same concurrency story as Reference / Workspace Dirs:
+// queue PUTs so late responses can't clobber newer local state, and
+// reload from the server on a failure when nothing else is pending
+// (a captured `previous` snapshot becomes unreliable across
+// overlapping mutations).
+let mcpInflight: Promise<unknown> = Promise.resolve();
+let mcpPending = 0;
+
+async function persistMcp(next: McpServerEntry[]): Promise<void> {
   mcpServers.value = next;
-  const response = await apiPut<unknown>(API_ROUTES.config.mcp, { servers: next });
-  if (!response.ok) {
-    mcpServers.value = previous;
-    statusError.value = true;
-    statusMessage.value = response.error || "MCP save failed";
-    return;
-  }
-  emit("saved");
-  statusError.value = false;
-  statusMessage.value = "";
+  mcpPending++;
+  const task = mcpInflight
+    .catch(() => undefined)
+    .then(async () => {
+      const response = await apiPut<{ servers: McpServerEntry[] }>(API_ROUTES.config.mcp, { servers: next });
+      mcpPending--;
+      if (!response.ok) {
+        statusError.value = true;
+        statusMessage.value = response.error || "MCP save failed";
+        if (mcpPending === 0) await loadConfig();
+        return;
+      }
+      emit("saved");
+      statusError.value = false;
+      statusMessage.value = "";
+    });
+  mcpInflight = task;
+  return task;
 }
 
 function askAboutGemini(): void {
@@ -316,21 +330,17 @@ function askAboutGemini(): void {
 }
 
 function addMcpServer(entry: McpServerEntry): void {
-  const previous = mcpServers.value.slice();
-  void persistMcp([...previous, entry], previous);
+  void persistMcp([...mcpServers.value, entry]);
 }
 
 function updateMcpServer(index: number, entry: McpServerEntry): void {
-  const previous = mcpServers.value.slice();
-  const next = [...previous];
+  const next = [...mcpServers.value];
   next[index] = entry;
-  void persistMcp(next, previous);
+  void persistMcp(next);
 }
 
 function removeMcpServer(index: number): void {
-  const previous = mcpServers.value.slice();
-  const next = previous.filter((_, i) => i !== index);
-  void persistMcp(next, previous);
+  void persistMcp(mcpServers.value.filter((_, i) => i !== index));
 }
 
 function close(): void {

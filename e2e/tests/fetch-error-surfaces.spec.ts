@@ -47,9 +47,11 @@ test.describe("fetch failure → inline error banner (#280)", () => {
     await expect(loadError).toBeVisible();
     await expect(loadError).toContainText("HTTP 500");
 
-    // Save button must be disabled so the user can't submit the
-    // (empty) default form over their real config.
-    const saveBtn = page.locator('[data-testid="settings-save-btn"]');
+    // The per-tab Tools Save must be disabled so the user can't submit
+    // the (empty) default form over their real config. (MCP has no
+    // Save button anymore — it auto-persists on each mutation — so
+    // we gate the tools endpoint specifically here.)
+    const saveBtn = page.locator('[data-testid="settings-tools-save-btn"]');
     await expect(saveBtn).toBeDisabled();
   });
 
