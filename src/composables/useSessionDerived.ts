@@ -21,16 +21,27 @@ export function useSessionDerived(opts: { sessionMap: Map<string, ActiveSession>
   // Global "is anything running" across every known session — in-memory
   // map (which reflects pub/sub events faster than server refetch) and
   // server-side summaries (for sessions not yet hydrated into the map).
-  // Scoping this to `activeSession` would drop to false as soon as the
-  // user leaves /chat (activeSession → undefined), firing downstream
-  // `watch(isRunning)` consumers before background runs actually
-  // finish — e.g. FilesView would refresh too early and miss writes.
+  // Used for consumers that must stay true across page navigation:
+  // favicon spinner and the FilesView refresh watcher (which would
+  // otherwise fire before a background run actually finishes, because
+  // leaving /chat drops activeSession to undefined).
   const isRunning = computed(() => {
     for (const session of sessionMap.values()) {
       if (session.isRunning) return true;
       if (Object.keys(session.pendingGenerations).length > 0) return true;
     }
     return sessions.value.some((summary) => summary.isRunning);
+  });
+
+  // True only when the session on screen has a run in flight. Drives
+  // UX touchpoints that should react per-session — ChatInput disable,
+  // sendMessage guard, chat-list auto-scroll, pending-call row tick —
+  // so a background run in session B doesn't disable the composer
+  // while the user is actively chatting in session A.
+  const activeSessionRunning = computed(() => {
+    const active = activeSession.value;
+    const pending = active ? Object.keys(active.pendingGenerations).length > 0 : false;
+    return currentSummary.value?.isRunning || active?.isRunning || pending || false;
   });
 
   const statusMessage = computed(() => currentSummary.value?.statusMessage ?? activeSession.value?.statusMessage ?? "");
@@ -47,6 +58,7 @@ export function useSessionDerived(opts: { sessionMap: Map<string, ActiveSession>
     sidebarResults,
     currentSummary,
     isRunning,
+    activeSessionRunning,
     statusMessage,
     toolCallHistory,
     activeSessionCount,

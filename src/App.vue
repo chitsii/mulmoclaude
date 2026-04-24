@@ -92,7 +92,7 @@
           :results="sidebarResults"
           :selected-uuid="selectedResultUuid"
           :result-timestamps="activeSession?.resultTimestamps ?? new Map()"
-          :is-running="isRunning"
+          :is-running="activeSessionRunning"
           :status-message="statusMessage"
           :pending-calls="pendingCalls"
           :session-role-name="sessionRoleName"
@@ -109,7 +109,7 @@
         <SuggestionsPanel ref="suggestionsPanelRef" :queries="currentRole.queries ?? []" @send="(q) => sendMessage(q)" @edit="onQueryEdit" />
 
         <!-- Text input -->
-        <ChatInput ref="chatInputRef" v-model="userInput" v-model:pasted-file="pastedFile" :is-running="isRunning" @send="sendMessage()" />
+        <ChatInput ref="chatInputRef" v-model="userInput" v-model:pasted-file="pastedFile" :is-running="activeSessionRunning" @send="sendMessage()" />
       </div>
 
       <!-- Canvas column -->
@@ -161,7 +161,7 @@
              session context, so no chat input is shown) -->
         <div v-if="isChatPage && layoutMode === 'stack'" class="border-t border-gray-200 bg-white shrink-0">
           <SuggestionsPanel ref="suggestionsPanelRef" :queries="currentRole.queries ?? []" @send="(q) => sendMessage(q)" @edit="onQueryEdit" />
-          <ChatInput ref="chatInputRef" v-model="userInput" v-model:pasted-file="pastedFile" :is-running="isRunning" @send="sendMessage()" />
+          <ChatInput ref="chatInputRef" v-model="userInput" v-model:pasted-file="pastedFile" :is-running="activeSessionRunning" @send="sendMessage()" />
         </div>
       </div>
 
@@ -355,8 +355,18 @@ const { markSessionRead } = useSessionSync({
 });
 const { geminiAvailable, sandboxEnabled, cpuLoadRatio, fetchHealth } = useHealth();
 
-const { activeSession, toolResults, sidebarResults, currentSummary, isRunning, statusMessage, toolCallHistory, activeSessionCount, unreadCount } =
-  useSessionDerived({ sessionMap, currentSessionId, sessions });
+const {
+  activeSession,
+  toolResults,
+  sidebarResults,
+  currentSummary,
+  isRunning,
+  activeSessionRunning,
+  statusMessage,
+  toolCallHistory,
+  activeSessionCount,
+  unreadCount,
+} = useSessionDerived({ sessionMap, currentSessionId, sessions });
 
 const { selectedResultUuid } = useSelectedResult({
   activeSession,
@@ -390,7 +400,7 @@ const chatInputRef = ref<{ focus: () => void } | null>(null);
 const { focusChatInput } = useChatScroll({
   toolResultsPanelRef,
   toolResults,
-  isRunning,
+  isRunning: activeSessionRunning,
   chatInputRef,
 });
 
@@ -519,7 +529,7 @@ const { availableTools, toolDescriptions, mcpToolsError, fetchMcpToolsStatus } =
 });
 
 const { pendingCalls, teardown: teardownPendingCalls } = usePendingCalls({
-  isRunning,
+  isRunning: activeSessionRunning,
   toolCallHistory,
 });
 
@@ -782,7 +792,7 @@ function unsubscribeSession(chatSessionId: string): void {
 
 async function sendMessage(text?: string) {
   const message = typeof text === "string" ? text : userInput.value.trim();
-  if (!message || isRunning.value) return;
+  if (!message || activeSessionRunning.value) return;
   userInput.value = "";
   const fileSnapshot = pastedFile.value;
   pastedFile.value = null;
