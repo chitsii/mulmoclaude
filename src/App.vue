@@ -433,6 +433,15 @@ watch(isRunning, (running, prev) => {
   if (prev && !running) filesRefreshToken.value++;
 });
 
+// Opening the side panel refreshes the session list so stale entries
+// don't linger after long idle periods. `fetchSessions` is diff-based
+// (cursor-aware) so the extra call is cheap when nothing changed.
+watch(sidePanelVisible, (visible, prev) => {
+  if (!prev && visible) {
+    fetchSessions().catch((err) => console.error("[side-panel] session fetch failed:", err));
+  }
+});
+
 // Cmd/Ctrl + 1 toggles layout when on /chat; on any other page it
 // navigates to /chat (layout flip requires a second press). Cmd+2–7
 // navigate directly to the matching page.
