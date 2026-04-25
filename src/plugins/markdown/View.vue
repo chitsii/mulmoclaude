@@ -26,7 +26,11 @@
       </div>
       <div class="markdown-content-wrapper">
         <div class="p-4">
-          <div class="markdown-content prose prose-slate max-w-none" v-html="renderedHtml"></div>
+          <!-- Click delegation: a single listener on the wrapper picks
+               up every interactive checkbox inserted by v-html. We
+               cannot bind @click directly on each `<input>` because
+               v-html bypasses Vue's template compiler. -->
+          <div class="markdown-content prose prose-slate max-w-none" @click="onMarkdownClick" v-html="renderedHtml"></div>
         </div>
       </div>
 
@@ -59,6 +63,7 @@ const { t } = useI18n();
 import type { ToolResult } from "gui-chat-protocol";
 import { isFilePath, type MarkdownToolData } from "./definition";
 import { rewriteMarkdownImageRefs } from "../../utils/image/rewriteMarkdownImageRefs";
+import { makeTasksInteractive, toggleTaskAt } from "../../utils/markdown/taskList";
 import { usePdfDownload } from "../../composables/usePdfDownload";
 import { apiGet, apiPut } from "../../utils/api";
 import { API_ROUTES } from "../../config/apiRoutes";
@@ -135,7 +140,12 @@ const renderedHtml = computed(() => {
   const raw = props.selectedResult.data?.markdown;
   const basePath = typeof raw === "string" && isFilePath(raw) ? raw.slice(0, raw.lastIndexOf("/")) : "";
   const withImages = rewriteMarkdownImageRefs(markdownContent.value, basePath);
-  return marked(withImages) as string;
+  // Strip the `disabled=""` attribute marked puts on GFM task
+  // checkboxes and tag them so `onMarkdownClick` can find them
+  // (#775). Inline content (no file backing) gets the same
+  // treatment so non-file-backed sessions still feel responsive,
+  // even though clicks there only update local state.
+  return makeTasksInteractive(marked(withImages) as string);
 });
 
 // Watch for scroll requests from viewState
@@ -226,6 +236,85 @@ async function applyMarkdown() {
 
   // Close the edit panel
   if (sourceDetails.value) sourceDetails.value.open = false;
+}
+
+// ── Inline task-list checkbox toggle (#775) ──────────────────────
+//
+// Click delegation handler bound to the rendered viewer. When the
+// user clicks a GFM task checkbox we:
+//   1. compute the new source via `toggleTaskAt`
+//   2. update local state optimistically (v-html re-renders to match)
+//   3. for file-backed docs, queue a PUT through the existing
+//      `/api/markdowns/update` route
+//
+// Skipped while the source editor is open — the textarea has its own
+// edit/apply flow and a checkbox click would race with whatever the
+// user is typing.
+
+let taskPersistChain: Promise<unknown> = Promise.resolve();
+
+async function persistTaskMarkdown(relativePath: string, markdown: string): Promise<void> {
+  const result = await apiPut<unknown>(API_ROUTES.plugins.updateMarkdown, {
+    relativePath,
+    markdown,
+  });
+  if (!result.ok) {
+    saveError.value = result.error;
+    // The optimistic local update no longer matches the server. Pull
+    // the canonical content back so the next click computes against
+    // the right source.
+    void fetchMarkdownContent();
+  } else {
+    // Clear any stale error from a prior failed click.
+    saveError.value = null;
+  }
+}
+
+function onMarkdownClick(event: MouseEvent): void {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  if (target.type !== "checkbox") return;
+  if (!target.classList.contains("md-task")) return;
+  if (editing.value) {
+    // Edit panel open — let the textarea own the source. Reverting
+    // here keeps the visual in sync with the still-untouched markdown.
+    target.checked = !target.checked;
+    return;
+  }
+
+  const root = event.currentTarget as HTMLElement;
+  const taskInputs = root.querySelectorAll<HTMLInputElement>("input.md-task");
+  const taskIndex = Array.from(taskInputs).indexOf(target);
+  if (taskIndex < 0) return;
+
+  const updated = toggleTaskAt(markdownContent.value, taskIndex);
+  if (updated === null) {
+    // Source/DOM drift — refuse to write something we can't trace.
+    target.checked = !target.checked;
+    return;
+  }
+
+  // Optimistic local update — v-html will re-render and the
+  // textarea (if anyone opens it next) sees the same content.
+  markdownContent.value = updated;
+  editableMarkdown.value = updated;
+
+  const raw = props.selectedResult.data?.markdown;
+  if (typeof raw === "string" && isFilePath(raw)) {
+    // Serialize PUTs so quick successive clicks don't race each
+    // other on the wire — the chain captures `updated` per click.
+    taskPersistChain = taskPersistChain.then(() => persistTaskMarkdown(raw, updated));
+  } else {
+    // Inline content — emit so the parent stores the edit.
+    emit("updateResult", {
+      ...props.selectedResult,
+      data: {
+        ...props.selectedResult.data,
+        markdown: updated,
+        pdfPath: undefined,
+      },
+    });
+  }
 }
 
 // Watch for external changes to selectedResult (when user clicks different result)
