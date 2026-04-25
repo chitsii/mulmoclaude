@@ -151,6 +151,25 @@ describe("toggleTaskAt", () => {
     const out = toggleTaskAt(markdown, 0);
     assert.equal(out, ["```", "- [ ] inside", "```   ", "- [x] outside"].join("\n"));
   });
+
+  it("recognises fences nested inside blockquotes", () => {
+    // `> \`\`\`` opens a fenced block inside a blockquote. Without
+    // blockquote stripping the walker would miscount the inner
+    // `> - [ ] inside` as a real task; with the strip the only
+    // counted task is the unquoted one outside.
+    const markdown = ["> ```", "> - [ ] inside-fence", "> ```", "- [ ] outside"].join("\n");
+    const out = toggleTaskAt(markdown, 0);
+    assert.equal(out, ["> ```", "> - [ ] inside-fence", "> ```", "- [x] outside"].join("\n"));
+  });
+
+  it("blockquoted fence requires content indent ≤ 3 spaces", () => {
+    // Inside a blockquote, the post-quote indent of `   ` ` ` ` ` is
+    // 3 spaces — still a fence. (Compare with the next test for the
+    // 4-space case which is NOT a fence.)
+    const markdown = ["> ```", "> - [ ] in", "> ```", "- [ ] out"].join("\n");
+    const out = toggleTaskAt(markdown, 0);
+    assert.equal(out, ["> ```", "> - [ ] in", "> ```", "- [x] out"].join("\n"));
+  });
 });
 
 describe("findTaskLines", () => {

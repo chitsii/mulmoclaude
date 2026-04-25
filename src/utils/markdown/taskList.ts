@@ -35,7 +35,15 @@ const TASK_LINE = /^(\s*(?:>\s*)*)([-*+]|\d+[.)])(\s+)\[([ xX])\]/;
 // content of an indented code block, so we must NOT treat that as a
 // fence — otherwise the index-counter drifts. ``` and ~~~ are both
 // legal; the closing fence must use the same character as the opener.
+//
+// `stepFence` strips any leading blockquote prefix before applying
+// this regex so blockquote-wrapped fences (`> ``` ... `> ``` `) are
+// recognised. Without that, content inside a quoted fence would
+// be walked at top level and any `> - [ ]`-shaped line inside would
+// be miscounted as a task — making the View's count-cross-check
+// refuse all toggles in the whole document.
 const FENCE_LINE = /^( {0,3})(`{3,}|~{3,})/;
+const BLOCKQUOTE_PREFIX = /^(\s*(?:>\s?)+)/;
 
 // Mutable state for the line walker. Pulled out so the main toggle
 // function reads as a flat loop rather than a state-machine swamp.
@@ -48,7 +56,15 @@ interface FenceState {
 // part of a fence (opener, closer, or interior) and should be skipped
 // by the task counter.
 function stepFence(line: string, state: FenceState): boolean {
-  const fenceMatch = line.match(FENCE_LINE);
+  // Strip a blockquote prefix (one or more `>` markers) so a fence
+  // line written as `> ```` is recognised the same as a top-level
+  // ` ``` `. Inside the blockquote, the 0-3-space indent rule of
+  // FENCE_LINE still applies relative to the post-quote content, so
+  // `>     ``` ` (≥ 4 spaces of content indent) is correctly NOT a
+  // fence.
+  const quoteMatch = line.match(BLOCKQUOTE_PREFIX);
+  const content = quoteMatch ? line.slice(quoteMatch[0].length) : line;
+  const fenceMatch = content.match(FENCE_LINE);
   if (fenceMatch) {
     const marker = fenceMatch[2];
     if (!state.inFence) {
@@ -65,7 +81,9 @@ function stepFence(line: string, state: FenceState): boolean {
     //   (c) NO info string — only whitespace allowed after the marker
     // Without (c), a line like "``` js" inside a fence would be
     // wrongly treated as the closer; marked keeps it as content.
-    const afterMarker = line.slice(fenceMatch[0].length);
+    // (Slice from `content`, not `line` — fenceMatch[0] is relative
+    // to the post-blockquote-strip content.)
+    const afterMarker = content.slice(fenceMatch[0].length);
     if (state.marker && marker[0] === state.marker[0] && marker.length >= state.marker.length && /^\s*$/.test(afterMarker)) {
       state.inFence = false;
       state.marker = null;
