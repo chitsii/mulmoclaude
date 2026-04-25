@@ -516,11 +516,22 @@ const imeEnter = useImeAwareEnter(submitChat);
 /** Base directory for wiki content, adjusted by the current view. */
 const WIKI_BASE_DIR = computed(() => (action.value === "page" ? "data/wiki/pages" : "data/wiki"));
 
-// Serialised PUT chain for rapid Stop clicks (#775). Each click
+// Serialised PUT chain for rapid checkbox clicks (#775). Each click
 // queues onto the previous so a slower network can't reorder writes.
+//
+// `saveQueueGeneration` invalidates older queued saves after a
+// failure-triggered refresh: their captured snapshots were computed
+// against the now-discarded optimistic state, so writing them would
+// overwrite the canonical server content with stale data. We bump
+// the generation on failure; queued saves whose generation no longer
+// matches skip silently.
 let taskPersistChain: Promise<unknown> = Promise.resolve();
+let saveQueueGeneration = 0;
 
-async function persistWikiPage(pageName: string, newContent: string): Promise<void> {
+async function persistWikiPage(pageName: string, newContent: string, generation: number): Promise<void> {
+  // Stale queued save (a previous save failed + refresh discarded
+  // the optimistic state this snapshot was based on).
+  if (generation !== saveQueueGeneration) return;
   // Bail if the page navigation has changed mid-flight — saving the
   // captured snapshot to a different page would clobber unrelated
   // state. The watchers on route / selectedResult already load the
@@ -535,14 +546,20 @@ async function persistWikiPage(pageName: string, newContent: string): Promise<vo
     content: newContent,
   });
 
+  if (generation !== saveQueueGeneration) return;
   if (currentSlug() !== pageName) return;
 
   if (!response.ok) {
+    // Break the chain so subsequent queued saves observe a stale
+    // generation and skip. Refresh resets local state to the
+    // canonical server content; navError stays visible.
+    saveQueueGeneration += 1;
     navError.value = response.status === 0 ? response.error : `Wiki save failed (${response.status}): ${response.error}`;
-    // Re-fetch so a future click computes against the canonical
-    // (server-side) markdown, not our optimistic local state.
     await refresh();
+    return;
   }
+  // Successful save — clear any stale error from a prior click.
+  navError.value = null;
 }
 
 // Split the current content into the frontmatter prefix (delimiters
@@ -604,7 +621,11 @@ function onTaskCheckboxClick(event: MouseEvent, target: HTMLInputElement): void 
   content.value = newContent;
   navError.value = null;
 
-  taskPersistChain = taskPersistChain.then(() => persistWikiPage(pageName, newContent));
+  // Capture the current generation so the queued save knows whether
+  // the chain has been broken (by a prior failure) by the time it
+  // runs. See `persistWikiPage` for the semantics.
+  const generation = saveQueueGeneration;
+  taskPersistChain = taskPersistChain.then(() => persistWikiPage(pageName, newContent, generation));
 }
 
 function handleContentClick(event: MouseEvent) {
