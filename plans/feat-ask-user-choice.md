@@ -20,6 +20,45 @@ re-typing the LLM's options just to choose one.
 | Default `required` | `true` |
 | User ignores form | form stays interactive in chat history |
 | Multi-question layout | all vertical, no accordion / steps |
+| **Placement** | **canvas plugin pane** (existing pattern — same slot as `manageWiki` / `scheduler` / `canvas`) |
+
+### Placement detail
+
+The form renders in the right-side canvas pane, NOT inline in the
+chat thread and NOT above the input box. This matches the existing
+plugin convention (every tool result that needs interactive UI
+lives in the canvas), so:
+
+- the implementation reuses the existing tool-result → plugin-view
+  selection plumbing (no new chat-bubble component)
+- the chat thread stays text-only, easier to scroll-read later
+- canvas has the room for long option lists and multi-question forms
+
+```
+┌────────────────────────────────────────────────────┐
+│ chat (left)           │  canvas (right)            │
+│                       │                            │
+│ user: 色選んで        │  ┌─ askUserChoice ───┐    │
+│                       │  │ 色は?              │    │  ← form lives here
+│ assistant: 色を選ん   │  │ ⦿ red ○ blue ...  │    │
+│ でください [tool:     │  │ [送信]            │    │
+│ askUserChoice]        │  └────────────────────┘   │
+│                       │                            │
+│ ┌─ text box ───┐     │                            │
+│ │ Type a task… │     │                            │
+│ └──────────────┘     │                            │
+└────────────────────────────────────────────────────┘
+```
+
+Trade-off accepted: the user's eyes split between the chat (the
+question text) and the canvas (the form). The alternative
+in-bubble layouts (form rendered inside an assistant message, or
+above the text box like a quick-reply bar) were considered and
+rejected for v1 — the in-bubble option requires a new rendering
+seam in the chat thread; the above-text-box option blurs the line
+between "what the LLM asked" and "what I'm about to type". Either
+can revisit in a follow-up if real usage shows split-attention is
+a real problem.
 
 ## Architecture
 
