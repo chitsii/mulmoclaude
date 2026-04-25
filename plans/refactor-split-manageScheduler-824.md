@@ -57,10 +57,21 @@ Existing chat sessions in users' workspaces have `manageScheduler` tool calls ba
 - The tool-result card lookup goes through `getPlugin(toolName)`. After the rename, `getPlugin("manageScheduler")` returns null and the tool-result card won't render the rich view for historical entries.
 - Trade-off: a one-line `manageScheduler: manageCalendarPlugin` alias in `src/tools/index.ts` would keep historical sessions rendering their last-known result. Cost: the new plugin's "I'm rendering an old generic result, not necessarily my domain" assumption pollutes both new plugins.
 
-**Decision**: clean cut, no alias. Rationale:
-- Chat tool-result cards are read-only history at the point of the rename. Users have already consumed those results.
-- The toolCallHistory sidebar still names the tool correctly for audit.
-- Adding an alias is easy if telemetry shows complaints; removing one later is harder.
+**Decision (revised)**: shape-dispatching legacy view. Adds:
+
+- `src/plugins/scheduler/legacyShape.ts` — pure helper `isLegacyAutomationsShape(data)` checking for any of `task` / `tasks` / `triggered` / `deleted`. Calendar shape is the default (anything not matching).
+- `src/plugins/scheduler/LegacySchedulerView.vue` — picks `AutomationsView` or `CalendarView` based on the helper, forwards `selectedResult` and `updateResult`.
+- `src/plugins/scheduler/index.ts` exports `legacyManageSchedulerEntry: PluginEntry` (deliberately not a full `ToolPlugin` — no `execute`, no `isEnabled` — so the absence makes its view-only nature explicit).
+- `src/tools/index.ts` registers it under the `manageScheduler` key. `getPlugin("manageScheduler")` returns this entry and historical sessions render the rich view.
+
+The legacy entry is **not** exposed to the LLM:
+- `src/config/toolNames.ts` does not list `manageScheduler`.
+- `server/agent/plugin-names.ts`'s `PLUGIN_DEFS` does not include it, so it never reaches MCP.
+- No role's `availablePlugins` lists it.
+
+So fresh chat sessions cannot pick `manageScheduler`; the entry exists strictly to render persisted history.
+
+Tests: `test/plugins/scheduler/test_legacyShape.ts` pins the shape detector across calendar / automation / unknown / null / array / adjacent-but-different-key cases.
 
 ## Verification
 

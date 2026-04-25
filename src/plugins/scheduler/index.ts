@@ -6,10 +6,12 @@
 // AutomationsView). The legacy unified `manageScheduler` plugin
 // went away with the rename; see plans/refactor-split-manageScheduler-824.md.
 
+import type { PluginEntry } from "../../tools/types";
 import type { ToolPlugin } from "../../tools/types";
 import type { ToolResult } from "gui-chat-protocol";
 import CalendarView from "./CalendarView.vue";
 import AutomationsView from "./AutomationsView.vue";
+import LegacySchedulerView from "./LegacySchedulerView.vue";
 import Preview from "./Preview.vue";
 import calendarDefinition from "./calendarDefinition";
 import automationsDefinition from "./automationsDefinition";
@@ -64,5 +66,29 @@ export const manageAutomationsPlugin: ToolPlugin<SchedulerData> = {
   isEnabled: () => true,
   generatingMessage: "Managing automations...",
   viewComponent: AutomationsView,
+  previewComponent: Preview,
+};
+
+// View-only fallback for tool results saved under the pre-split
+// `manageScheduler` name. Registered in src/tools/index.ts so
+// `getPlugin("manageScheduler")` returns this entry and historical
+// chat sessions still render the rich view (LegacySchedulerView
+// dispatches to CalendarView or AutomationsView by data shape).
+//
+// Deliberately a `PluginEntry` (not a `ToolPlugin`) so the absence
+// of `execute` / `isEnabled` makes its view-only nature explicit:
+// no LLM exposure path, no fresh dispatch, just the historical
+// renderer. The tool name is also absent from
+// server/agent/plugin-names.ts and src/config/toolNames.ts, so
+// new sessions cannot pick it up.
+export const legacyManageSchedulerEntry: PluginEntry = {
+  toolDefinition: {
+    type: "function",
+    name: "manageScheduler",
+    prompt: "[deprecated] Split into manageCalendar + manageAutomations (#824).",
+    description: "[deprecated] Split into manageCalendar + manageAutomations (#824). Kept registered for legacy chat-history rendering only.",
+    parameters: { type: "object", properties: {}, required: [] },
+  },
+  viewComponent: LegacySchedulerView,
   previewComponent: Preview,
 };
