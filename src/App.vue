@@ -797,7 +797,18 @@ function unsubscribeSession(chatSessionId: string): void {
 async function cancelActiveRun(): Promise<void> {
   const sessionId = currentSessionId.value;
   if (!sessionId) return;
-  await apiPost<{ ok: boolean }>(API_ROUTES.agent.cancel, { chatSessionId: sessionId });
+  console.info("[agent] cancel requested", { chatSessionId: sessionId });
+  const result = await apiPost<{ ok: boolean }>(API_ROUTES.agent.cancel, { chatSessionId: sessionId });
+  if (!result.ok) {
+    console.warn("[agent] cancel POST failed", { chatSessionId: sessionId, error: result.error });
+    return;
+  }
+  // Backend's `ok: false` means the session wasn't in-flight (already
+  // finished, or duplicate Stop click). Benign, but distinct from a
+  // network failure — surface separately in the console.
+  if (!result.data?.ok) {
+    console.info("[agent] cancel was a no-op (no run in flight)", { chatSessionId: sessionId });
+  }
 }
 
 async function sendMessage(text?: string) {
