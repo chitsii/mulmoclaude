@@ -187,6 +187,7 @@ const deMessages = {
     automations: { label: "Aktionen", title: "Aktionen öffnen" },
     wiki: { label: "Wiki", title: "Wiki öffnen" },
     sources: { label: "Quellen", title: "Informationsquellen öffnen" },
+    news: { label: "Nachrichten", title: "Nachrichten-Viewer öffnen" },
     skills: { label: "Skills", title: "Skills öffnen" },
     roles: { label: "Rollen", title: "Rollen öffnen" },
     files: { label: "Dateien", title: "Workspace-Dateien öffnen" },
@@ -380,6 +381,21 @@ const deMessages = {
     hideSource: "Quelltext ausblenden <>",
     showSource: "Quelltext anzeigen <>",
   },
+  pluginNews: {
+    title: "Nachrichten",
+    itemCount: "{unread} ungelesen / {total} insgesamt",
+    filterAll: "Alle",
+    filterUnread: "Ungelesen",
+    allSources: "Alle",
+    markAllRead: "Alle als gelesen markieren",
+    selectPrompt: "Wähle einen Eintrag zum Lesen aus.",
+    empty: "Keine Nachrichten in dieser Ansicht.",
+    unread: "Ungelesen",
+    openOriginal: "Original öffnen",
+    noBody: "Kein Inhalt verfügbar — öffne den Originalartikel.",
+    bodyError: "Inhalt konnte nicht geladen werden: {error}",
+    loadError: "Nachrichten konnten nicht geladen werden: {error}",
+  },
   pluginManageSource: {
     titlePlaceholder: "Titel (optional)",
     heading: "Informationsquellen",
@@ -540,6 +556,8 @@ const deMessages = {
     saveError: "⚠ {error}",
     copyLabel: "Kopieren",
     copiedLabel: "Kopiert!",
+    taskCountMismatch:
+      "Die Anzahl der Aufgaben in der Markdown-Quelle und im gerenderten Ergebnis stimmt nicht überein. Das Umschalten wurde abgelehnt, um eine Beschädigung der Datei zu vermeiden.",
   },
   pluginTextResponse: {
     pdf: "PDF",
