@@ -86,6 +86,13 @@ export const env = Object.freeze({
   journalForceRunOnStartup: asFlag(process.env.JOURNAL_FORCE_RUN_ON_STARTUP),
   chatIndexForceRunOnStartup: asFlag(process.env.CHAT_INDEX_FORCE_RUN_ON_STARTUP),
 
+  // macOS Reminder notification sink (#789). Darwin-only; iCloud
+  // Reminders sync mirrors the entry to the user's iPhone, which
+  // delivers the system notification. No-op on other platforms
+  // (logs a single warn at first call). Off by default to avoid
+  // surprising new users with a Reminders permission prompt.
+  macosReminderNotifications: asFlag(process.env.MACOS_REMINDER_NOTIFICATIONS),
+
   // MulmoBridge Relay (#520). Optional — when both are set the server
   // connects to the Relay via WebSocket and forwards bridge messages.
   relayUrl: process.env.RELAY_URL,
