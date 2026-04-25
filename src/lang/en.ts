@@ -416,6 +416,7 @@ const enMessages = {
     noBody: "No body available — open the original article.",
     bodyError: "Failed to load body: {error}",
     loadError: "Failed to load news: {error}",
+    chatPlaceholder: "Ask anything about this article",
   },
   pluginManageSource: {
     titlePlaceholder: "Title (optional)",

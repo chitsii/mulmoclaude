@@ -37,20 +37,22 @@ const props = withDefaults(
     prependText: string;
     disabled?: boolean;
     testIdPrefix?: string;
+    allowEmpty?: boolean;
   }>(),
-  { disabled: false, testIdPrefix: "page-chat" },
+  { disabled: false, testIdPrefix: "page-chat", allowEmpty: false },
 );
 
 const { t } = useI18n();
 const appApi = useAppApi();
 const draft = ref("");
 
-const canSend = computed(() => draft.value.trim().length > 0 && !props.disabled);
+const canSend = computed(() => !props.disabled && (props.allowEmpty || draft.value.trim().length > 0));
 
 function submit() {
+  if (props.disabled) return;
   const text = draft.value.trim();
-  if (!text || props.disabled) return;
-  const prompt = `${props.prependText}\n\n${text}`;
+  if (!text && !props.allowEmpty) return;
+  const prompt = text ? `${props.prependText}\n\n${text}` : props.prependText;
   draft.value = "";
   appApi.startNewChat(prompt);
 }

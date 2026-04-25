@@ -402,6 +402,7 @@ const esMessages = {
     noBody: "Sin cuerpo — abre el artículo original.",
     bodyError: "No se pudo cargar el contenido: {error}",
     loadError: "No se pudieron cargar las noticias: {error}",
+    chatPlaceholder: "Pregunta lo que quieras sobre este artículo",
   },
   pluginManageSource: {
     titlePlaceholder: "Título (opcional)",

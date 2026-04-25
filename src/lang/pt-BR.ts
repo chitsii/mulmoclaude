@@ -395,6 +395,7 @@ const ptBRMessages = {
     noBody: "Sem conteúdo — abra o artigo original.",
     bodyError: "Falha ao carregar o conteúdo: {error}",
     loadError: "Falha ao carregar notícias: {error}",
+    chatPlaceholder: "Pergunte o que quiser sobre este artigo",
   },
   pluginManageSource: {
     titlePlaceholder: "Título (opcional)",

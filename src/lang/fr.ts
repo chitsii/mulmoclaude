@@ -396,6 +396,7 @@ const frMessages = {
     noBody: "Pas de contenu — ouvre l'article original.",
     bodyError: "Échec du chargement du contenu : {error}",
     loadError: "Échec du chargement des actualités : {error}",
+    chatPlaceholder: "Posez toute question sur cet article",
   },
   pluginManageSource: {
     titlePlaceholder: "Titre (facultatif)",

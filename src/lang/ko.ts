@@ -400,6 +400,7 @@ const koMessages = {
     noBody: "본문이 없습니다 — 원문을 열어주세요.",
     bodyError: "본문 로드 실패: {error}",
     loadError: "뉴스 로드 실패: {error}",
+    chatPlaceholder: "이 기사에 대해 무엇이든 질문",
   },
   pluginManageSource: {
     titlePlaceholder: "제목 (선택)",

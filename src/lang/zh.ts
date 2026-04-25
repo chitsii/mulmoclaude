@@ -396,6 +396,7 @@ const zhMessages = {
     noBody: "无正文 — 请打开原文。",
     bodyError: "加载正文失败: {error}",
     loadError: "加载新闻失败: {error}",
+    chatPlaceholder: "就本文章随意提问",
   },
   pluginManageSource: {
     titlePlaceholder: "标题(可选)",

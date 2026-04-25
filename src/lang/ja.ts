@@ -400,6 +400,7 @@ const jaMessages = {
     noBody: "本文がありません — 元の記事を開いてください。",
     bodyError: "本文の取得に失敗: {error}",
     loadError: "ニュースの取得に失敗: {error}",
+    chatPlaceholder: "この記事について何でも質問",
   },
   pluginManageSource: {
     titlePlaceholder: "タイトル（省略可）",

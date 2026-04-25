@@ -397,6 +397,7 @@ const deMessages = {
     noBody: "Kein Inhalt verfügbar — öffne den Originalartikel.",
     bodyError: "Inhalt konnte nicht geladen werden: {error}",
     loadError: "Nachrichten konnten nicht geladen werden: {error}",
+    chatPlaceholder: "Fragen Sie alles zu diesem Artikel",
   },
   pluginManageSource: {
     titlePlaceholder: "Titel (optional)",
