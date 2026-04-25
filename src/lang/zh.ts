@@ -21,7 +21,6 @@ const zhMessages = {
   },
   sessionTabBar: {
     newSession: "新建会话",
-    sessionHistory: "会话历史",
     // 中文无单复数之分，但仍保留 `|` 分隔符以对齐 vue-i18n 的 pluralization 约定。
     activeSessions: "{count} 个活动会话（代理运行中）",
     unreadReplies: "{count} 条未读回复",
@@ -56,7 +55,6 @@ const zhMessages = {
     noSessions: "暂无会话。",
     noMatching: "没有匹配的会话。",
     running: "运行中",
-    unread: "未读",
     noMessages: "(无消息)",
     openRowAria: "打开会话: {preview}",
   },
@@ -70,6 +68,7 @@ const zhMessages = {
     home: "前往最新对话",
     toolCallHistory: "工具调用历史",
     settings: "设置",
+    settingsGeminiMissing: "设置 — 缺少 Gemini API 密钥",
   },
   rightSidebar: {
     toggleSystemPrompt: "切换系统提示词",
@@ -143,8 +142,8 @@ const zhMessages = {
     mcpSaveFailed: "保存 MCP 服务器更改失败。",
   },
   canvasViewToggle: {
-    stackViewTooltip: "堆叠视图 · 点击切换到单一视图 (⌘1)",
-    singleViewTooltip: "单一视图 · 点击切换到堆叠视图 (⌘2)",
+    stackViewTooltip: "堆叠视图 · 点击切换到单一视图",
+    singleViewTooltip: "单一视图 · 点击切换到堆叠视图",
     switchToSingle: "切换到单一视图",
     switchToStack: "切换到堆叠视图",
   },
@@ -153,6 +152,12 @@ const zhMessages = {
     hideTooltip: "隐藏会话历史面板",
     show: "显示会话历史",
     hide: "隐藏会话历史",
+  },
+  sessionHistoryExpand: {
+    expandTooltip: "将会话历史面板展开为全宽",
+    collapseTooltip: "收起会话历史面板",
+    expand: "展开会话历史",
+    collapse: "收起会话历史",
   },
   settingsWorkspaceDirs: {
     explanation: "自定义用于在 {dataDir} 和 {artifactsDir} 下组织文件的目录。Claude 会参照这些来决定文件保存路径。",
@@ -177,13 +182,14 @@ const zhMessages = {
     errLabelConflict: '标签 "{label}" 已存在',
   },
   pluginLauncher: {
-    todos: { label: "待办", title: "打开待办 (⌘4)" },
-    scheduler: { label: "日程", title: "打开日程 (⌘5)" },
-    wiki: { label: "百科", title: "打开 Wiki (⌘6)" },
+    todos: { label: "待办", title: "打开待办" },
+    calendar: { label: "日历", title: "打开日历" },
+    automations: { label: "自动化", title: "打开自动化" },
+    wiki: { label: "百科", title: "打开 Wiki" },
     sources: { label: "信息源", title: "打开信息源" },
-    skills: { label: "技能", title: "打开技能 (⌘7)" },
-    roles: { label: "角色", title: "打开角色 (⌘8)" },
-    files: { label: "文件", title: "打开工作区文件 (⌘3)" },
+    skills: { label: "技能", title: "打开技能" },
+    roles: { label: "角色", title: "打开角色" },
+    files: { label: "文件", title: "打开工作区文件" },
   },
   fileContentHeader: {
     showRendered: "显示渲染后的 Markdown",

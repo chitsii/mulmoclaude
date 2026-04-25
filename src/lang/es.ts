@@ -22,7 +22,6 @@ const esMessages = {
   },
   sessionTabBar: {
     newSession: "Nueva sesión",
-    sessionHistory: "Historial de sesiones",
     activeSessions: "{count} sesión activa (agente en ejecución) | {count} sesiones activas (agente en ejecución)",
     unreadReplies: "{count} respuesta sin leer | {count} respuestas sin leer",
     unreadDot: "Nueva respuesta",
@@ -56,7 +55,6 @@ const esMessages = {
     noSessions: "Aún no hay sesiones.",
     noMatching: "No hay sesiones coincidentes.",
     running: "En ejecución",
-    unread: "Sin leer",
     noMessages: "(sin mensajes)",
     openRowAria: "Abrir sesión: {preview}",
   },
@@ -70,6 +68,7 @@ const esMessages = {
     home: "Ir al chat más reciente",
     toolCallHistory: "Historial de llamadas a herramientas",
     settings: "Ajustes",
+    settingsGeminiMissing: "Ajustes — Falta la clave API de Gemini",
   },
   rightSidebar: {
     toggleSystemPrompt: "Alternar system prompt",
@@ -146,8 +145,8 @@ const esMessages = {
     mcpSaveFailed: "No se pudieron guardar los cambios de los servidores MCP.",
   },
   canvasViewToggle: {
-    stackViewTooltip: "Vista apilada · haz clic para cambiar a vista única (⌘1)",
-    singleViewTooltip: "Vista única · haz clic para cambiar a vista apilada (⌘2)",
+    stackViewTooltip: "Vista apilada · haz clic para cambiar a vista única",
+    singleViewTooltip: "Vista única · haz clic para cambiar a vista apilada",
     switchToSingle: "Cambiar a vista única",
     switchToStack: "Cambiar a vista apilada",
   },
@@ -156,6 +155,12 @@ const esMessages = {
     hideTooltip: "Ocultar el panel de historial de sesiones",
     show: "Mostrar historial de sesiones",
     hide: "Ocultar historial de sesiones",
+  },
+  sessionHistoryExpand: {
+    expandTooltip: "Expandir el panel de historial de sesiones a ancho completo",
+    collapseTooltip: "Contraer el panel de historial de sesiones",
+    expand: "Expandir historial de sesiones",
+    collapse: "Contraer historial de sesiones",
   },
   settingsWorkspaceDirs: {
     explanation:
@@ -182,13 +187,14 @@ const esMessages = {
     errLabelConflict: 'La etiqueta "{label}" ya existe',
   },
   pluginLauncher: {
-    todos: { label: "Tareas", title: "Abrir tareas (⌘4)" },
-    scheduler: { label: "Agenda", title: "Abrir agenda (⌘5)" },
-    wiki: { label: "Wiki", title: "Abrir wiki (⌘6)" },
+    todos: { label: "Tareas", title: "Abrir tareas" },
+    calendar: { label: "Calendario", title: "Abrir calendario" },
+    automations: { label: "Acciones", title: "Abrir acciones" },
+    wiki: { label: "Wiki", title: "Abrir wiki" },
     sources: { label: "Fuentes", title: "Abrir fuentes de información" },
-    skills: { label: "Skills", title: "Abrir skills (⌘7)" },
-    roles: { label: "Roles", title: "Abrir roles (⌘8)" },
-    files: { label: "Archivos", title: "Abrir archivos del área de trabajo (⌘3)" },
+    skills: { label: "Skills", title: "Abrir skills" },
+    roles: { label: "Roles", title: "Abrir roles" },
+    files: { label: "Archivos", title: "Abrir archivos del área de trabajo" },
   },
   fileContentHeader: {
     showRendered: "Mostrar Markdown renderizado",

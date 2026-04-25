@@ -37,7 +37,6 @@ const enMessages = {
   },
   sessionTabBar: {
     newSession: "New session",
-    sessionHistory: "Session history",
     // vue-i18n pluralization: `t(key, count)` picks singular / plural
     // based on the number. `{count}` is interpolated.
     activeSessions: "{count} active session (agent running) | {count} active sessions (agent running)",
@@ -73,7 +72,6 @@ const enMessages = {
     noSessions: "No sessions yet.",
     noMatching: "No matching sessions.",
     running: "Running",
-    unread: "Unread",
     noMessages: "(no messages)",
     openRowAria: "Open session: {preview}",
   },
@@ -87,6 +85,7 @@ const enMessages = {
     home: "Go to latest chat",
     toolCallHistory: "Tool call history",
     settings: "Settings",
+    settingsGeminiMissing: "Settings — Gemini API key missing",
   },
   rightSidebar: {
     toggleSystemPrompt: "Toggle system prompt",
@@ -162,8 +161,8 @@ const enMessages = {
     mcpSaveFailed: "Failed to save MCP server changes.",
   },
   canvasViewToggle: {
-    stackViewTooltip: "Stack view · click to switch to Single (⌘1)",
-    singleViewTooltip: "Single view · click to switch to Stack (⌘2)",
+    stackViewTooltip: "Stack view · click to switch to Single",
+    singleViewTooltip: "Single view · click to switch to Stack",
     switchToSingle: "Switch to Single view",
     switchToStack: "Switch to Stack view",
   },
@@ -172,6 +171,12 @@ const enMessages = {
     hideTooltip: "Hide session history panel",
     show: "Show session history",
     hide: "Hide session history",
+  },
+  sessionHistoryExpand: {
+    expandTooltip: "Expand session history panel to full width",
+    collapseTooltip: "Collapse session history panel",
+    expand: "Expand session history",
+    collapse: "Collapse session history",
   },
   settingsWorkspaceDirs: {
     explanation: "Custom directories for organizing files under {dataDir} and {artifactsDir}. Claude uses these to route file saves.",
@@ -197,13 +202,14 @@ const enMessages = {
     errLabelConflict: 'Label "{label}" already exists',
   },
   pluginLauncher: {
-    todos: { label: "Todos", title: "Open todos (⌘4)" },
-    scheduler: { label: "Schedule", title: "Open schedule (⌘5)" },
-    wiki: { label: "Wiki", title: "Open wiki (⌘6)" },
+    todos: { label: "Todos", title: "Open todos" },
+    calendar: { label: "Calendar", title: "Open calendar" },
+    automations: { label: "Actions", title: "Open actions" },
+    wiki: { label: "Wiki", title: "Open wiki" },
     sources: { label: "Sources", title: "Open information sources" },
-    skills: { label: "Skills", title: "Open skills (⌘7)" },
-    roles: { label: "Roles", title: "Open roles (⌘8)" },
-    files: { label: "Files", title: "Open workspace files (⌘3)" },
+    skills: { label: "Skills", title: "Open skills" },
+    roles: { label: "Roles", title: "Open roles" },
+    files: { label: "Files", title: "Open workspace files" },
   },
   fileContentHeader: {
     showRendered: "Show rendered Markdown",

@@ -22,7 +22,6 @@ const koMessages = {
   },
   sessionTabBar: {
     newSession: "새 세션",
-    sessionHistory: "세션 기록",
     // 한국어는 단·복수 구분이 없어 같은 문자열이지만 vue-i18n 의
     // pluralization 규약에 맞추기 위해 `|` 구분자를 유지합니다.
     activeSessions: "활성 세션 {count}개 (에이전트 실행 중)",
@@ -58,7 +57,6 @@ const koMessages = {
     noSessions: "아직 세션이 없습니다.",
     noMatching: "일치하는 세션이 없습니다.",
     running: "실행 중",
-    unread: "읽지 않음",
     noMessages: "(메시지 없음)",
     openRowAria: "세션 열기: {preview}",
   },
@@ -72,6 +70,7 @@ const koMessages = {
     home: "최신 채팅으로 이동",
     toolCallHistory: "도구 호출 기록",
     settings: "설정",
+    settingsGeminiMissing: "설정 — Gemini API 키 없음",
   },
   rightSidebar: {
     toggleSystemPrompt: "시스템 프롬프트 토글",
@@ -146,8 +145,8 @@ const koMessages = {
     mcpSaveFailed: "MCP 서버 변경 사항을 저장하지 못했습니다.",
   },
   canvasViewToggle: {
-    stackViewTooltip: "스택 보기 · 클릭하여 단일 보기로 전환 (⌘1)",
-    singleViewTooltip: "단일 보기 · 클릭하여 스택 보기로 전환 (⌘2)",
+    stackViewTooltip: "스택 보기 · 클릭하여 단일 보기로 전환",
+    singleViewTooltip: "단일 보기 · 클릭하여 스택 보기로 전환",
     switchToSingle: "단일 보기로 전환",
     switchToStack: "스택 보기로 전환",
   },
@@ -156,6 +155,12 @@ const koMessages = {
     hideTooltip: "세션 기록 패널 숨기기",
     show: "세션 기록 표시",
     hide: "세션 기록 숨기기",
+  },
+  sessionHistoryExpand: {
+    expandTooltip: "세션 기록 패널을 전체 너비로 확장",
+    collapseTooltip: "세션 기록 패널 축소",
+    expand: "세션 기록 확장",
+    collapse: "세션 기록 축소",
   },
   settingsWorkspaceDirs: {
     explanation: "{dataDir} 와 {artifactsDir} 아래에서 파일을 정리하기 위한 커스텀 디렉터리입니다. Claude 는 이를 참조해 파일 저장 위치를 결정합니다.",
@@ -181,13 +186,14 @@ const koMessages = {
     errLabelConflict: '라벨 "{label}" 은(는) 이미 사용 중입니다',
   },
   pluginLauncher: {
-    todos: { label: "할 일", title: "할 일 열기 (⌘4)" },
-    scheduler: { label: "일정", title: "일정 열기 (⌘5)" },
-    wiki: { label: "위키", title: "위키 열기 (⌘6)" },
+    todos: { label: "할 일", title: "할 일 열기" },
+    calendar: { label: "캘린더", title: "캘린더 열기" },
+    automations: { label: "자동화", title: "자동화 열기" },
+    wiki: { label: "위키", title: "위키 열기" },
     sources: { label: "소스", title: "정보 소스 열기" },
-    skills: { label: "스킬", title: "스킬 열기 (⌘7)" },
-    roles: { label: "역할", title: "역할 열기 (⌘8)" },
-    files: { label: "파일", title: "워크스페이스 파일 열기 (⌘3)" },
+    skills: { label: "스킬", title: "스킬 열기" },
+    roles: { label: "역할", title: "역할 열기" },
+    files: { label: "파일", title: "워크스페이스 파일 열기" },
   },
   fileContentHeader: {
     showRendered: "렌더링된 Markdown 표시",

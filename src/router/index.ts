@@ -1,7 +1,7 @@
 // Vue-router setup (history mode — clean URLs without #).
 //
-// Each page has its own route: /chat, /files, /todos, /scheduler,
-// /wiki, /skills, /roles, /history, /sources. Layout preference
+// Each page has its own route: /chat, /files, /todos, /calendar,
+// /automations, /wiki, /skills, /roles, /sources. Layout preference
 // (single vs. stack) is a separate concern persisted in localStorage
 // — it is not part of the URL.
 //
@@ -12,7 +12,6 @@
 
 import { defineComponent, h } from "vue";
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
-import { HISTORY_FILTER_ROUTE_PATTERN } from "../config/historyFilters";
 
 // Stub component that renders nothing. Required by vue-router (every
 // route needs a component) but never actually mounted because App.vue
@@ -23,11 +22,11 @@ export const PAGE_ROUTES = {
   chat: "chat",
   files: "files",
   todos: "todos",
-  scheduler: "scheduler",
+  calendar: "calendar",
+  automations: "automations",
   wiki: "wiki",
   skills: "skills",
   roles: "roles",
-  history: "history",
   sources: "sources",
 } as const;
 
@@ -45,7 +44,11 @@ const routes: RouteRecordRaw[] = [
   // selected". See plans/feat-files-path-url.md.
   { path: "/files/:pathMatch(.*)*", name: PAGE_ROUTES.files, component: Stub },
   { path: "/todos", name: PAGE_ROUTES.todos, component: Stub },
-  { path: "/scheduler", name: PAGE_ROUTES.scheduler, component: Stub },
+  { path: "/calendar", name: PAGE_ROUTES.calendar, component: Stub },
+  { path: "/automations", name: PAGE_ROUTES.automations, component: Stub },
+  // Legacy Scheduler URL — split into Calendar + Automations (#758).
+  // Redirect preserves bookmarks; delete once telemetry shows no hits.
+  { path: "/scheduler", redirect: "/calendar" },
   // Wiki sub-views live on the path rather than in query params so
   // URLs mirror the filesystem layout (`data/wiki/pages/<slug>.md`)
   // and stay sibling-safe (no query-key bleed from other routes).
@@ -55,11 +58,6 @@ const routes: RouteRecordRaw[] = [
   { path: "/wiki/:section(pages|log|lint-report)?/:slug?", name: PAGE_ROUTES.wiki, component: Stub },
   { path: "/skills", name: PAGE_ROUTES.skills, component: Stub },
   { path: "/roles", name: PAGE_ROUTES.roles, component: Stub },
-  // `filter` is a closed enum (see src/config/historyFilters.ts). The
-  // default `all` is represented by the bare `/history` URL, so it is
-  // not part of the pattern. Unknown values fall through to the
-  // catch-all redirect below.
-  { path: `/history/:filter(${HISTORY_FILTER_ROUTE_PATTERN})?`, name: PAGE_ROUTES.history, component: Stub },
   { path: "/sources", name: PAGE_ROUTES.sources, component: Stub },
   { path: "/:pathMatch(.*)*", redirect: "/chat" },
 ];

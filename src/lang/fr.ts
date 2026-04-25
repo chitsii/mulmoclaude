@@ -17,7 +17,6 @@ const frMessages = {
   },
   sessionTabBar: {
     newSession: "Nouvelle session",
-    sessionHistory: "Historique des sessions",
     activeSessions: "{count} session active (agent en cours d'exécution) | {count} sessions actives (agent en cours d'exécution)",
     unreadReplies: "{count} réponse non lue | {count} réponses non lues",
     unreadDot: "Nouvelle réponse",
@@ -51,7 +50,6 @@ const frMessages = {
     noSessions: "Aucune session pour le moment.",
     noMatching: "Aucune session correspondante.",
     running: "En cours",
-    unread: "Non lu",
     noMessages: "(aucun message)",
     openRowAria: "Ouvrir la session : {preview}",
   },
@@ -65,6 +63,7 @@ const frMessages = {
     home: "Aller à la dernière conversation",
     toolCallHistory: "Historique des appels d'outils",
     settings: "Paramètres",
+    settingsGeminiMissing: "Paramètres — Clé API Gemini manquante",
   },
   rightSidebar: {
     toggleSystemPrompt: "Basculer le system prompt",
@@ -140,8 +139,8 @@ const frMessages = {
     mcpSaveFailed: "Impossible d'enregistrer les modifications des serveurs MCP.",
   },
   canvasViewToggle: {
-    stackViewTooltip: "Vue empilée · cliquez pour passer à la vue simple (⌘1)",
-    singleViewTooltip: "Vue simple · cliquez pour passer à la vue empilée (⌘2)",
+    stackViewTooltip: "Vue empilée · cliquez pour passer à la vue simple",
+    singleViewTooltip: "Vue simple · cliquez pour passer à la vue empilée",
     switchToSingle: "Passer à la vue simple",
     switchToStack: "Passer à la vue empilée",
   },
@@ -150,6 +149,12 @@ const frMessages = {
     hideTooltip: "Masquer le panneau d'historique des sessions",
     show: "Afficher l'historique des sessions",
     hide: "Masquer l'historique des sessions",
+  },
+  sessionHistoryExpand: {
+    expandTooltip: "Agrandir le panneau d'historique des sessions en pleine largeur",
+    collapseTooltip: "Réduire le panneau d'historique des sessions",
+    expand: "Agrandir l'historique des sessions",
+    collapse: "Réduire l'historique des sessions",
   },
   settingsWorkspaceDirs: {
     explanation:
@@ -176,13 +181,14 @@ const frMessages = {
     errLabelConflict: 'L\'étiquette "{label}" existe déjà',
   },
   pluginLauncher: {
-    todos: { label: "Tâches", title: "Ouvrir les tâches (⌘4)" },
-    scheduler: { label: "Planning", title: "Ouvrir le planning (⌘5)" },
-    wiki: { label: "Wiki", title: "Ouvrir le wiki (⌘6)" },
+    todos: { label: "Tâches", title: "Ouvrir les tâches" },
+    calendar: { label: "Calendrier", title: "Ouvrir le calendrier" },
+    automations: { label: "Actions", title: "Ouvrir les actions" },
+    wiki: { label: "Wiki", title: "Ouvrir le wiki" },
     sources: { label: "Sources", title: "Ouvrir les sources d'information" },
-    skills: { label: "Skills", title: "Ouvrir les skills (⌘7)" },
-    roles: { label: "Rôles", title: "Ouvrir les rôles (⌘8)" },
-    files: { label: "Fichiers", title: "Ouvrir les fichiers du workspace (⌘3)" },
+    skills: { label: "Skills", title: "Ouvrir les skills" },
+    roles: { label: "Rôles", title: "Ouvrir les rôles" },
+    files: { label: "Fichiers", title: "Ouvrir les fichiers du workspace" },
   },
   fileContentHeader: {
     showRendered: "Afficher le Markdown rendu",

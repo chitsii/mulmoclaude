@@ -17,7 +17,6 @@ const deMessages = {
   },
   sessionTabBar: {
     newSession: "Neue Sitzung",
-    sessionHistory: "Sitzungsverlauf",
     activeSessions: "{count} aktive Sitzung (Agent läuft) | {count} aktive Sitzungen (Agent läuft)",
     unreadReplies: "{count} ungelesene Antwort | {count} ungelesene Antworten",
     unreadDot: "Neue Antwort",
@@ -51,7 +50,6 @@ const deMessages = {
     noSessions: "Noch keine Sitzungen.",
     noMatching: "Keine passenden Sitzungen.",
     running: "Läuft",
-    unread: "Ungelesen",
     noMessages: "(keine Nachrichten)",
     openRowAria: "Sitzung öffnen: {preview}",
   },
@@ -65,6 +63,7 @@ const deMessages = {
     home: "Zum neuesten Chat",
     toolCallHistory: "Tool-Aufrufverlauf",
     settings: "Einstellungen",
+    settingsGeminiMissing: "Einstellungen — Gemini-API-Schlüssel fehlt",
   },
   rightSidebar: {
     toggleSystemPrompt: "System-Prompt umschalten",
@@ -140,8 +139,8 @@ const deMessages = {
     mcpSaveFailed: "Änderungen an den MCP-Servern konnten nicht gespeichert werden.",
   },
   canvasViewToggle: {
-    stackViewTooltip: "Stapelansicht · klicken, um zur Einzelansicht zu wechseln (⌘1)",
-    singleViewTooltip: "Einzelansicht · klicken, um zur Stapelansicht zu wechseln (⌘2)",
+    stackViewTooltip: "Stapelansicht · klicken, um zur Einzelansicht zu wechseln",
+    singleViewTooltip: "Einzelansicht · klicken, um zur Stapelansicht zu wechseln",
     switchToSingle: "Zur Einzelansicht wechseln",
     switchToStack: "Zur Stapelansicht wechseln",
   },
@@ -150,6 +149,12 @@ const deMessages = {
     hideTooltip: "Sitzungsverlauf-Panel ausblenden",
     show: "Sitzungsverlauf anzeigen",
     hide: "Sitzungsverlauf ausblenden",
+  },
+  sessionHistoryExpand: {
+    expandTooltip: "Sitzungsverlauf-Panel auf volle Breite erweitern",
+    collapseTooltip: "Sitzungsverlauf-Panel verkleinern",
+    expand: "Sitzungsverlauf erweitern",
+    collapse: "Sitzungsverlauf verkleinern",
   },
   settingsWorkspaceDirs: {
     explanation:
@@ -176,13 +181,14 @@ const deMessages = {
     errLabelConflict: 'Label "{label}" existiert bereits',
   },
   pluginLauncher: {
-    todos: { label: "To-dos", title: "To-dos öffnen (⌘4)" },
-    scheduler: { label: "Zeitplan", title: "Zeitplan öffnen (⌘5)" },
-    wiki: { label: "Wiki", title: "Wiki öffnen (⌘6)" },
+    todos: { label: "To-dos", title: "To-dos öffnen" },
+    calendar: { label: "Kalender", title: "Kalender öffnen" },
+    automations: { label: "Aktionen", title: "Aktionen öffnen" },
+    wiki: { label: "Wiki", title: "Wiki öffnen" },
     sources: { label: "Quellen", title: "Informationsquellen öffnen" },
-    skills: { label: "Skills", title: "Skills öffnen (⌘7)" },
-    roles: { label: "Rollen", title: "Rollen öffnen (⌘8)" },
-    files: { label: "Dateien", title: "Workspace-Dateien öffnen (⌘3)" },
+    skills: { label: "Skills", title: "Skills öffnen" },
+    roles: { label: "Rollen", title: "Rollen öffnen" },
+    files: { label: "Dateien", title: "Workspace-Dateien öffnen" },
   },
   fileContentHeader: {
     showRendered: "Gerendertes Markdown anzeigen",

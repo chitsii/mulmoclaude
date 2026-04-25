@@ -22,7 +22,6 @@ const jaMessages = {
   },
   sessionTabBar: {
     newSession: "新しいセッション",
-    sessionHistory: "セッション履歴",
     // 日本語は単複同形のため左右同じ文字列だが、vue-i18n の
     // pluralization API に合わせて `|` 区切りで揃える。
     activeSessions: "{count} 件のアクティブセッション（エージェント実行中）",
@@ -58,7 +57,6 @@ const jaMessages = {
     noSessions: "セッションはまだありません。",
     noMatching: "該当するセッションはありません。",
     running: "実行中",
-    unread: "未読",
     noMessages: "（メッセージなし）",
     openRowAria: "セッションを開く: {preview}",
   },
@@ -72,6 +70,7 @@ const jaMessages = {
     home: "最新のチャットに移動",
     toolCallHistory: "ツール呼び出し履歴",
     settings: "設定",
+    settingsGeminiMissing: "設定 — Gemini API キー未設定",
   },
   rightSidebar: {
     toggleSystemPrompt: "システムプロンプトの表示切替",
@@ -145,8 +144,8 @@ const jaMessages = {
     mcpSaveFailed: "MCP サーバーの変更を保存できませんでした。",
   },
   canvasViewToggle: {
-    stackViewTooltip: "スタック表示・クリックで Single に切替 (⌘1)",
-    singleViewTooltip: "Single 表示・クリックで Stack に切替 (⌘2)",
+    stackViewTooltip: "スタック表示・クリックで Single に切替",
+    singleViewTooltip: "Single 表示・クリックで Stack に切替",
     switchToSingle: "Single 表示に切替",
     switchToStack: "Stack 表示に切替",
   },
@@ -155,6 +154,12 @@ const jaMessages = {
     hideTooltip: "セッション履歴パネルを閉じる",
     show: "セッション履歴を表示",
     hide: "セッション履歴を閉じる",
+  },
+  sessionHistoryExpand: {
+    expandTooltip: "セッション履歴パネルを全画面表示",
+    collapseTooltip: "セッション履歴パネルを元のサイズに戻す",
+    expand: "セッション履歴を拡大",
+    collapse: "セッション履歴を縮小",
   },
   settingsWorkspaceDirs: {
     explanation: "{dataDir} および {artifactsDir} 配下でファイルを整理するためのカスタムディレクトリ。Claude がファイル保存先を振り分けるために使用します。",
@@ -180,13 +185,14 @@ const jaMessages = {
     errLabelConflict: "ラベル「{label}」は既に使用されています",
   },
   pluginLauncher: {
-    todos: { label: "Todo", title: "Todo を開く (⌘4)" },
-    scheduler: { label: "スケジュール", title: "スケジュールを開く (⌘5)" },
-    wiki: { label: "Wiki", title: "Wiki を開く (⌘6)" },
+    todos: { label: "Todo", title: "Todo を開く" },
+    calendar: { label: "カレンダー", title: "カレンダーを開く" },
+    automations: { label: "自動化", title: "自動化を開く" },
+    wiki: { label: "Wiki", title: "Wiki を開く" },
     sources: { label: "ソース", title: "情報ソースを開く" },
-    skills: { label: "スキル", title: "スキルを開く (⌘7)" },
-    roles: { label: "ロール", title: "ロールを開く (⌘8)" },
-    files: { label: "ファイル", title: "ワークスペースファイルを開く (⌘3)" },
+    skills: { label: "スキル", title: "スキルを開く" },
+    roles: { label: "ロール", title: "ロールを開く" },
+    files: { label: "ファイル", title: "ワークスペースファイルを開く" },
   },
   fileContentHeader: {
     showRendered: "レンダリング表示",
