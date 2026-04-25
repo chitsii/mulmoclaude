@@ -51,14 +51,21 @@ function stepFence(line: string, state: FenceState): boolean {
   if (fenceMatch) {
     const marker = fenceMatch[2];
     if (!state.inFence) {
+      // Openers may carry an info string after the marker
+      // (e.g. "```ts"). We don't need to keep it — just enter
+      // the fenced region.
       state.inFence = true;
       state.marker = marker;
       return true;
     }
-    // Closer must (a) use the same character as the opener and
-    // (b) be at least as long. Per CommonMark — a 3-backtick line
-    // does not close a 4-backtick fence; the inner line is content.
-    if (state.marker && marker[0] === state.marker[0] && marker.length >= state.marker.length) {
+    // Closer rules per CommonMark §4.5:
+    //   (a) same character as opener
+    //   (b) length ≥ opener
+    //   (c) NO info string — only whitespace allowed after the marker
+    // Without (c), a line like "``` js" inside a fence would be
+    // wrongly treated as the closer; marked keeps it as content.
+    const afterMarker = line.slice(fenceMatch[0].length);
+    if (state.marker && marker[0] === state.marker[0] && marker.length >= state.marker.length && /^\s*$/.test(afterMarker)) {
       state.inFence = false;
       state.marker = null;
       return true;

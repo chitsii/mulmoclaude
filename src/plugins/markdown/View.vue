@@ -263,6 +263,15 @@ async function persistTaskMarkdown(relativePath: string, markdown: string): Prom
     relativePath,
     markdown,
   });
+
+  // The user may have switched results during the round-trip. Skip
+  // every state mutation past this point — the watcher on
+  // `selectedResult.data?.markdown` already loads the new document,
+  // and writing `saveError` / triggering a refetch here would touch
+  // unrelated state (or refetch the *new* doc, masking edits the
+  // user just made there).
+  if (props.selectedResult.data?.markdown !== relativePath) return;
+
   if (!result.ok) {
     saveError.value = result.error;
     // Refetch synchronously inside the chain so subsequent queued

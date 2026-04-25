@@ -126,6 +126,22 @@ describe("toggleTaskAt", () => {
     const out = toggleTaskAt(markdown, 0);
     assert.equal(out, ["```", "- [ ] inside", "````", "- [x] outside"].join("\n"));
   });
+
+  it("a closer with an info string is NOT a valid closer", () => {
+    // Per CommonMark §4.5, fence closers can't carry an info
+    // string — only trailing whitespace is allowed. "``` js" mid-
+    // fence is content, not the close. The bottom task is index 0.
+    const markdown = ["```", "- [ ] inside", "``` js", "- [x] still-inside", "```", "- [ ] outside"].join("\n");
+    const out = toggleTaskAt(markdown, 0);
+    assert.equal(out, ["```", "- [ ] inside", "``` js", "- [x] still-inside", "```", "- [x] outside"].join("\n"));
+  });
+
+  it("a closer with only trailing whitespace IS a valid closer", () => {
+    // Whitespace after the marker is fine for a closer.
+    const markdown = ["```", "- [ ] inside", "```   ", "- [ ] outside"].join("\n");
+    const out = toggleTaskAt(markdown, 0);
+    assert.equal(out, ["```", "- [ ] inside", "```   ", "- [x] outside"].join("\n"));
+  });
 });
 
 describe("makeTasksInteractive", () => {
