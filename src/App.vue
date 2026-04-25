@@ -308,11 +308,12 @@ function navigateToSession(sessionId: string, replace = false): void {
 function handleNotificationNavigate(action: NotificationAction): void {
   const target = resolveNotificationTarget(action);
   if (!target) return;
-  if (target.kind === "session") {
-    navigateToSession(target.sessionId);
-  } else {
-    router.push({ name: target.view }).catch(() => {});
-  }
+  // No special-casing for chat targets: PR #774 moved the role
+  // selector's state into the `useCurrentRole` singleton, so the
+  // role no longer needs to be pinned via `?role=` on every
+  // session-navigate. router.push(target) keeps the user's
+  // current role choice across the navigation automatically.
+  router.push(target).catch(() => {});
 }
 
 // External URL changes (back/forward button, typed URL) → update ref.
@@ -356,18 +357,8 @@ const { markSessionRead } = useSessionSync({
 });
 const { geminiAvailable, sandboxEnabled, cpuLoadRatio, fetchHealth } = useHealth();
 
-const {
-  activeSession,
-  toolResults,
-  sidebarResults,
-  currentSummary,
-  isRunning,
-  activeSessionRunning,
-  statusMessage,
-  toolCallHistory,
-  activeSessionCount,
-  unreadCount,
-} = useSessionDerived({ sessionMap, currentSessionId, sessions });
+const { activeSession, toolResults, sidebarResults, isRunning, activeSessionRunning, statusMessage, toolCallHistory, activeSessionCount, unreadCount } =
+  useSessionDerived({ sessionMap, currentSessionId, sessions });
 
 const { selectedResultUuid } = useSelectedResult({
   activeSession,
@@ -403,11 +394,23 @@ const sessionRole = computed<Role>(() => {
   return roles.value[0];
 });
 
+const { mergedSessions, tabSessions } = useMergedSessions({
+  sessionMap,
+  sessions,
+});
+
 // ── Dynamic favicon (#470) ──────────────────────────────────
-// `unreadCount` covers every session (not just the active tab), so
-// the favicon badge lights up when a background session gets a new
-// reply even though the user is looking at a different session.
-useFaviconState({ isRunning, currentSummary, activeSession, sessionsUnreadCount: unreadCount, cpuLoadRatio });
+// Every input here is global, not per-on-screen-session: the user
+// is often on /files or other non-chat views, so the favicon has
+// to react to the whole session list rather than `activeSession`.
+//
+// `isRunning` is the global scan from useSessionDerived (sessionMap +
+// server summaries), and `mergedSessions` folds the in-memory
+// `updatedAt` / `pendingGenerations` over server summaries — so the
+// runningLong clock picks up `beginUserTurn`'s local stamp on the
+// very same tick as `isRunning` flips, without waiting for the next
+// /api/sessions refetch.
+useFaviconState({ isRunning, sessions: mergedSessions, sessionsUnreadCount: unreadCount, cpuLoadRatio });
 
 const toolResultsPanelRef = ref<{ root: HTMLDivElement | null } | null>(null);
 const canvasRef = ref<HTMLDivElement | null>(null);
@@ -515,11 +518,6 @@ const { pendingCalls, teardown: teardownPendingCalls } = usePendingCalls({
 });
 
 const selectedResult = computed(() => toolResults.value.find((result) => result.uuid === selectedResultUuid.value) ?? null);
-
-const { mergedSessions, tabSessions } = useMergedSessions({
-  sessionMap,
-  sessions,
-});
 
 // Centralised session-switch handler: subscribe to the current session's
 // pub/sub channel so we receive real-time events even if the session is
