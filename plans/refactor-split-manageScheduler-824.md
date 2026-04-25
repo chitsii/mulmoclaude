@@ -38,7 +38,7 @@ Land in one PR:
 | `src/plugins/scheduler/automationsDefinition.ts` | New — automation-only tool definition |
 | `src/plugins/scheduler/definition.ts` | Delete (replaced by the two above) |
 | `src/plugins/scheduler/index.ts` | Export `manageCalendarPlugin` + `manageAutomationsPlugin`; each plugin uses the matching definition and view component |
-| `src/plugins/scheduler/View.vue` | Delete (tab UI no longer needed; CalendarView/AutomationsView render directly per plugin) |
+| `src/plugins/scheduler/View.vue` | Stay — CalendarView / AutomationsView still delegate to it via `force-tab`. The tab-bar UI block becomes dead code (every mount now sets `forceTab`), but ripping the tab logic out is a bigger internal refactor. Defer to a follow-up cleanup PR. |
 | `src/tools/index.ts` | Replace `manageScheduler: schedulerPlugin` with `manageCalendar: ..., manageAutomations: ...` |
 | `src/config/toolNames.ts` | Replace `manageScheduler` constant with two |
 | `src/config/roles.ts` | Replace `"manageScheduler"` in every `availablePlugins` with both new names |
