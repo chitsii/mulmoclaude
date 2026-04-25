@@ -113,7 +113,18 @@ describe("buildDailyPassPlan", () => {
     const meta2 = { type: "claude_session_id", id: "claude-abc" };
     await writeFile(sessionFile, `${JSON.stringify(meta1)}\n${JSON.stringify(meta2)}\n`);
 
-    const plan = await buildDailyPassPlan(defaultState(), {
+    // Seed the state with deliberately UNSORTED topics so the
+    // `knownTopics: [...newTopicsSeen].sort()` line in the planner
+    // is observably the cause of the post-condition. Without this
+    // seeding the assertion is vacuous (empty list is trivially
+    // sorted) — Codex iter-2 flagged the original version of this
+    // test for exactly that.
+    const seededState = {
+      ...defaultState(),
+      knownTopics: ["zeta", "alpha", "kappa"],
+    };
+
+    const plan = await buildDailyPassPlan(seededState, {
       workspaceRoot,
       summarize: noopSummarize,
       activeSessionIds: new Set(),
@@ -123,9 +134,9 @@ describe("buildDailyPassPlan", () => {
     assert.equal(plan.dayBuckets.size, 0, "dayBuckets should be empty");
     assert.equal(plan.perSessionExcerpts.size, 0, "perSessionExcerpts should be empty");
     assert.equal(plan.orderedDays.length, 0, "no days to process");
-    // initialNextState must still be normalised so a later run sees
-    // a sorted knownTopics list.
-    assert.deepEqual(plan.initialNextState.knownTopics, []);
+    // initialNextState must be normalised — `knownTopics` arrives
+    // unsorted (zeta/alpha/kappa) and must come back sorted.
+    assert.deepEqual(plan.initialNextState.knownTopics, ["alpha", "kappa", "zeta"]);
     // The dirty session must still be tracked in dirtyMetaById so
     // anything downstream could (in principle) mark it processed.
     assert.ok(plan.dirtyMetaById.has(sessionId), "metadata-only session is still tracked as dirty");
