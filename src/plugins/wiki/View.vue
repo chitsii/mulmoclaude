@@ -550,12 +550,16 @@ async function persistWikiPage(pageName: string, newContent: string, generation:
   if (currentSlug() !== pageName) return;
 
   if (!response.ok) {
-    // Break the chain so subsequent queued saves observe a stale
-    // generation and skip. Refresh resets local state to the
-    // canonical server content; navError stays visible.
-    saveQueueGeneration += 1;
     navError.value = response.status === 0 ? response.error : `Wiki save failed (${response.status}): ${response.error}`;
+    // Refresh resets local state to the canonical server content.
+    // The generation bump must come AFTER refresh completes — clicks
+    // arriving WHILE refresh is in flight capture the pre-bump
+    // generation; bumping post-refresh invalidates them too. Bumping
+    // pre-refresh would let those during-refresh clicks slip through
+    // (they'd capture the new gen and persist a toggle computed
+    // against the not-yet-reset DOM).
     await refresh();
+    saveQueueGeneration += 1;
     return;
   }
   // Successful save — clear any stale error from a prior click.
