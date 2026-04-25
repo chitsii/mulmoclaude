@@ -15,16 +15,26 @@
 //    (which is also used by wiki/View.vue, where this PR doesn't yet
 //    enable interactive tasks).
 
-// Matches a GFM task-list marker at the start of a list line.
+// Matches a GFM task-list marker at the start of a list line. The
+// `prefix` group absorbs leading whitespace plus any blockquote
+// markers (`>`, possibly nested), so:
 //   - [ ] foo
 //   * [x] bar
 //   1. [ ] baz
-// Captures: indent, bullet, separator, mark.
-const TASK_LINE = /^(\s*)([-*+]|\d+\.)(\s+)\[([ xX])\]/;
+//   > - [ ] quoted
+//   > > - [ ] nested-quoted
+// all match. `marked` renders all of these as a real task checkbox,
+// so they need to be counted (and writable) by the index walker.
+//
+// Captures: prefix (indent + any `>` chains), bullet, separator, mark.
+const TASK_LINE = /^(\s*(?:>\s*)*)([-*+]|\d+\.)(\s+)\[([ xX])\]/;
 
-// Fenced code block opener/closer. ``` and ~~~ both legal in GFM; the
-// closing fence must use the same marker as the opener.
-const FENCE_LINE = /^(\s*)(```+|~~~+)/;
+// Fenced code block opener/closer. CommonMark allows fences to be
+// indented up to 3 spaces; ≥ 4 leading spaces makes the line literal
+// content of an indented code block, so we must NOT treat that as a
+// fence — otherwise the index-counter drifts. ``` and ~~~ are both
+// legal; the closing fence must use the same character as the opener.
+const FENCE_LINE = /^( {0,3})(`{3,}|~{3,})/;
 
 // Mutable state for the line walker. Pulled out so the main toggle
 // function reads as a flat loop rather than a state-machine swamp.
@@ -43,23 +53,31 @@ function stepFence(line: string, state: FenceState): boolean {
     if (!state.inFence) {
       state.inFence = true;
       state.marker = marker;
-    } else if (state.marker && marker.startsWith(state.marker[0])) {
-      // Closing fence must use the same marker character as the
-      // opener and be at least as long, per CommonMark.
+      return true;
+    }
+    // Closer must (a) use the same character as the opener and
+    // (b) be at least as long. Per CommonMark — a 3-backtick line
+    // does not close a 4-backtick fence; the inner line is content.
+    if (state.marker && marker[0] === state.marker[0] && marker.length >= state.marker.length) {
       state.inFence = false;
       state.marker = null;
+      return true;
     }
+    // A fence-shaped line that doesn't satisfy the closer rule is
+    // still inside the open fence — skip it like any other content.
     return true;
   }
   return state.inFence;
 }
 
 // Apply the [ ]/[x] flip captured by `TASK_LINE` and rebuild the line
-// with the rest of the original text intact.
+// with the rest of the original text intact. `prefix` includes any
+// indentation plus blockquote markers so quoted tasks like
+// `> - [ ] foo` round-trip cleanly.
 function flipMark(line: string, match: RegExpMatchArray): string {
-  const [whole, indent, bullet, sep, mark] = match;
+  const [whole, prefix, bullet, sep, mark] = match;
   const flipped = mark === " " ? "x" : " ";
-  return `${indent}${bullet}${sep}[${flipped}]` + line.slice(whole.length);
+  return `${prefix}${bullet}${sep}[${flipped}]` + line.slice(whole.length);
 }
 
 /** Toggle the n-th task-list checkbox in `source`. Returns the new
@@ -67,6 +85,17 @@ function flipMark(line: string, match: RegExpMatchArray): string {
  *  line isn't actually a task line (defensive against source/DOM
  *  drift). Indexing matches `marked`'s render order: top-down,
  *  document order, skipping content inside fenced code blocks.
+ *
+ *  Known limitation: 4-space *indented* code blocks (the alternative
+ *  to fenced) aren't tracked, so a `    - [ ] foo` line written as
+ *  literal code inside an indented block would be counted as a task
+ *  even though `marked` renders it verbatim. Full CommonMark indented-
+ *  code-block detection is context-dependent (needs blank-line
+ *  history, list-continuation column, etc.); the practical workaround
+ *  is to use fences for code samples that contain task syntax. The
+ *  click handler short-circuits via the `null` return when the source
+ *  and DOM index lists disagree, so the worst case is a no-op click,
+ *  not data corruption.
  */
 export function toggleTaskAt(source: string, taskIndex: number): string | null {
   if (!Number.isInteger(taskIndex) || taskIndex < 0) return null;

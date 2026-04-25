@@ -76,6 +76,56 @@ describe("toggleTaskAt", () => {
     assert.equal(toggleTaskAt("- [ ] x", 0), "- [x] x");
     assert.equal(toggleTaskAt("- [ ] x\n", 0), "- [x] x\n");
   });
+
+  // ── Blockquoted tasks ─────────────────────────────────────────
+  // marked renders these as real task checkboxes; the index walker
+  // must count them so DOM and source stay aligned.
+
+  it("toggles a task inside a single-level blockquote", () => {
+    assert.equal(toggleTaskAt("> - [ ] quoted\n", 0), "> - [x] quoted\n");
+  });
+
+  it("toggles a task inside a nested blockquote", () => {
+    assert.equal(toggleTaskAt("> > - [ ] nested\n", 0), "> > - [x] nested\n");
+  });
+
+  it("counts blockquoted tasks alongside top-level tasks", () => {
+    const markdown = "- [ ] top-0\n> - [ ] quoted-1\n- [ ] top-2\n";
+    assert.equal(toggleTaskAt(markdown, 1), "- [ ] top-0\n> - [x] quoted-1\n- [ ] top-2\n");
+    assert.equal(toggleTaskAt(markdown, 2), "- [ ] top-0\n> - [ ] quoted-1\n- [x] top-2\n");
+  });
+
+  it("handles indented blockquote prefixes", () => {
+    assert.equal(toggleTaskAt("   > - [ ] indented quote\n", 0), "   > - [x] indented quote\n");
+  });
+
+  // ── Fence indent / length corner cases ────────────────────────
+
+  it("does NOT treat a 4-space-indented ``` as a fence opener", () => {
+    // CommonMark allows fences indented up to 3 spaces; ≥ 4 is
+    // literal content of an indented code block. Verified by the
+    // top-level task matching at index 0 — if the 4-space ``` had
+    // (incorrectly) opened a fence, the task counter would never
+    // reach the real task on the bottom line.
+    const markdown = "    ```\n- [ ] real\n    ```\n";
+    assert.equal(toggleTaskAt(markdown, 0), "    ```\n- [x] real\n    ```\n");
+  });
+
+  it("a shorter closer does NOT close a longer opener", () => {
+    // ```` (4 backticks) opens; ``` (3 backticks) is too short to
+    // close per CommonMark — the closer must be ≥ opener length.
+    const markdown = ["````", "- [ ] inside", "```", "- [x] still-inside", "````", "- [ ] outside"].join("\n");
+    const out = toggleTaskAt(markdown, 0);
+    assert.equal(out, ["````", "- [ ] inside", "```", "- [x] still-inside", "````", "- [x] outside"].join("\n"));
+  });
+
+  it("a longer closer DOES close a shorter opener", () => {
+    // ``` (3) opens; ```` (4 ≥ 3) closes. Then a top-level task at
+    // the bottom is index 0.
+    const markdown = ["```", "- [ ] inside", "````", "- [ ] outside"].join("\n");
+    const out = toggleTaskAt(markdown, 0);
+    assert.equal(out, ["```", "- [ ] inside", "````", "- [x] outside"].join("\n"));
+  });
 });
 
 describe("makeTasksInteractive", () => {

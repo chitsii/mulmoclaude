@@ -254,20 +254,26 @@ async function applyMarkdown() {
 let taskPersistChain: Promise<unknown> = Promise.resolve();
 
 async function persistTaskMarkdown(relativePath: string, markdown: string): Promise<void> {
+  // Bail if the user navigated to a different result while this PUT
+  // was queued — the snapshot belongs to a document that's no longer
+  // on screen, and persisting it would clobber unrelated state.
+  if (props.selectedResult.data?.markdown !== relativePath) return;
+
   const result = await apiPut<unknown>(API_ROUTES.plugins.updateMarkdown, {
     relativePath,
     markdown,
   });
   if (!result.ok) {
     saveError.value = result.error;
-    // The optimistic local update no longer matches the server. Pull
-    // the canonical content back so the next click computes against
-    // the right source.
-    void fetchMarkdownContent();
-  } else {
-    // Clear any stale error from a prior failed click.
-    saveError.value = null;
+    // Refetch synchronously inside the chain so subsequent queued
+    // clicks observe the canonical (server-side) markdown before
+    // computing their own toggle. Detaching this with `void` could
+    // let the refetch land after a newer click already wrote.
+    await fetchMarkdownContent();
+    return;
   }
+  // Clear any stale error from a prior failed click.
+  saveError.value = null;
 }
 
 function onMarkdownClick(event: MouseEvent): void {
