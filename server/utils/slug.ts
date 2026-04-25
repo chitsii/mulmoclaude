@@ -71,19 +71,24 @@ export function slugify(title: string, defaultSlug = "page", maxLength = DEFAULT
 // Shared between server (`todosColumnsHandlers#uniqueId`) and the
 // Playwright mock (`e2e/tests/todo-columns.spec.ts`) so the e2e
 // dispatcher mirrors server behavior at the truncation boundary.
+//
+// Precondition: `base` must already be a canonical slug (typically
+// the output of `slugify`) — non-empty and containing at least one
+// non-hyphen character. The helper short-circuits on inputs that
+// can't produce a valid disambiguation (empty or all-hyphen) and
+// returns them unchanged so it never *fabricates* a new invalid
+// slug from invalid input. Codex iter-4 #732.
 export function disambiguateSlug(base: string, existingIds: ReadonlySet<string>): string {
+  if (!hasNonHyphenChar(base)) return base;
   if (!existingIds.has(base)) return base;
   const compose = (suffix: number): string => {
     const tail = `-${suffix}`;
     const room = DEFAULT_MAX_LENGTH - tail.length;
     // Pick the cut: full base when it already fits, room-truncated
     // otherwise. Then strip any trailing hyphen at that cut so the
-    // join never yields `--` (which `isValidSlug` rejects). The
-    // strip applies to BOTH paths — current callers (slugify
-    // producers) never pass a trailing-hyphen base, but the helper
-    // is exported so future callers must not be able to coerce it
-    // into an invalid slug. Manual loop instead of a regex —
-    // `sonarjs/slow-regex` flags `-+$` even on this bounded input.
+    // join never yields `--` (which `isValidSlug` rejects). Manual
+    // loop instead of a regex — `sonarjs/slow-regex` flags `-+$`
+    // even on this bounded input.
     const cut = base.length <= room ? base.length : room;
     let end = cut;
     while (end > 0 && base[end - 1] === "-") end--;
@@ -92,4 +97,11 @@ export function disambiguateSlug(base: string, existingIds: ReadonlySet<string>)
   let suffix = 2;
   while (existingIds.has(compose(suffix))) suffix++;
   return compose(suffix);
+}
+
+function hasNonHyphenChar(input: string): boolean {
+  for (let i = 0; i < input.length; i++) {
+    if (input[i] !== "-") return true;
+  }
+  return false;
 }

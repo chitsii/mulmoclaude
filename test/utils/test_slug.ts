@@ -236,6 +236,24 @@ describe("disambiguateSlug", () => {
     assert.ok(isValidSlug(result));
   });
 
+  it("short-circuits on an empty base instead of fabricating '-2' (Codex iter-4 #732)", () => {
+    // Precondition: base must be a canonical slug. Empty and all-
+    // hyphen inputs can't produce a valid disambiguation, so the
+    // helper returns them unchanged rather than emitting an invalid
+    // leading-hyphen slug like "-2". Production callers (slugify
+    // producers) never pass these, but the contract guarantees that
+    // invalid base in => invalid base out (never invalid base in =>
+    // *new* invalid slug out).
+    assert.equal(disambiguateSlug("", new Set([""])), "");
+    assert.equal(disambiguateSlug("", new Set()), "");
+  });
+
+  it("short-circuits on all-hyphen bases ('-', '--', '---')", () => {
+    assert.equal(disambiguateSlug("-", new Set(["-"])), "-");
+    assert.equal(disambiguateSlug("--", new Set(["--"])), "--");
+    assert.equal(disambiguateSlug("---", new Set()), "---");
+  });
+
   it("strips a trailing hyphen at exactly room-size (no overflow, no early return shortcut)", () => {
     // Base length === room (118 for `-2`); the cut point falls exactly
     // at the trailing hyphen. Both paths (overflow / no-overflow) must
