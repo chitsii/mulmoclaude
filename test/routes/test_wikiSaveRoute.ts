@@ -7,7 +7,7 @@
 // sandbox; files created during the tests are cleaned in
 // `after()`.
 
-import { after, before, describe, it } from "node:test";
+import { after, before, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { mkdirSync } from "fs";
 import { mkdtemp, readFile, rm, writeFile } from "fs/promises";
@@ -97,6 +97,19 @@ after(async () => {
 });
 
 describe("POST /api/wiki — action: save", () => {
+  // Reset the module-level page-index cache before every test.
+  // The cache invalidates on `pagesDir` mtime change, but Windows
+  // NTFS has ~10–15 ms mtime granularity — two file writes within
+  // that window leave the cache pinned to the first state, so a
+  // page created in test N can be invisible to test N+1's
+  // resolvePagePath. Linux/macOS happen to land on different ms
+  // each time so the bug only surfaces on Windows CI runners.
+  // (Pre-existing from #775 / PR #795; surfaced on PR #801.)
+  beforeEach(async () => {
+    const { __resetPageIndexCache } = await import("../../server/api/routes/wiki/pageIndex.js");
+    __resetPageIndexCache();
+  });
+
   it("overwrites an existing page atomically", async () => {
     const slug = "test-page";
     const filePath = path.join(pagesDir, `${slug}.md`);

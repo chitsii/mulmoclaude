@@ -6,6 +6,45 @@
 //
 // All failures are caught and logged here; nothing ever bubbles
 // back to the request handler.
+//
+// ── Architecture (#799) ──────────────────────────────────────────
+//
+// Two top-level passes hang off `maybeRunJournal()`, each with its
+// own cadence and its own state-machine slot. Memory extraction is
+// a sub-step of the daily pass, not a peer pipeline.
+//
+//   session-end
+//     │
+//     └─> maybeRunJournal()  [this file]
+//           │   gates by interval, holds the lock, traps errors
+//           │
+//           ├─> runDailyPass         (≥ 1 h since last)
+//           │     dailyPass.ts       finds new/changed sessions via
+//           │                        mtime, buckets events by local
+//           │                        date, calls `claude` CLI once
+//           │                        per day, writes daily summaries
+//           │                        + topics + state checkpoint.
+//           │     │
+//           │     │  early-returns when no dirty sessions; otherwise
+//           │     │  at the end of the per-day loop:
+//           │     │
+//           │     └─> extractAndAppendMemory
+//           │           memoryExtractor.ts  scans the day's new
+//           │                              daily file for memory-
+//           │                              worthy facts, appends to
+//           │                              the user's ~/.claude/
+//           │                              memory.md.
+//           │
+//           └─> runOptimizationPass  (≥ 7 d since last)
+//                 optimizationPass.ts reads existing topics, asks
+//                                    the LLM to merge duplicates /
+//                                    archive stale ones, writes back
+//                                    and updates archive/.
+//
+// _index.md is rebuilt at the end of every successful pass so the
+// UI's directory listing reflects whatever was just written.
+//
+// Audit + roadmap: `plans/audit-journal-subsystem.md` (#799).
 
 import { workspacePath as defaultWorkspacePath } from "../workspace.js";
 import {
