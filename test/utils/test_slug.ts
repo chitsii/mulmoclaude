@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "crypto";
-import { hasNonAscii, hashSlug, isValidSlug, slugify } from "../../server/utils/slug.js";
+import { DEFAULT_MAX_LENGTH, disambiguateSlug, hasNonAscii, hashSlug, isValidSlug, slugify } from "../../server/utils/slug.js";
 
 const HASH_LEN = 16;
 
@@ -180,5 +180,55 @@ describe("isValidSlug", () => {
     assert.equal(isValidSlug(42 as any), false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     assert.equal(isValidSlug(undefined as any), false);
+  });
+});
+
+describe("disambiguateSlug", () => {
+  it("returns the base unchanged when no collision exists", () => {
+    assert.equal(disambiguateSlug("review", new Set()), "review");
+    assert.equal(disambiguateSlug("review", new Set(["other", "another"])), "review");
+  });
+
+  it("appends -2 on the first collision", () => {
+    assert.equal(disambiguateSlug("review", new Set(["review"])), "review-2");
+  });
+
+  it("walks forward through -3, -4, ...", () => {
+    assert.equal(disambiguateSlug("review", new Set(["review", "review-2", "review-3"])), "review-4");
+  });
+
+  it("preserves a hyphen-prefix base (no double hyphen)", () => {
+    // base ends with non-hyphen; suffix join is single hyphen.
+    const result = disambiguateSlug("doing-abc", new Set(["doing-abc"]));
+    assert.equal(result, "doing-abc-2");
+    assert.ok(isValidSlug(result));
+  });
+
+  it("truncates when base + suffix would exceed DEFAULT_MAX_LENGTH (Codex iter-1 #732)", () => {
+    // 120-char base + "-2" naively yields 122 chars, failing isValidSlug.
+    const base = "a".repeat(DEFAULT_MAX_LENGTH);
+    const result = disambiguateSlug(base, new Set([base]));
+    assert.ok(result.length <= DEFAULT_MAX_LENGTH, `expected length <= ${DEFAULT_MAX_LENGTH}, got ${result.length}`);
+    assert.ok(isValidSlug(result), `expected valid slug, got "${result}"`);
+    assert.ok(result.endsWith("-2"));
+  });
+
+  it("strips a trailing hyphen revealed by truncation so the join doesn't yield '--'", () => {
+    // 120-char base where slice(0, 118) ends with "-"; without the
+    // trailing-hyphen trim the disambiguation would emit "...--2".
+    const tricky = "x".repeat(117) + "-aa";
+    const result = disambiguateSlug(tricky, new Set([tricky]));
+    assert.equal(result.indexOf("--"), -1, `must not contain '--', got "${result}"`);
+    assert.ok(isValidSlug(result));
+    assert.ok(result.endsWith("-2"));
+  });
+
+  it("walks the truncated suffix through -3, -4 too", () => {
+    const base = "a".repeat(DEFAULT_MAX_LENGTH);
+    const existing = new Set([base, disambiguateSlug(base, new Set([base])), disambiguateSlug(base, new Set([base, disambiguateSlug(base, new Set([base]))]))]);
+    const result = disambiguateSlug(base, existing);
+    assert.ok(result.length <= DEFAULT_MAX_LENGTH);
+    assert.ok(isValidSlug(result));
+    assert.ok(result.endsWith("-4"), `expected -4 suffix, got "${result}"`);
   });
 });

@@ -61,3 +61,29 @@ export function slugify(title: string, defaultSlug = "page", maxLength = DEFAULT
   }
   return hash;
 }
+
+// Disambiguate `base` against `existingIds` by appending `-2`, `-3`, …
+// until a free id is found. Truncates `base` (stripping any trailing
+// hyphen so the join never produces `--`) so the composite stays
+// within `DEFAULT_MAX_LENGTH` — required because a 120-char base + "-2"
+// would otherwise produce a 122-char id that fails `isValidSlug`.
+//
+// Shared between server (`todosColumnsHandlers#uniqueId`) and the
+// Playwright mock (`e2e/tests/todo-columns.spec.ts`) so the e2e
+// dispatcher mirrors server behavior at the truncation boundary.
+export function disambiguateSlug(base: string, existingIds: ReadonlySet<string>): string {
+  if (!existingIds.has(base)) return base;
+  const compose = (suffix: number): string => {
+    const tail = `-${suffix}`;
+    const room = DEFAULT_MAX_LENGTH - tail.length;
+    if (base.length <= room) return `${base}${tail}`;
+    // Manual loop instead of a regex — `sonarjs/slow-regex` flags
+    // `-+$` even though the input here is already <= DEFAULT_MAX_LENGTH.
+    let end = room;
+    while (end > 0 && base[end - 1] === "-") end--;
+    return `${base.slice(0, end)}${tail}`;
+  };
+  let suffix = 2;
+  while (existingIds.has(compose(suffix))) suffix++;
+  return compose(suffix);
+}

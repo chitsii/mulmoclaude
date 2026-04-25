@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { mockAllApis } from "../fixtures/api";
 import { mockSlugifyColumnId, setupMutableTodoMocks } from "../fixtures/todos-mutable";
+import { disambiguateSlug } from "../../server/utils/slug";
 import { WORKSPACE_FILES } from "../../src/config/workspacePaths";
 
 import { ONE_SECOND_MS } from "../../server/utils/time.ts";
@@ -14,11 +15,11 @@ async function setupTodoMocks(page: Page): Promise<void> {
         const label = typeof body.label === "string" && body.label.length > 0 ? body.label : "New Column";
         const baseId = mockSlugifyColumnId(label);
         const existing = new Set(state.columns.map((col) => col.id));
-        let newId = baseId;
-        let num = 2;
-        // Hyphen separator post #732 — must mirror the server's
-        // `uniqueId()` in todosColumnsHandlers.ts.
-        while (existing.has(newId)) newId = `${baseId}-${num++}`;
+        // Use the shared helper so the mock mirrors the server's
+        // `uniqueId()` exactly — including the truncation it does
+        // when a 120-char base would otherwise overflow the cap
+        // (Codex iter-2 #732).
+        const newId = disambiguateSlug(baseId, existing);
         return {
           columns: [...state.columns, { id: newId, label }],
         };
