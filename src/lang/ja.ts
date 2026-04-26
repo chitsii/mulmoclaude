@@ -478,6 +478,7 @@ const jaMessages = {
   pluginManageSource: {
     titlePlaceholder: "タイトル（省略可）",
     heading: "情報ソース",
+    chatPlaceholder: "情報ソースについて質問…",
     sourceCount: "{count} 件",
     addButton: "追加",
     rebuildNow: "今すぐ再構築",

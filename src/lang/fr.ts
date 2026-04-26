@@ -474,6 +474,7 @@ const frMessages = {
   pluginManageSource: {
     titlePlaceholder: "Titre (facultatif)",
     heading: "Sources d'information",
+    chatPlaceholder: "Posez une question sur vos sources d'information…",
     sourceCount: "{count} source | {count} sources",
     addButton: "Ajouter",
     rebuildNow: "Reconstruire maintenant",

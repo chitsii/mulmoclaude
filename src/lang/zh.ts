@@ -474,6 +474,7 @@ const zhMessages = {
   pluginManageSource: {
     titlePlaceholder: "标题(可选)",
     heading: "信息源",
+    chatPlaceholder: "询问关于您的信息源…",
     sourceCount: "{count} 个信息源",
     addButton: "添加",
     rebuildNow: "立即重建",

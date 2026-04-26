@@ -475,6 +475,7 @@ const deMessages = {
   pluginManageSource: {
     titlePlaceholder: "Titel (optional)",
     heading: "Informationsquellen",
+    chatPlaceholder: "Fragen Sie zu Ihren Informationsquellen…",
     sourceCount: "{count} Quelle | {count} Quellen",
     addButton: "Hinzufügen",
     rebuildNow: "Jetzt neu aufbauen",

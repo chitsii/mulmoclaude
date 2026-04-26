@@ -478,6 +478,7 @@ const koMessages = {
   pluginManageSource: {
     titlePlaceholder: "제목 (선택)",
     heading: "정보 소스",
+    chatPlaceholder: "정보 소스에 대해 질문하기…",
     sourceCount: "{count}개 소스",
     addButton: "추가",
     rebuildNow: "지금 재빌드",

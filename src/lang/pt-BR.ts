@@ -473,6 +473,7 @@ const ptBRMessages = {
   pluginManageSource: {
     titlePlaceholder: "Título (opcional)",
     heading: "Fontes de informação",
+    chatPlaceholder: "Pergunte sobre suas fontes de informação…",
     sourceCount: "{count} fonte | {count} fontes",
     addButton: "Adicionar",
     rebuildNow: "Reconstruir agora",

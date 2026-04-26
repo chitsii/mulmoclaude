@@ -238,6 +238,10 @@ Two layouts share `<WikiView>`: the **index** (page list) and a **single page** 
 │   [sources-preset-<id>]                                            │
 │                                                                    │
 │ Last rebuild summary at the bottom: [sources-rebuild-summary]      │
+│                                                                    │
+│ Per-page chat composer (page mode only): [sources-page-chat-input] │
+│   [sources-page-chat-send] — spawns a fresh chat with a prepended  │
+│   pointer to config/helps/sources.md                               │
 └────────────────────────────────────────────────────────────────────┘
 ```
 

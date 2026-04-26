@@ -252,7 +252,6 @@ import { extractImageData } from "./utils/tools/result";
 import { buildAgentRequestBody, postAgentRun } from "./utils/agent/request";
 import { applyAgentEvent, type AgentEventContext } from "./utils/agent/eventDispatch";
 import { pushErrorMessage, beginUserTurn, updateResult } from "./utils/session/sessionHelpers";
-import { maybeSeedRoleDefault } from "./utils/session/seedRoleDefault";
 import { roleName, roleIcon } from "./utils/role/icon";
 import { createEmptySession } from "./utils/session/sessionFactory";
 import { buildLoadedSession, parseSessionEntries } from "./utils/session/sessionEntries";
@@ -654,8 +653,7 @@ function onRoleChange(roleId: string) {
   // is preserved inside SessionHeaderControls (useCurrentRole) and
   // future "+" clicks will read it from there.
   if (!isChatPage.value) return;
-  const session = createNewSession(roleId);
-  maybeSeedRoleDefault(session);
+  createNewSession(roleId);
 }
 
 // Land on /chat with no specific session in mind (initial load or

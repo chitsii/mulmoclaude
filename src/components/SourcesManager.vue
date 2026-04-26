@@ -257,6 +257,18 @@
         {{ t("pluginManageSource.archiveErrorsSuffix", { count: lastRebuild.archiveErrors.length }) }}
       </span>
     </div>
+
+    <!-- Per-page chat composer (standalone /sources route only).
+         Sending spawns a fresh chat with a prepended pointer to
+         config/helps/sources.md so the agent loads source-management
+         conventions before answering. Hidden in plugin mode where
+         the enclosing chat already has its own composer. -->
+    <PageChatComposer
+      v-if="mode === 'page'"
+      :placeholder="t('pluginManageSource.chatPlaceholder')"
+      :prepend-text="`Before answering, read config/helps/sources.md for source-management conventions, then handle the request below using the manageSource tool when appropriate.`"
+      test-id-prefix="sources-page-chat"
+    />
   </div>
 </template>
 
@@ -270,6 +282,7 @@ import { apiGet, apiPost, apiDelete } from "../utils/api";
 import { API_ROUTES } from "../config/apiRoutes";
 import { SOURCE_FILTER_KEYS, countByFilter, matchesSourceFilter, type SourceFilterKey } from "../utils/sources/filter";
 import FilterChip from "./FilterChip.vue";
+import PageChatComposer from "./PageChatComposer.vue";
 
 const { t } = useI18n();
 
