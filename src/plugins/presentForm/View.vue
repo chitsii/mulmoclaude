@@ -589,11 +589,14 @@ function handleSubmit(): void {
 
   // Build a markdown bullet list of `- {label}: {value}` lines so the
   // chat history reads naturally for a human while still being trivial
-  // for the LLM to parse. Empty values become "(none)".
+  // for the LLM to parse. Empty values become "(none)". Titles, labels,
+  // and choice strings are passed through singleLine() to strip any
+  // newlines they might contain — without that, a label like
+  // "Address (street\nand number)" would shatter the bullet structure.
   const lines: string[] = [];
-  if (formData.value?.title) lines.push(`**${formData.value.title}**`, "");
+  if (formData.value?.title) lines.push(`**${singleLine(formData.value.title)}**`, "");
   formData.value?.fields.forEach((field) => {
-    lines.push(`- ${field.label}: ${renderValue(field, formValues.value[field.id])}`);
+    lines.push(`- ${singleLine(field.label)}: ${renderValue(field, formValues.value[field.id])}`);
   });
 
   submitted.value = true;
@@ -609,18 +612,33 @@ function indentContinuation(text: string): string {
   return text.replace(/\n/g, "\n  ");
 }
 
+// Collapse any newline (and surrounding whitespace) into a single
+// space. Used on titles, labels, and choice strings (LLM-authored
+// fields) so they can't smuggle a newline into the markdown bullet
+// structure and reshape the payload. Free-form user input
+// (text/textarea values) uses indentContinuation instead — it
+// preserves multi-line values. Implemented via split-trim-join (not a
+// global regex) to avoid sonarjs's slow-regex flag on `\s*\n\s*`.
+function singleLine(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0)
+    .join(" ");
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function renderValue(field: FormField, value: any): string {
   const empty = "(none)";
   if (field.type === "radio" || field.type === "dropdown") {
-    return value !== null && value !== undefined ? field.choices[value] : empty;
+    return value !== null && value !== undefined ? singleLine(field.choices[value]) : empty;
   }
   // Checkbox values render as a nested bullet sublist rather than a
   // comma-joined string. Comma-joining is ambiguous when a choice label
   // itself contains a comma; the sublist is unambiguous and survives
   // round-trip parsing.
   if (field.type === "checkbox") {
-    const items: string[] = (value || []).map((idx: number) => field.choices[idx]);
+    const items: string[] = (value || []).map((idx: number) => singleLine(field.choices[idx]));
     if (items.length === 0) return empty;
     return "\n  - " + items.join("\n  - ");
   }
