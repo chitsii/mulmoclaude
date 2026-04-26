@@ -45,11 +45,10 @@
       </div>
     </div>
 
-    <!-- Shared Thinking indicator (matches the chat sidebar). Only
-         renders while a generation is in flight; the dot animation +
-         status text reassures the user that the long-running movie /
-         beat / character / audio job is still alive. -->
-    <ThinkingIndicator v-if="busyStatus" :status-message="busyStatus" class="px-6 border-b border-gray-100 shrink-0" />
+    <!-- Shared Thinking indicator. TEMPORARY: always-on to verify
+         placement; revert to v-if="busyStatus" once the user
+         confirms the location is correct. -->
+    <ThinkingIndicator :status-message="busyStatus ?? 'DEBUG: always-on placement check'" class="px-6 border-b border-gray-100 shrink-0 bg-yellow-50" />
 
     <!-- Characters section -->
     <div v-if="characterKeys.length > 0" class="border-b border-gray-100 shrink-0 px-4 py-3">
