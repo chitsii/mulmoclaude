@@ -375,6 +375,7 @@ const esMessages = {
     moreCount: "+{count} más",
     previewIcon: "📅",
     previewUpcoming: "{count} próximos",
+    previewAutomations: "{count} automatización | {count} automatizaciones",
     previewMore: "+ {count} más…",
   },
   pluginSchedulerTasks: {

@@ -385,6 +385,7 @@ const enMessages = {
     moreCount: "+{count} more",
     previewIcon: "📅",
     previewUpcoming: "{count} upcoming",
+    previewAutomations: "{count} automation | {count} automations",
     previewMore: "+ {count} more…",
   },
   pluginSchedulerTasks: {

@@ -371,6 +371,7 @@ const frMessages = {
     moreCount: "+{count} de plus",
     previewIcon: "📅",
     previewUpcoming: "{count} à venir",
+    previewAutomations: "{count} automatisation | {count} automatisations",
     previewMore: "+ {count} de plus…",
   },
   pluginSchedulerTasks: {

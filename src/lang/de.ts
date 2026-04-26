@@ -370,6 +370,7 @@ const deMessages = {
     moreCount: "+{count} weitere",
     previewIcon: "📅",
     previewUpcoming: "{count} anstehend",
+    previewAutomations: "{count} Automatisierung | {count} Automatisierungen",
     previewMore: "+ {count} weitere…",
   },
   pluginSchedulerTasks: {

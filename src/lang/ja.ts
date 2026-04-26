@@ -366,6 +366,7 @@ const jaMessages = {
     moreCount: "他 {count} 件",
     previewIcon: "📅",
     previewUpcoming: "今後 {count} 件",
+    previewAutomations: "オートメーション {count} 件",
     previewMore: "+ {count} 件…",
   },
   pluginSchedulerTasks: {
