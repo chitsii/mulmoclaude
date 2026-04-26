@@ -61,14 +61,26 @@ export default defineConfig({
   },
   server: {
     host: true,
+    allowedHosts: ['.ts.net'],
     proxy: {
+      // Long-lived connections — POST /api/agent returns immediately
+      // but the socket.io pub/sub on /ws is the actual result channel.
+      // Vite/http-proxy-middleware defaults to a 2-min idle timeout
+      // which kills the WS upgrade and produces ECONNRESET storms
+      // whenever a tool call (or paused agent) goes quiet for >2 min.
+      // Disable both timeouts so the connection lives as long as the
+      // upstream server keeps it.
       '/api': {
         target: 'http://localhost:3001',
-        changeOrigin: true
+        changeOrigin: true,
+        timeout: 0,
+        proxyTimeout: 0,
       },
       '/ws': {
         target: 'ws://localhost:3001',
-        ws: true
+        ws: true,
+        timeout: 0,
+        proxyTimeout: 0,
       }
     }
   }
