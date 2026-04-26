@@ -36,6 +36,36 @@ A quick visual reference so chat instructions about UI ("the bell at the top rig
 
 Sidebar visibility toggles via the canvas-layout state. When closed, the main pane is full-width.
 
+## `<SessionSidebar>` — left column on every chat session (single layout)
+
+The `w-80` left column inside the chat page (and any other view that mounts it). Despite the historical name `ToolResultsPanel` (renamed in #842), it owns the whole left chrome of an active session: role header, layout / tool-call-history toggles, the tool-result preview list, and the run-time "thinking" indicator.
+
+```
+┌─<SessionSidebar>──────────────────────────────┐
+│ ┌─[sidebar-role-header]─────────────────────┐ │
+│ │ ⭐ General                       🔧  ▦/▥  │ │  ← role icon + name
+│ │                                            │ │     toggle right sidebar (build icon)
+│ │                                            │ │     <CanvasViewToggle> single/stack
+│ └────────────────────────────────────────────┘ │
+│ ┌─[tool-results-scroll]────────────────────┐   │  ← scrollable list,
+│ │ ┌─card (selected: ring-blue-500)──────┐ │   │     click → emit("select", uuid)
+│ │ │ source •          • smart-time       │ │   │
+│ │ │ [<plugin>.previewComponent]         │ │   │
+│ │ └──────────────────────────────────────┘ │   │
+│ │ ┌─card──────────────────────────────────┐ │   │
+│ │ │ ...                                   │ │   │
+│ │ └──────────────────────────────────────┘ │   │
+│ └──────────────────────────────────────────┘   │
+│ ┌─Thinking indicator (only while isRunning)─┐  │  ← role="status" aria-live="polite"
+│ │ status • • • • [run-elapsed] (≥1s)        │  │
+│ │   • pendingToolName · 2.3s                │  │
+│ │   • pendingToolName · 0.8s                │  │
+│ └────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────┘
+```
+
+In **Stack layout** this sidebar isn't rendered; the same data flows through `<StackView>` which inlines result bodies into the main column. Only single layout shows the preview list.
+
 ## NotificationBell expanded
 
 ```
@@ -239,22 +269,25 @@ Two layouts share `<WikiView>`: the **index** (page list) and a **single page** 
 ┌─[<FilesView>]──────────────────────────────────────────────────────────┐
 │ ┌─Tree pane──────────┐ ┌─Preview pane (route param: pathMatch)───────┐ │
 │ │ ▶ artifacts/       │ │                                             │ │
-│ │ ▼ config/          │ │  Selected file: data/sources/foo.md         │ │
-│ │   • interests.json │ │                                             │ │
-│ │   • mcp.json       │ │  ┌─Preview rendered by FileContentRenderer┐ │ │
-│ │   • settings.json  │ │  │                                        │ │ │
-│ │ ▶ conversations/   │ │  │  • markdown → marked + Vue             │ │ │
-│ │ ▶ data/            │ │  │  • images → <img>                      │ │ │
-│ │ ▼ data/sources/    │ │  │  • todos JSON → <TodoExplorer>         │ │ │
-│ │   • foo.md   ←sel  │ │  │  • scheduler items.json → <CalendarView>│ │ │
-│ │   • bar.md         │ │  │  • code → text                         │ │ │
-│ │ ...                │ │  │                                        │ │ │
-│ └────────────────────┘ │  └────────────────────────────────────────┘ │ │
-│                        └─────────────────────────────────────────────┘ │
+│ │ ▼ config/          │ │ ┌─[system-file-banner] (#832, optional)───┐ │ │
+│ │   • interests.json │ │ │ ℹ News notification filter profile · 🟢│ │ │
+│ │   • mcp.json       │ │ │   Scores articles for the bell. …       │ │ │
+│ │   • settings.json  │ │ │   Schema: server/.../interests.ts       │ │ │
+│ │ ▶ conversations/   │ │ └─────────────────────────────────────────┘ │ │
+│ │ ▶ data/            │ │                                             │ │
+│ │ ▼ data/sources/    │ │  ┌─Preview rendered by FileContentRenderer┐ │ │
+│ │   • foo.md   ←sel  │ │  │                                        │ │ │
+│ │   • bar.md         │ │  │  • markdown → marked + Vue             │ │ │
+│ │ ...                │ │  │  • images → <img>                      │ │ │
+│ │                    │ │  │  • todos JSON → <TodoExplorer>         │ │ │
+│ │                    │ │  │  • scheduler items.json → <CalendarView>│ │ │
+│ │                    │ │  │  • code → text                         │ │ │
+│ │                    │ │  └────────────────────────────────────────┘ │ │
+│ └────────────────────┘ └─────────────────────────────────────────────┘ │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-The preview pane reuses plugin views — clicking a `config/scheduler/items.json` mounts `<CalendarView>` via `toSchedulerResult` (issue #832 / #833 will add a description banner + Edit button on top of this).
+The preview pane reuses plugin views — clicking a `config/scheduler/items.json` mounts `<CalendarView>` via `toSchedulerResult`. System-managed files (`config/*.json`, `data/wiki/*.md`, `conversations/memory.md`, …) get a `[system-file-banner]` above the body explaining what the file is, who writes it, and whether hand-edits survive (descriptors live in `src/config/systemFileDescriptors.ts`; #832).
 
 ## /skills — workspace skills list
 
