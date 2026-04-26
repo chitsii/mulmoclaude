@@ -189,7 +189,7 @@
       v-if="action === 'page' && content && isStandaloneWikiRoute && currentSlug() !== null"
       :key="currentSlug() ?? ''"
       :placeholder="t('pluginWiki.chatPlaceholder')"
-      :prepend-text="`Before answering, read the wiki page at data/wiki/pages/${currentSlug()}.md.`"
+      :prepend-text="`Before answering, read the wiki page at ${WIKI_PAGES_DIR}/${currentSlug()}.md.`"
       test-id-prefix="wiki-page-chat"
     />
   </div>
@@ -378,8 +378,15 @@ watch(content, async () => {
   if (scrollRef.value) scrollRef.value.scrollTop = 0;
 });
 
+// Workspace-relative wiki dirs. Centralised so future layout shifts
+// (e.g. the prior `wiki/` → `data/wiki/` move) only need to change
+// these two literals — all callers (image-ref rewriter, wiki-link
+// resolver, agent-prompt strings) derive from them.
+const WIKI_PAGES_DIR = "data/wiki/pages";
+const WIKI_DATA_DIR = "data/wiki";
+
 /** Base directory for wiki content, adjusted by the current view. */
-const WIKI_BASE_DIR = computed(() => (action.value === "page" ? "data/wiki/pages" : "data/wiki"));
+const WIKI_BASE_DIR = computed(() => (action.value === "page" ? WIKI_PAGES_DIR : WIKI_DATA_DIR));
 
 const renderedContent = computed(() => {
   if (!content.value) return "";
@@ -473,14 +480,14 @@ const isStandaloneWikiRoute = computed(() => route.name === PAGE_ROUTES.wiki);
 // wiki tooling — and silently produce useless sessions.
 function requestCreatePage() {
   appApi.startNewChat(
-    `Create a wiki page about ${JSON.stringify(title.value)}. Research the topic and write a comprehensive article in data/wiki/pages/.`,
+    `Create a wiki page about ${JSON.stringify(title.value)}. Research the topic and write a comprehensive article in ${WIKI_PAGES_DIR}/.`,
     BUILTIN_ROLE_IDS.general,
   );
 }
 
 function requestUpdatePage() {
   appApi.startNewChat(
-    `Update the existing wiki page about ${JSON.stringify(title.value)}. The page file exists but has no content. Research the topic and write a comprehensive article in data/wiki/pages/.`,
+    `Update the existing wiki page about ${JSON.stringify(title.value)}. The page file exists but has no content. Research the topic and write a comprehensive article in ${WIKI_PAGES_DIR}/.`,
     BUILTIN_ROLE_IDS.general,
   );
 }
