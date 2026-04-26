@@ -37,6 +37,11 @@ describe("isLocalhostOrigin — accepts local variants", () => {
     assert.equal(isLocalhostOrigin("http://[::1]"), true);
     assert.equal(isLocalhostOrigin("http://[::1]:5173"), true);
   });
+
+  it("accepts Tailscale MagicDNS hosts (*.ts.net)", () => {
+    assert.equal(isLocalhostOrigin("http://tower.taila36990.ts.net:5173"), true);
+    assert.equal(isLocalhostOrigin("https://laptop.tail-scale.ts.net"), true);
+  });
 });
 
 describe("isLocalhostOrigin — rejects everything else", () => {
@@ -59,6 +64,15 @@ describe("isLocalhostOrigin — rejects everything else", () => {
     // check. Set membership rejects it.
     assert.equal(isLocalhostOrigin("http://evillocalhost"), false);
     assert.equal(isLocalhostOrigin("http://notlocalhost"), false);
+  });
+
+  it("rejects ts.net lookalikes that don't end with .ts.net", () => {
+    // The Tailscale check is suffix-only so `ts.net.evil.com` and
+    // `fakets.net` must not slip through. URL.hostname compares
+    // the whole string against the suffix.
+    assert.equal(isLocalhostOrigin("http://ts.net.evil.com"), false);
+    assert.equal(isLocalhostOrigin("http://fakets.net"), false);
+    assert.equal(isLocalhostOrigin("http://ts.net"), false);
   });
 
   it("rejects a URL that only contains `localhost` in the path", () => {

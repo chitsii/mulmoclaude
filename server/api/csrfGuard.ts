@@ -36,9 +36,12 @@ const LOCALHOST_HOSTNAMES: ReadonlySet<string> = new Set([
 ]);
 
 // Decide whether an Origin header value points at the same
-// machine. Accepts scheme + hostname + optional port; rejects
-// `null`, empty, malformed, subdomain-lookalikes, non-loopback
-// IPs, and non-HTTP schemes. Exported for test.
+// machine OR an authenticated Tailscale tailnet peer. Tailnet
+// hosts (`*.ts.net` MagicDNS) are reachable only over WireGuard
+// from peers the user has explicitly approved, so the trust
+// boundary is equivalent to localhost for CSRF purposes.
+// Rejects `null`, empty, malformed, non-loopback public IPs,
+// and non-HTTP schemes. Exported for test.
 export function isLocalhostOrigin(origin: string): boolean {
   if (!origin) return false;
   let url: URL;
@@ -47,7 +50,9 @@ export function isLocalhostOrigin(origin: string): boolean {
   } catch {
     return false;
   }
-  return LOCALHOST_HOSTNAMES.has(url.hostname);
+  if (LOCALHOST_HOSTNAMES.has(url.hostname)) return true;
+  if (url.hostname.endsWith(".ts.net")) return true;
+  return false;
 }
 
 // Express middleware. Safe-method requests (GET / HEAD / OPTIONS)
