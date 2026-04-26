@@ -5,6 +5,10 @@ import { mcpTools, isMcpToolEnabled } from "./mcp-tools/index.js";
 import { MCP_PLUGIN_NAMES } from "./plugin-names.js";
 import type { McpServerSpec } from "../system/config.js";
 import { getCurrentToken } from "../api/auth/token.js";
+// Aliased to avoid shadowing the local `env` variable in
+// `collectMcpToolSentinelEnv` below (the no-shadow lint rule
+// flags the import even though scopes don't actually overlap).
+import { env as serverEnv } from "../system/env.js";
 import type { Attachment } from "@mulmobridge/protocol";
 import { isImageMime, isNativeAttachmentMime } from "@mulmobridge/client";
 import { convertAttachment } from "./attachmentConverter.js";
@@ -205,6 +209,13 @@ export function buildCliArgs(params: CliArgsParams): string[] {
     "stream-json",
     "--include-partial-messages",
     "--verbose",
+    // Pin the model. Defaults to claude-opus-4-7 so subscription
+    // users get the most capable Claude out of the box; can be
+    // overridden via the MULMOCLAUDE_MODEL env var (accepts the
+    // same values as `claude --model`, e.g. `sonnet`, `haiku`,
+    // or a full id like `claude-sonnet-4-6`).
+    "--model",
+    serverEnv.agentModel,
     "--system-prompt",
     systemPrompt,
     "--allowedTools",

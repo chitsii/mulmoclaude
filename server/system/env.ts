@@ -68,6 +68,15 @@ export const env = Object.freeze({
   geminiApiKey: process.env.GEMINI_API_KEY,
   xBearerToken: process.env.X_BEARER_TOKEN,
 
+  // Model used for the main agent loop. Passed verbatim to
+  // `claude --model <value>` — accepts aliases (`opus`, `sonnet`,
+  // `haiku`) or full ids (e.g. `claude-opus-4-7`). When unset,
+  // defaults to `claude-opus-4-7` so subscription users get the
+  // most capable model out of the box. Note: the chat-index
+  // summarizer and source classifier hard-code `--model haiku`
+  // for cost reasons and are not affected by this setting.
+  agentModel: process.env.MULMOCLAUDE_MODEL?.trim() || "claude-opus-4-7",
+
   // Bearer auth token (#272, #316): if set, the server uses this
   // verbatim instead of generating a fresh random token at startup.
   // Matches the env var already honoured by `bridges/_lib/token.ts`
