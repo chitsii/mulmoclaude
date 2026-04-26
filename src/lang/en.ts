@@ -295,6 +295,9 @@ const enMessages = {
     runFailed: "Run failed: {error}",
     toggleFailed: "Toggle failed: {error}",
     deleteFailed: "Delete failed: {error}",
+    detailsToggle: "Show details",
+    promptLabel: "Prompt",
+    roleLabel: "Role",
   },
   pluginCanvas: {
     undo: "Undo",
