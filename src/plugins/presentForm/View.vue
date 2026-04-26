@@ -600,17 +600,34 @@ function handleSubmit(): void {
   props.sendTextMessage(lines.join("\n"));
 }
 
+// Indent every line except the first by 2 spaces — under markdown
+// rules, indented continuations stay attached to the preceding bullet
+// instead of starting a new top-level item. Without this, a textarea
+// value containing newlines would inject phantom bullets into the
+// chat-side payload that the LLM could mis-parse.
+function indentContinuation(text: string): string {
+  return text.replace(/\n/g, "\n  ");
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function renderValue(field: FormField, value: any): string {
   const empty = "(none)";
   if (field.type === "radio" || field.type === "dropdown") {
     return value !== null && value !== undefined ? field.choices[value] : empty;
   }
+  // Checkbox values render as a nested bullet sublist rather than a
+  // comma-joined string. Comma-joining is ambiguous when a choice label
+  // itself contains a comma; the sublist is unambiguous and survives
+  // round-trip parsing.
   if (field.type === "checkbox") {
-    const items = (value || []).map((idx: number) => field.choices[idx]);
-    return items.length > 0 ? items.join(", ") : empty;
+    const items: string[] = (value || []).map((idx: number) => field.choices[idx]);
+    if (items.length === 0) return empty;
+    return "\n  - " + items.join("\n  - ");
   }
-  if (typeof value === "string") return value.trim() === "" ? empty : value;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed === "" ? empty : indentContinuation(trimmed);
+  }
   if (value === null || value === undefined) return empty;
   return String(value);
 }

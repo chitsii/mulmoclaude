@@ -23,6 +23,22 @@ function validateChoiceField(field: FormField): void {
   }
 }
 
+function validateCheckboxRange(field: FormField & { type: "checkbox" }): void {
+  const { minSelections, maxSelections, choices, id } = field;
+  if (minSelections !== undefined && maxSelections !== undefined && minSelections > maxSelections) {
+    throw new Error(`Field '${id}': minSelections cannot be greater than maxSelections`);
+  }
+  if (maxSelections !== undefined && maxSelections > choices.length) {
+    throw new Error(`Field '${id}': maxSelections cannot exceed number of choices`);
+  }
+  // Without this lower-bound check, a form with minSelections > choices.length
+  // would render but be impossible to submit — the user can never satisfy the
+  // minimum because there aren't enough options to pick.
+  if (minSelections !== undefined && minSelections > choices.length) {
+    throw new Error(`Field '${id}': minSelections cannot exceed number of choices`);
+  }
+}
+
 function validateRangeField(field: FormField): void {
   if (
     (field.type === "text" || field.type === "textarea") &&
@@ -38,14 +54,7 @@ function validateRangeField(field: FormField): void {
   if (field.type === "date" && field.minDate && field.maxDate && field.minDate > field.maxDate) {
     throw new Error(`Field '${field.id}': minDate cannot be after maxDate`);
   }
-  if (field.type === "checkbox") {
-    if (field.minSelections !== undefined && field.maxSelections !== undefined && field.minSelections > field.maxSelections) {
-      throw new Error(`Field '${field.id}': minSelections cannot be greater than maxSelections`);
-    }
-    if (field.maxSelections !== undefined && field.maxSelections > field.choices.length) {
-      throw new Error(`Field '${field.id}': maxSelections cannot exceed number of choices`);
-    }
-  }
+  if (field.type === "checkbox") validateCheckboxRange(field);
 }
 
 function validateField(field: FormField, index: number, seenIds: Set<string>): void {
