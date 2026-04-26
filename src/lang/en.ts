@@ -557,6 +557,7 @@ const enMessages = {
     beatCount: "{count} beat | {count} beats",
     movie: "Movie",
     generating: "Generating…",
+    statusThinking: "Thinking…",
     statusGeneratingMovie: "Generating movie…",
     statusGeneratingBeats: "Rendering slides…",
     statusGeneratingCharacters: "Generating character images…",

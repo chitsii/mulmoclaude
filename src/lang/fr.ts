@@ -535,6 +535,7 @@ const frMessages = {
     beatCount: "{count} beat | {count} beats",
     movie: "Film",
     generating: "Génération…",
+    statusThinking: "Réflexion…",
     statusGeneratingMovie: "Génération de la vidéo…",
     statusGeneratingBeats: "Rendu des diapositives…",
     statusGeneratingCharacters: "Génération des images de personnages…",

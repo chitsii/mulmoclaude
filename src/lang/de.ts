@@ -536,6 +536,7 @@ const deMessages = {
     beatCount: "{count} Beat | {count} Beats",
     movie: "Video",
     generating: "Wird generiert…",
+    statusThinking: "Denkt nach…",
     statusGeneratingMovie: "Video wird generiert…",
     statusGeneratingBeats: "Folien werden gerendert…",
     statusGeneratingCharacters: "Charakterbilder werden generiert…",

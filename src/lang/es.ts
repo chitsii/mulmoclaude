@@ -543,6 +543,7 @@ const esMessages = {
     beatCount: "{count} beat | {count} beats",
     movie: "Vídeo",
     generating: "Generando…",
+    statusThinking: "Pensando…",
     statusGeneratingMovie: "Generando vídeo…",
     statusGeneratingBeats: "Renderizando diapositivas…",
     statusGeneratingCharacters: "Generando imágenes de personajes…",

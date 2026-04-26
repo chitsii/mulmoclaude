@@ -541,6 +541,7 @@ const jaMessages = {
     beatCount: "{count} ビート",
     movie: "動画",
     generating: "生成中…",
+    statusThinking: "考え中…",
     statusGeneratingMovie: "動画を生成中…",
     statusGeneratingBeats: "スライドを描画中…",
     statusGeneratingCharacters: "キャラクター画像を生成中…",

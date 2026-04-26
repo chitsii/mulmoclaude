@@ -533,6 +533,7 @@ const ptBRMessages = {
     beatCount: "{count} beat | {count} beats",
     movie: "Vídeo",
     generating: "Gerando…",
+    statusThinking: "Pensando…",
     statusGeneratingMovie: "Gerando vídeo…",
     statusGeneratingBeats: "Renderizando slides…",
     statusGeneratingCharacters: "Gerando imagens de personagens…",

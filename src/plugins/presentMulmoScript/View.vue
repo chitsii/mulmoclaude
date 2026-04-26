@@ -455,11 +455,15 @@ const anyAudioGenerating = computed(() => Object.values(audioState).some((state)
 // Drives the shared ThinkingIndicator. Picks the most specific
 // label so the user can tell *what* is in flight rather than just
 // "busy" — order mirrors how long each operation typically takes.
+// The agent-thinking branch (`isAgentRunning`) is the catch-all so a
+// plain text turn from the chat input also lights up the indicator,
+// matching the chat sidebar's behaviour.
 const busyStatus = computed<string | null>(() => {
   if (movieGenerating.value) return t("pluginMulmoScript.statusGeneratingMovie");
   if (anyBeatRendering.value) return t("pluginMulmoScript.statusGeneratingBeats");
   if (anyCharRendering.value) return t("pluginMulmoScript.statusGeneratingCharacters");
   if (anyAudioGenerating.value) return t("pluginMulmoScript.statusGeneratingAudio");
+  if (activeSessionRef?.value?.isRunning) return t("pluginMulmoScript.statusThinking");
   return null;
 });
 
