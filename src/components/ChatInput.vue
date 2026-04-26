@@ -43,6 +43,8 @@
           <button
             data-testid="send-btn"
             class="bg-blue-600 hover:bg-blue-700 text-white rounded w-8 h-8 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+            :title="t('chatInput.send')"
+            :aria-label="t('chatInput.send')"
             :disabled="isRunning"
             @click="emit('send')"
           >
@@ -52,6 +54,7 @@
             data-testid="attach-file-btn"
             class="text-gray-400 hover:text-gray-600 rounded w-8 h-8 flex items-center justify-center"
             :title="t('chatInput.attachFile')"
+            :aria-label="t('chatInput.attachFile')"
             @click="openFilePicker"
           >
             <span class="material-icons text-base leading-none">attach_file</span>

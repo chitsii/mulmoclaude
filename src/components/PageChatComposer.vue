@@ -36,6 +36,7 @@
           :data-testid="`${testIdPrefix}-send`"
           class="bg-blue-600 hover:bg-blue-700 text-white rounded w-8 h-8 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
           :title="t('common.sendChat')"
+          :aria-label="t('common.sendChat')"
           :disabled="!canSend"
           @click="submit"
         >

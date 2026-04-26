@@ -51,6 +51,7 @@ const enMessages = {
   },
   chatInput: {
     placeholder: "Type a task, or drop / paste / attach a file…",
+    send: "Send",
     attachFile: "Attach file",
     fileTooLarge: "File too large ({sizeMB} MB). Maximum is 30 MB.",
     unsupportedFileType: "File type not supported. Accepted: images, PDF, DOCX, XLSX, PPTX, text files.",
