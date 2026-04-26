@@ -480,6 +480,7 @@ const esMessages = {
   pluginManageSource: {
     titlePlaceholder: "Título (opcional)",
     heading: "Fuentes de información",
+    chatPlaceholder: "Pregunta sobre tus fuentes de información…",
     sourceCount: "{count} fuente | {count} fuentes",
     addButton: "Añadir",
     rebuildNow: "Reconstruir ahora",

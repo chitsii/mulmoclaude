@@ -494,6 +494,7 @@ const enMessages = {
   pluginManageSource: {
     titlePlaceholder: "Title (optional)",
     heading: "Information sources",
+    chatPlaceholder: "Ask about your information sources…",
     sourceCount: "{count} source | {count} sources",
     addButton: "Add",
     rebuildNow: "Rebuild now",
