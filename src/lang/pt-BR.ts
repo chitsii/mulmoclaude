@@ -323,6 +323,7 @@ const ptBRMessages = {
     moreCount: "+{count} mais",
     previewIcon: "📅",
     previewUpcoming: "{count} próximos",
+    previewAutomations: "{count} automação | {count} automações",
     previewMore: "+ {count} mais…",
   },
   pluginSchedulerTasks: {

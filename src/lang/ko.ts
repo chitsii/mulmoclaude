@@ -328,6 +328,7 @@ const koMessages = {
     moreCount: "+{count}개 더",
     previewIcon: "📅",
     previewUpcoming: "예정 {count}개",
+    previewAutomations: "자동화 {count}개",
     previewMore: "+ {count}개 더…",
   },
   pluginSchedulerTasks: {

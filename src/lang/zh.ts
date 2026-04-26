@@ -324,6 +324,7 @@ const zhMessages = {
     moreCount: "+还有 {count} 个",
     previewIcon: "📅",
     previewUpcoming: "即将 {count} 个",
+    previewAutomations: "{count} 个自动化",
     previewMore: "+ 还有 {count} 个…",
   },
   pluginSchedulerTasks: {
