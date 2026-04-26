@@ -281,6 +281,9 @@ const esMessages = {
     runFailed: "Error al ejecutar: {error}",
     toggleFailed: "Error al alternar: {error}",
     deleteFailed: "Error al eliminar: {error}",
+    detailsToggle: "Mostrar detalles",
+    promptLabel: "Prompt",
+    roleLabel: "Rol",
   },
   pluginCanvas: {
     undo: "Deshacer",
