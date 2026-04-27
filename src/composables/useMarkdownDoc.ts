@@ -15,9 +15,30 @@ export interface MarkdownDocField {
   key: string;
   /** YAML value as-is — `string`, `string[]`, `number`, `boolean`,
    *  nested object, or `null`. Templates typically branch on
-   *  `Array.isArray(value)` and fall back to string interpolation
-   *  for primitives. */
+   *  `Array.isArray(value)` and pass scalars through
+   *  `formatScalarField` so a nested object doesn't render as
+   *  `[object Object]` (codex review iter-1 #902). */
   value: unknown;
+}
+
+/** Render a non-array `MarkdownDocField.value` as a string for
+ *  the properties-panel template. Branch:
+ *    - `null`/`undefined` → empty string (keep cell visually empty)
+ *    - object → compact JSON (so nested frontmatter doesn't print
+ *      `[object Object]`)
+ *    - everything else → `String(value)` (string / number / boolean) */
+export function formatScalarField(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      // Cyclic objects can't be JSON-stringified — fall back to a
+      // pragmatic placeholder rather than throwing in a template.
+      return String(value);
+    }
+  }
+  return String(value);
 }
 
 export interface MarkdownDocView extends ParsedMarkdown {

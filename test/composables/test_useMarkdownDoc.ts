@@ -7,7 +7,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { ref } from "vue";
-import { useMarkdownDoc } from "../../src/composables/useMarkdownDoc.js";
+import { formatScalarField, useMarkdownDoc } from "../../src/composables/useMarkdownDoc.js";
 
 describe("useMarkdownDoc", () => {
   it("derives meta + body + fields from a reactive markdown source", () => {
@@ -56,5 +56,37 @@ describe("useMarkdownDoc", () => {
     assert.equal(view.value.hasHeader, false);
     assert.equal(view.value.body, "# Heading\n\nbody without frontmatter\n");
     assert.deepEqual(view.value.fields, []);
+  });
+});
+
+// formatScalarField is the template helper that prevents nested
+// frontmatter values from rendering as `[object Object]` (codex
+// review iter-1 #902). It runs in template scope so it must
+// handle every shape `unknown` can hold without throwing.
+describe("formatScalarField", () => {
+  it("renders strings, numbers, booleans via String()", () => {
+    assert.equal(formatScalarField("hello"), "hello");
+    assert.equal(formatScalarField(42), "42");
+    assert.equal(formatScalarField(true), "true");
+    assert.equal(formatScalarField(false), "false");
+  });
+
+  it("renders null and undefined as empty string", () => {
+    assert.equal(formatScalarField(null), "");
+    assert.equal(formatScalarField(undefined), "");
+  });
+
+  it("renders nested objects as compact JSON (not [object Object])", () => {
+    assert.equal(formatScalarField({ a: 1, b: "two" }), '{"a":1,"b":"two"}');
+  });
+
+  it("falls back to String() for cyclic objects (no throw)", () => {
+    // A cyclic object can't be JSON.stringify'd. The helper must
+    // degrade gracefully so a template render doesn't crash the
+    // properties panel.
+    const cyclic: { self?: unknown } = {};
+    cyclic.self = cyclic;
+    const out = formatScalarField(cyclic);
+    assert.equal(typeof out, "string");
   });
 });

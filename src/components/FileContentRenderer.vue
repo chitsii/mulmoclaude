@@ -36,7 +36,7 @@
                   </span>
                 </span>
               </template>
-              <span v-else class="text-gray-800 break-words">{{ field.value }}</span>
+              <span v-else class="text-gray-800 break-words">{{ formatScalarField(field.value) }}</span>
             </div>
           </div>
           <div class="flex-1 min-h-0" @click.capture="(e: MouseEvent) => emit('markdownLinkClick', e)">
@@ -132,7 +132,7 @@ import type { SchedulerData } from "../plugins/scheduler/index";
 import type { TodoData } from "../plugins/todo/index";
 import { JSON_TOKEN_CLASS } from "../utils/format/jsonSyntax";
 import type { JsonToken, JsonlLine } from "../utils/format/jsonSyntax";
-import type { MarkdownDocView } from "../composables/useMarkdownDoc";
+import { formatScalarField, type MarkdownDocView } from "../composables/useMarkdownDoc";
 import { rewriteMarkdownImageRefs } from "../utils/image/rewriteMarkdownImageRefs";
 import { API_ROUTES } from "../config/apiRoutes";
 import { descriptorForPath } from "../config/systemFileDescriptors";

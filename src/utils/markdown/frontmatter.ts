@@ -92,12 +92,20 @@ export function mergeFrontmatter(existing: Record<string, unknown>, patch: Recor
 
 function safeYamlLoad(text: string): Record<string, unknown> | null {
   try {
-    // `JSON_SCHEMA` keeps ISO date strings AS strings instead of
-    // auto-coercing to `Date` (the YAML 1.1 default). We don't
-    // want `created: 2026-04-27` to become a Date object — JSON-
-    // serialisable scalars are the canonical shape for round-trip
-    // through `serializeWithFrontmatter`.
-    const loaded = yaml.load(text, { schema: yaml.JSON_SCHEMA });
+    // `FAILSAFE_SCHEMA` keeps every scalar as a string and skips
+    // type coercion. Two motivating cases:
+    //
+    //   - YAML 1.1 dates: `created: 2026-04-27` would become a
+    //     `Date` object under DEFAULT_SCHEMA, breaking round-trip.
+    //   - Numeric-looking strings: `version: 1.20` → number 1.2
+    //     under JSON_SCHEMA, dropping the trailing zero on save
+    //     (codex review iter-1 #902).
+    //
+    // For our domain — title / created / updated / tags / editor —
+    // everything that should be a string IS one, and the rare
+    // caller that wants a number can coerce explicitly. Mappings
+    // and sequences still parse normally (FAILSAFE keeps those).
+    const loaded = yaml.load(text, { schema: yaml.FAILSAFE_SCHEMA });
     // `yaml.load` returns `undefined` for empty input, a primitive
     // for scalar-only YAML, or an object for the normal case. Only
     // accept plain objects — anything else is a malformed header.

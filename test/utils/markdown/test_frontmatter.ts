@@ -127,6 +127,26 @@ describe("serializeWithFrontmatter", () => {
     const round = parseFrontmatter(text);
     assert.equal(round.meta.title, 'Has: colon and "quotes"');
   });
+
+  it("preserves numeric-looking strings verbatim (no `1.20` → 1.2 coercion)", () => {
+    // Codex iter-1 #902: under JSON_SCHEMA, `js-yaml` would
+    // collapse `version: 1.20` into the number 1.2, dropping the
+    // trailing zero. Switching to FAILSAFE_SCHEMA keeps every
+    // scalar as a string so the round-trip is byte-identical.
+    const text = "---\nversion: 1.20\nzeros: 00123\n---\nbody";
+    const out = parseFrontmatter(text);
+    assert.equal(out.meta.version, "1.20");
+    assert.equal(out.meta.zeros, "00123");
+  });
+
+  it("scalars that LOOK numeric / boolean are kept as strings (FAILSAFE schema)", () => {
+    // Side-effect of FAILSAFE: the caller is responsible for
+    // coercion if they actually want a number. The trade-off is
+    // documented; this test pins the contract.
+    const out = parseFrontmatter("---\ncount: 5\nenabled: true\n---\nbody");
+    assert.equal(out.meta.count, "5");
+    assert.equal(out.meta.enabled, "true");
+  });
 });
 
 describe("mergeFrontmatter", () => {

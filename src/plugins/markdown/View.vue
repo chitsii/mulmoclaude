@@ -40,7 +40,7 @@
                   </span>
                 </span>
               </template>
-              <span v-else class="text-gray-800 break-words">{{ field.value }}</span>
+              <span v-else class="text-gray-800 break-words">{{ formatScalarField(field.value) }}</span>
             </div>
           </div>
           <!-- Click delegation: a single listener on the wrapper picks
@@ -75,7 +75,7 @@
 import { computed, ref, watch, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
 import { marked } from "marked";
-import { useMarkdownDoc } from "../../composables/useMarkdownDoc";
+import { formatScalarField, useMarkdownDoc } from "../../composables/useMarkdownDoc";
 
 const { t } = useI18n();
 import type { ToolResult } from "gui-chat-protocol";
