@@ -15,30 +15,60 @@
           <span v-if="filePath" class="truncate">{{ filePath }}</span>
         </div>
       </div>
-      <div class="ml-4 shrink-0 flex gap-2">
+      <div class="ml-4 shrink-0 flex items-center gap-2">
+        <!-- Play presentation: opens the lightbox at beat 0 and starts
+             audio. Same gating as Download Movie — only when a movie has
+             been generated, which is our proxy for "every beat has both
+             an image and audio on disk". Green outline + green icon
+             share the visual idiom with the (filled) Download button so
+             both completed-artifact actions read as the same family. -->
+        <button
+          v-if="moviePath && !movieGenerating"
+          class="h-8 w-8 flex items-center justify-center rounded border border-green-600 text-green-600 hover:bg-green-50 transition-colors"
+          :title="t('pluginMulmoScript.playPresentation')"
+          :aria-label="t('pluginMulmoScript.playPresentation')"
+          @click="playPresentation"
+        >
+          <span class="material-icons text-base">play_arrow</span>
+        </button>
         <!-- Download Movie -->
         <a
           v-if="moviePath && !movieGenerating"
           :href="`${downloadMovieBase}?moviePath=${encodeURIComponent(moviePath)}`"
           download
-          class="px-3 py-1 text-xs rounded-full border transition-colors border-gray-200 text-gray-500 hover:bg-gray-50 flex items-center justify-center gap-1"
+          class="h-8 px-2.5 flex items-center gap-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm transition-colors"
         >
-          <span class="material-icons text-sm leading-none">download</span>
+          <span class="material-icons text-base">download</span>
           <span>{{ t("pluginMulmoScript.movie") }}</span>
         </a>
-        <!-- Generate / Regenerate Movie -->
+        <!-- Regenerate Movie (icon-only): collapses to a square once a
+             movie exists — the adjacent Download / Play already make
+             the subject clear, so the "Movie" label only adds noise. -->
         <button
-          class="px-3 py-1 text-xs rounded-full border transition-colors border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 flex items-center justify-center gap-1"
+          v-if="moviePath && !movieGenerating"
+          class="h-8 w-8 flex items-center justify-center rounded border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors"
+          :title="t('pluginMulmoScript.regenerateMovie')"
+          :aria-label="t('pluginMulmoScript.regenerateMovie')"
+          @click="generateMovie"
+        >
+          <span class="material-icons text-base">refresh</span>
+        </button>
+        <!-- Generate Movie (pill): no movie yet, or one is currently
+             generating. Keeps the label so first-time users know what
+             they're triggering. -->
+        <button
+          v-else
+          class="h-8 px-2.5 flex items-center gap-1 text-sm rounded border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           :disabled="movieGenerating"
           @click="generateMovie"
         >
-          <svg v-if="movieGenerating" class="animate-spin w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none">
+          <svg v-if="movieGenerating" class="animate-spin w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
           <span v-if="movieGenerating">{{ t("pluginMulmoScript.generating") }}</span>
           <template v-else>
-            <span class="material-icons text-sm leading-none">refresh</span>
+            <span class="material-icons text-sm">refresh</span>
             <span>{{ t("pluginMulmoScript.movie") }}</span>
           </template>
         </button>
@@ -308,7 +338,7 @@
     </div>
 
     <!-- Lightbox -->
-    <div v-if="lightbox" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80" @click="lightbox = null">
+    <div v-if="lightbox" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80" @click="closeLightbox">
       <div class="flex items-center gap-4" @click.stop>
         <button
           v-if="!lightbox.isCharacter"
@@ -474,16 +504,40 @@ function characterPrompt(key: string): string {
   return (script.value.imageParams?.images?.[key]?.prompt as string) ?? "";
 }
 
+function stopPlayingAudio() {
+  if (!playingAudio.value) return;
+  playingAudio.value.audio.pause();
+  playingAudio.value = null;
+}
+
 function openLightbox(index: number) {
-  if (playingAudio.value) {
-    playingAudio.value.audio.pause();
-    playingAudio.value = null;
-  }
+  stopPlayingAudio();
   lightbox.value = {
     src: renderedImages[index],
     text: effectiveBeat(index).text,
     index,
   };
+}
+
+// Backdrop click handler. Stops any in-flight narration so the audio
+// doesn't keep playing after the lightbox is dismissed — without this,
+// the HTMLAudioElement created by playAudio() outlives the modal and
+// the user hears disembodied narration with no UI to stop it.
+function closeLightbox() {
+  stopPlayingAudio();
+  lightbox.value = null;
+}
+
+// "Play presentation" toolbar action. Opens the lightbox at beat 0 and
+// kicks off its narration audio; the existing on-ended hook then chains
+// through the rest of the deck (lightboxMove(1) → playAudio if the next
+// beat has audio), so one click runs the whole presentation. Only wired
+// to the toolbar button when moviePath is set, which is our proxy for
+// "every beat has both image and audio on disk".
+function playPresentation() {
+  if (beats.value.length === 0) return;
+  openLightbox(0);
+  if (beatAudios[0]) playAudio(0);
 }
 
 const hasPrev = computed(() => {
@@ -505,10 +559,20 @@ const hasNext = computed(() => {
 function lightboxMove(delta: number) {
   if (!lightbox.value) return;
   const total = beats.value.length;
+  // If audio was playing when the user clicked the arrow, carry the
+  // playback over to the next beat that has audio. openLightbox()
+  // unconditionally stops any active audio, so we capture the flag
+  // BEFORE that and replay AFTER. The on-ended auto-advance path
+  // already nulls playingAudio before calling lightboxMove, so this
+  // branch won't double-fire there.
+  const wasPlaying = playingAudio.value !== null;
   let i = lightbox.value.index + delta;
   while (i >= 0 && i < total) {
     if (renderedImages[i]) {
       openLightbox(i);
+      if (wasPlaying && beatAudios[i]) {
+        playAudio(i);
+      }
       return;
     }
     i += delta;
@@ -902,6 +966,29 @@ async function generateAllCharacters() {
   await Promise.all(characterKeys.value.filter((key) => charRenderState[key] !== "rendering").map((key) => renderCharacter(key, false)));
 }
 
+// Mount-time policy: prefer the cached PNG on disk over re-rendering.
+// Deterministic beat types (textSlide/markdown/chart/mermaid/html_tailwind)
+// are cheap to render but not free — every renderBeat round-trips,
+// flips renderState to "rendering", and emits publishGeneration
+// start/finish events that flicker the global busy indicator. So if
+// the image already exists (e.g. after a movie generation, or a
+// previous mount of the same result), we just load it. Only fall
+// through to renderBeat when the disk has nothing yet AND the type is
+// safe to auto-render (deterministic content, no characters waiting).
+//
+// Edits invalidate cached PNGs through other paths: per-beat saves
+// already do `delete renderedImages[index]; renderBeat(index)` on
+// image change in updateBeat(), and the per-beat ↺ regenerate button
+// is always available — so a stale PNG is one click away from being
+// refreshed.
+async function hydrateBeatImage(beat: Beat, index: number, hasCharacters: boolean, autoRenderTypes: readonly string[]): Promise<void> {
+  await loadExistingBeatImage(index);
+  if (renderedImages[index]) return;
+  if (shouldAutoRenderBeat(beat, hasCharacters, autoRenderTypes)) {
+    await renderBeat(index);
+  }
+}
+
 async function initializeScript() {
   // Reset scroll position so new results start at the top
   if (beatListEl.value) beatListEl.value.scrollTop = 0;
@@ -927,11 +1014,7 @@ async function initializeScript() {
   const AUTO_RENDER_TYPES = ["textSlide", "markdown", "chart", "mermaid", "html_tailwind"] as const;
   const hasCharacters = characterKeys.value.length > 0;
   beats.value.forEach((beat, index) => {
-    if (shouldAutoRenderBeat(beat, hasCharacters, AUTO_RENDER_TYPES)) {
-      renderBeat(index);
-    } else if (beat.imagePrompt) {
-      loadExistingBeatImage(index);
-    }
+    void hydrateBeatImage(beat, index, hasCharacters, AUTO_RENDER_TYPES);
     if (beat.text) loadExistingBeatAudio(index);
   });
 

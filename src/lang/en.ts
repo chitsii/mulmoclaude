@@ -826,6 +826,8 @@ const enMessages = {
     gen: "Gen",
     play: "▶ Play",
     stop: "■ Stop",
+    playPresentation: "Play presentation",
+    regenerateMovie: "Regenerate movie",
     errPrefix: "⚠ Error",
     noBeats: "No beats found in script",
     editSource: "Edit Script Source",

@@ -797,6 +797,8 @@ const zhMessages = {
     gen: "生成",
     play: "▶ 播放",
     stop: "■ 停止",
+    playPresentation: "播放演示",
+    regenerateMovie: "重新生成视频",
     errPrefix: "⚠ 错误",
     noBeats: "脚本中没有找到 beat",
     editSource: "编辑脚本源",

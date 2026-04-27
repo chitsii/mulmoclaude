@@ -809,6 +809,8 @@ const deMessages = {
     gen: "Generieren",
     play: "▶ Abspielen",
     stop: "■ Stoppen",
+    playPresentation: "Präsentation abspielen",
+    regenerateMovie: "Video neu generieren",
     errPrefix: "⚠ Fehler",
     noBeats: "Keine Beats im Skript gefunden",
     editSource: "Skript-Quelle bearbeiten",

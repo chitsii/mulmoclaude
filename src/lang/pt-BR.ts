@@ -800,6 +800,8 @@ const ptBRMessages = {
     gen: "Gerar",
     play: "▶ Reproduzir",
     stop: "■ Parar",
+    playPresentation: "Reproduzir apresentação",
+    regenerateMovie: "Regenerar vídeo",
     errPrefix: "⚠ Erro",
     noBeats: "Nenhum beat encontrado no script",
     editSource: "Editar fonte do script",
