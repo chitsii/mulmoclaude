@@ -1,5 +1,5 @@
 <template>
-  <div v-if="expanded && hasContent" ref="panelRef" class="border-t border-gray-200 flex flex-col">
+  <div v-if="expanded" ref="panelRef" class="border-t border-gray-200 flex flex-col">
     <div ref="listRef" class="px-4 pt-2 pb-2 max-h-64 overflow-y-auto flex flex-col gap-1">
       <template v-if="activeTab === 'suggestions'">
         <button
@@ -101,8 +101,6 @@ function setActiveTab(tab: TabId): void {
   localStorage.setItem(TAB_STORAGE_KEY, tab);
   nextTick(() => scrollToBottom());
 }
-
-const hasContent = computed(() => props.queries.length > 0 || skills.value.length > 0);
 
 function scrollToBottom(): void {
   if (listRef.value) {

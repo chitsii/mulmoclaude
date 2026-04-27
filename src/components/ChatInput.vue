@@ -36,7 +36,6 @@
         />
         <div class="flex flex-col gap-1">
           <button
-            v-if="showSuggestionsButton"
             ref="suggestionsBtnRef"
             data-testid="suggestions-btn"
             class="rounded w-8 h-8 flex items-center justify-center"
@@ -79,12 +78,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from "vue";
+import { nextTick, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import ChatAttachmentPreview from "./ChatAttachmentPreview.vue";
 import SuggestionsPanel from "./SuggestionsPanel.vue";
 import { useImeAwareEnter } from "../composables/useImeAwareEnter";
-import { useSkillsList } from "../composables/useSkillsList";
 
 const { t } = useI18n();
 
@@ -94,7 +92,7 @@ export interface PastedFile {
   mime: string;
 }
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     modelValue: string;
     pastedFile: PastedFile | null;
@@ -116,9 +114,6 @@ const fileError = ref<string | null>(null);
 const fileInput = ref<HTMLInputElement | null>(null);
 const suggestionsExpanded = ref(false);
 const suggestionsBtnRef = ref<HTMLButtonElement | null>(null);
-
-const { skills } = useSkillsList();
-const showSuggestionsButton = computed(() => (props.queries?.length ?? 0) > 0 || skills.value.length > 0);
 
 const MAX_ATTACH_BYTES = 30 * 1024 * 1024;
 

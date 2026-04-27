@@ -1,7 +1,6 @@
 <template>
   <div class="border-t border-gray-200 shrink-0 bg-gray-50">
     <SuggestionsPanel
-      v-if="showSuggestionsButton"
       v-model:expanded="suggestionsExpanded"
       :queries="suggestions"
       :trigger-ref="suggestionsBtnRef"
@@ -23,7 +22,6 @@
       />
       <div class="flex flex-col gap-1 shrink-0">
         <button
-          v-if="showSuggestionsButton"
           ref="suggestionsBtnRef"
           :data-testid="`${testIdPrefix}-suggestions`"
           class="rounded w-8 h-8 flex items-center justify-center"
@@ -54,7 +52,6 @@ import { computed, nextTick, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useAppApi } from "../composables/useAppApi";
 import { useImeAwareEnter } from "../composables/useImeAwareEnter";
-import { useSkillsList } from "../composables/useSkillsList";
 import SuggestionsPanel from "./SuggestionsPanel.vue";
 
 const props = withDefaults(
@@ -75,9 +72,6 @@ const draft = ref("");
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const suggestionsExpanded = ref(false);
 const suggestionsBtnRef = ref<HTMLButtonElement | null>(null);
-
-const { skills } = useSkillsList();
-const showSuggestionsButton = computed(() => (props.suggestions?.length ?? 0) > 0 || skills.value.length > 0);
 
 const canSend = computed(() => !props.disabled && (props.allowEmpty || draft.value.trim().length > 0));
 
