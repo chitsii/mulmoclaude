@@ -54,18 +54,33 @@ describe("formatTextColor", () => {
   // Build the ANSI patterns from String.fromCharCode so the lint rule
   // `no-control-regex` doesn't trip on a literal ESC byte in the source.
   const ESC = String.fromCharCode(27);
-  const COLOR_RE = new RegExp(`^2026-04-13T07:12:45\\.123Z ${ESC}\\[[0-9;]+m([A-Z ]+?)${ESC}\\[0m \\[agent\\]`);
   const ANY_ANSI = new RegExp(`${ESC}\\[[0-9;]*m`, "g");
   const FIRST_CODE = new RegExp(`${ESC}\\[([0-9;]+)m`);
 
-  it("wraps the level word in an ANSI escape but leaves the rest untouched", () => {
-    const colored = formatTextColor(record({ level: "warn" }));
-    const plain = formatText(record({ level: "warn" }));
-    const match = COLOR_RE.exec(colored);
-    assert.ok(match, "expected coloured output to start with timestamp + ANSI level");
-    assert.equal(match[1], "WARN ");
-    // Stripping every ANSI escape recovers the plain output exactly.
-    assert.equal(colored.replaceAll(ANY_ANSI, ""), plain);
+  it("wraps the entire line for error and warn (whole-row colour)", () => {
+    for (const level of ["error", "warn"] as const) {
+      const colored = formatTextColor(record({ level }));
+      assert.ok(colored.startsWith(ESC + "["), `expected ${level} line to start with an ANSI escape`);
+      assert.ok(colored.endsWith(ESC + "[0m"), `expected ${level} line to end with the ANSI reset`);
+      // Exactly one open escape + the closing reset — no nested wraps
+      // around the level word.
+      const escapeCount = (colored.match(ANY_ANSI) ?? []).length;
+      assert.equal(escapeCount, 2, `expected exactly two SGR codes for ${level}, got ${escapeCount}`);
+      // Stripping ANSI recovers the plain output exactly.
+      assert.equal(colored.replaceAll(ANY_ANSI, ""), formatText(record({ level })));
+    }
+  });
+
+  it("colours only the level word for info and debug (chatty levels stay quiet)", () => {
+    for (const level of ["info", "debug"] as const) {
+      const colored = formatTextColor(record({ level }));
+      // Should NOT start with an escape — the timestamp leads.
+      assert.ok(!colored.startsWith(ESC + "["), `expected ${level} line to start with the timestamp, not ANSI`);
+      // Exactly one wrapped slot: open + reset around the level word.
+      const escapeCount = (colored.match(ANY_ANSI) ?? []).length;
+      assert.equal(escapeCount, 2, `expected exactly one wrapped slot for ${level}`);
+      assert.equal(colored.replaceAll(ANY_ANSI, ""), formatText(record({ level })));
+    }
   });
 
   it("uses distinct colour codes per level (sanity check)", () => {

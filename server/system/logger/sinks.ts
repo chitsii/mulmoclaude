@@ -9,12 +9,18 @@ function pickFormatter(kind: "text" | "json"): Formatter {
   return kind === "json" ? formatJson : formatText;
 }
 
-// Honour the cross-tool `NO_COLOR` convention (https://no-color.org/).
-// Any non-empty value disables colour even on a real TTY — useful when
-// piping to a file or running under a CI runner that doesn't strip
-// escapes itself.
+// Decide whether to emit ANSI escapes on this stream:
+//   1. `NO_COLOR=<anything>` → off, always (https://no-color.org/).
+//   2. `FORCE_COLOR=<non-zero>` → on, even when the stream isn't a
+//      TTY. Concurrently / yarn / npm scripts set this on child
+//      processes by default, so `yarn dev` piped output keeps colour.
+//      `FORCE_COLOR=0` is treated as "explicitly off".
+//   3. Otherwise: on iff the stream itself is a real TTY.
 function colorEnabled(stream: { isTTY?: boolean }): boolean {
   if (process.env.NO_COLOR && process.env.NO_COLOR.length > 0) return false;
+  const force = process.env.FORCE_COLOR;
+  if (force !== undefined && force !== "" && force !== "0" && force !== "false") return true;
+  if (force === "0" || force === "false") return false;
   return stream.isTTY === true;
 }
 
