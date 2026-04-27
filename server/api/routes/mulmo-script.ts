@@ -1,7 +1,8 @@
 import { Router, Request, Response } from "express";
-import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, statSync } from "fs";
 import path from "path";
 import { WORKSPACE_PATHS } from "../../workspace/paths.js";
+import { writeFileAtomic } from "../../utils/files/atomic.js";
 import { stripDataUri } from "../../utils/files/image-store.js";
 import { writeJsonAtomic } from "../../utils/files/json.js";
 import {
@@ -615,10 +616,10 @@ router.post(API_ROUTES.mulmoScript.uploadBeatImage, async (req: Request<object, 
 
   await withStoryContext(res, filePath, {}, async ({ context }) => {
     const { imagePath } = getBeatPngImagePath(context, beatIndex);
-    mkdirSync(path.dirname(imagePath), { recursive: true });
-
+    // writeFileAtomic creates parent dirs and prevents a half-
+    // written PNG from surviving a crash mid-write (#881 v2).
     const base64 = stripDataUri(imageData);
-    writeFileSync(imagePath, Buffer.from(base64, "base64"));
+    await writeFileAtomic(imagePath, Buffer.from(base64, "base64"));
 
     res.json({ image: fileToDataUri(imagePath, "image/png") });
   });
@@ -687,10 +688,10 @@ router.post(
 
     await withStoryContext(res, filePath, {}, async ({ context }) => {
       const imagePath = getReferenceImagePath(context, key, "png");
-      mkdirSync(path.dirname(imagePath), { recursive: true });
-
+      // writeFileAtomic creates parent dirs and prevents a half-
+      // written PNG from surviving a crash mid-write (#881 v2).
       const base64 = stripDataUri(imageData);
-      writeFileSync(imagePath, Buffer.from(base64, "base64"));
+      await writeFileAtomic(imagePath, Buffer.from(base64, "base64"));
 
       res.json({ image: fileToDataUri(imagePath, "image/png") });
     });
