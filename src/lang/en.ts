@@ -84,6 +84,8 @@ const enMessages = {
     toolCallHistory: "Tool call history",
     settings: "Settings",
     settingsGeminiMissing: "Settings — Gemini API key missing",
+    todayJournal: "Today's journal",
+    todayJournalNotFound: "No journal summary yet — chat for a while and the journal will generate one.",
   },
   rightSidebar: {
     toggleSystemPrompt: "Toggle system prompt",

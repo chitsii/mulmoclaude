@@ -62,6 +62,8 @@ const frMessages = {
     toolCallHistory: "Historique des appels d'outils",
     settings: "Paramètres",
     settingsGeminiMissing: "Paramètres — Clé API Gemini manquante",
+    todayJournal: "Résumé du jour",
+    todayJournalNotFound: "Pas encore de résumé — discutez un peu et le journal en générera un.",
   },
   rightSidebar: {
     toggleSystemPrompt: "Basculer le system prompt",

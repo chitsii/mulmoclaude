@@ -62,6 +62,8 @@ const deMessages = {
     toolCallHistory: "Tool-Aufrufverlauf",
     settings: "Einstellungen",
     settingsGeminiMissing: "Einstellungen — Gemini-API-Schlüssel fehlt",
+    todayJournal: "Heutige Zusammenfassung",
+    todayJournalNotFound: "Noch keine Zusammenfassung — chatte etwas und das Journal erstellt eine.",
   },
   rightSidebar: {
     toggleSystemPrompt: "System-Prompt umschalten",

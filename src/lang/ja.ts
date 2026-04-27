@@ -69,6 +69,8 @@ const jaMessages = {
     toolCallHistory: "ツール呼び出し履歴",
     settings: "設定",
     settingsGeminiMissing: "設定 — Gemini API キー未設定",
+    todayJournal: "今日のまとめ",
+    todayJournalNotFound: "まだまとめがありません — しばらく会話するとjournalが生成します。",
   },
   rightSidebar: {
     toggleSystemPrompt: "システムプロンプトの表示切替",
