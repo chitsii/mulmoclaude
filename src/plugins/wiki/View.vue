@@ -135,7 +135,7 @@
           v-if="selectedTag !== null && !allTags.some(([tag]) => tag === selectedTag)"
           :active="true"
           :label="selectedTag"
-          :count="1"
+          :count="tagCounts.get(selectedTag) ?? 1"
           :data-testid="`wiki-tag-filter-${selectedTag}`"
           @click="toggleTagFilter(selectedTag)"
         />
@@ -329,12 +329,21 @@ watch(
 // the tag at the target position, which keeps tied-popularity tags
 // grouped together rather than slicing them arbitrarily.
 const TARGET_FILTER_CHIPS = 20;
-const allTags = computed<[string, number][]>(() => {
+// Full per-tag count map. Kept as its own computed (rather than
+// folded into `allTags`) so the fallback chip below — rendered when
+// the active filter is a tag the cutoff hides — can look up the
+// real count instead of falling back to a hardcoded 1, which would
+// understate the count of any non-singleton tag the adaptive cutoff
+// drops from the chip row.
+const tagCounts = computed<Map<string, number>>(() => {
   const counts = new Map<string, number>();
   for (const entry of pageEntries.value) {
     for (const tag of entry.tags ?? []) counts.set(tag, (counts.get(tag) ?? 0) + 1);
   }
-  const meaningful = [...counts.entries()]
+  return counts;
+});
+const allTags = computed<[string, number][]>(() => {
+  const meaningful = [...tagCounts.value.entries()]
     .filter(([, count]) => count > 1)
     .sort(([tagA, countA], [tagB, countB]) => countB - countA || tagA.localeCompare(tagB));
   if (meaningful.length <= TARGET_FILTER_CHIPS) return meaningful;
