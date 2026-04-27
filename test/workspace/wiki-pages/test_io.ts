@@ -191,6 +191,15 @@ describe("wiki-pages/io — classifyAsWikiPage", () => {
     assert.deepEqual(out, { wiki: false });
   });
 
+  it("accepts page names whose basename starts with `..` (e.g. `..foo.md`)", () => {
+    // Codex iter-3 #883: an over-strict `rel.startsWith("..")` rule
+    // would have wrongly rejected this legitimate single-segment
+    // filename. The proper escape check is the separator presence,
+    // which `..foo.md` doesn't trip.
+    const out = classifyAsWikiPage(path.join(pagesDir, "..foo.md"), { workspaceRoot: root });
+    assert.deepEqual(out, { wiki: true, slug: "..foo" });
+  });
+
   it("rejects paths outside the workspace entirely", () => {
     const out = classifyAsWikiPage("/etc/passwd", { workspaceRoot: root });
     assert.deepEqual(out, { wiki: false });

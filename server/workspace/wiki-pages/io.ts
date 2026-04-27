@@ -116,14 +116,19 @@ export async function writeWikiPage(slug: string, content: string, meta: WikiWri
 export function classifyAsWikiPage(absPath: string, opts: WikiPageWriteOptions = {}): { wiki: true; slug: string } | { wiki: false } {
   const root = opts.workspaceRoot ?? defaultWorkspacePath;
   const pagesDir = path.join(root, WORKSPACE_DIRS.wikiPages);
-  // `path.relative` returns "" for equal paths and a "../"-prefixed
-  // string for outside-root paths. Anything starting with ".." (or
-  // absolute on Windows after a drive change) is rejected.
+  // `path.relative` returns "" for equal paths, a "../"-prefixed
+  // string when `absPath` is outside `pagesDir`, and an absolute
+  // path on Windows when the two are on different drives.
   const rel = path.relative(pagesDir, absPath);
   if (rel.length === 0) return { wiki: false };
-  if (rel.startsWith("..") || path.isAbsolute(rel)) return { wiki: false };
+  if (path.isAbsolute(rel)) return { wiki: false };
   // The file must live directly in `pages/`, not in a subdirectory
-  // (no nested wiki layout today). Reject anything with a separator.
+  // (no nested wiki layout today). Any separator means the path
+  // either escapes (`../secret.md`) or descends (`subdir/foo.md`)
+  // — both rejected. NOTE: a literal page name like `..foo.md` is
+  // a single segment without a separator and is allowed (codex
+  // review iter-3 #883 — the prior `startsWith("..")` rule
+  // wrongly rejected it).
   if (rel.includes(path.sep)) return { wiki: false };
   if (!rel.endsWith(".md")) return { wiki: false };
   return { wiki: true, slug: rel.slice(0, -".md".length) };
