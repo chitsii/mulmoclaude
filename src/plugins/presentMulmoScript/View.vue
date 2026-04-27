@@ -308,7 +308,7 @@
     </div>
 
     <!-- Lightbox -->
-    <div v-if="lightbox" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80" @click="lightbox = null">
+    <div v-if="lightbox" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80" @click="closeLightbox">
       <div class="flex items-center gap-4" @click.stop>
         <button
           v-if="!lightbox.isCharacter"
@@ -474,16 +474,28 @@ function characterPrompt(key: string): string {
   return (script.value.imageParams?.images?.[key]?.prompt as string) ?? "";
 }
 
+function stopPlayingAudio() {
+  if (!playingAudio.value) return;
+  playingAudio.value.audio.pause();
+  playingAudio.value = null;
+}
+
 function openLightbox(index: number) {
-  if (playingAudio.value) {
-    playingAudio.value.audio.pause();
-    playingAudio.value = null;
-  }
+  stopPlayingAudio();
   lightbox.value = {
     src: renderedImages[index],
     text: effectiveBeat(index).text,
     index,
   };
+}
+
+// Backdrop click handler. Stops any in-flight narration so the audio
+// doesn't keep playing after the lightbox is dismissed — without this,
+// the HTMLAudioElement created by playAudio() outlives the modal and
+// the user hears disembodied narration with no UI to stop it.
+function closeLightbox() {
+  stopPlayingAudio();
+  lightbox.value = null;
 }
 
 const hasPrev = computed(() => {
