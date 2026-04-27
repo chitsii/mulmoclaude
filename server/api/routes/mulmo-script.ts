@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, unlinkSync, writeFileSync } from "fs";
 import path from "path";
 import { WORKSPACE_PATHS } from "../../workspace/paths.js";
 import { stripDataUri } from "../../utils/files/image-store.js";
@@ -22,7 +22,7 @@ import {
   removeSessionProgressCallback,
   type MulmoScript,
 } from "mulmocast";
-import type { MulmoBeat, MulmoImagePromptMedia } from "@mulmocast/types";
+import { mulmoScriptSchema, type MulmoBeat, type MulmoImagePromptMedia } from "@mulmocast/types";
 import { slugify } from "../../utils/slug.js";
 import { resolveWithinRoot } from "../../utils/files/safe.js";
 import { errorMessage } from "../../utils/errors.js";
@@ -118,6 +118,64 @@ router.post(API_ROUTES.mulmoScript.save, async (req: Request<object, object, Sav
   res.json({
     data: { script, filePath: `stories/${fname}` },
     message: `Saved MulmoScript to stories/${fname}`,
+    instructions: "Display the storyboard to the user.",
+  });
+});
+
+interface LoadMulmoScriptBody {
+  filePath?: string;
+}
+
+// Re-display an already-saved MulmoScript without resending the full
+// JSON. Path is workspace-relative (e.g. "stories/foo.json"); the
+// resolveStoryPath helper enforces realpath-based confinement to the
+// stories directory and a `.json` extension is required to keep this
+// endpoint from doubling as a generic file-read primitive.
+router.post(API_ROUTES.mulmoScript.load, async (req: Request<object, object, LoadMulmoScriptBody>, res: Response) => {
+  const { filePath } = req.body ?? {};
+  if (typeof filePath !== "string" || filePath === "") {
+    badRequest(res, "filePath must be a non-empty string");
+    return;
+  }
+  if (!filePath.toLowerCase().endsWith(".json")) {
+    badRequest(res, "filePath must point to a .json file");
+    return;
+  }
+
+  const absoluteFilePath = resolveStoryPath(filePath, res);
+  if (!absoluteFilePath) return;
+
+  let raw: string;
+  try {
+    raw = readFileSync(absoluteFilePath, "utf-8");
+  } catch (err) {
+    serverError(res, errorMessage(err));
+    return;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    badRequest(res, `Invalid JSON: ${errorMessage(err)}`);
+    return;
+  }
+
+  const validation = mulmoScriptSchema.safeParse(parsed);
+  if (!validation.success) {
+    badRequest(res, "File is not a valid MulmoScript");
+    return;
+  }
+
+  // Normalize the returned filePath so the View / future calls always
+  // use the canonical "stories/<rel>" wire form, regardless of what the
+  // caller passed in. Keeps pendingGenerations keys consistent across
+  // save and load.
+  const normalized = filePath.startsWith("stories/") || filePath === "stories" ? filePath : `stories/${filePath}`;
+
+  res.json({
+    data: { script: validation.data, filePath: normalized },
+    message: `Loaded MulmoScript from ${normalized}`,
     instructions: "Display the storyboard to the user.",
   });
 });
@@ -493,6 +551,58 @@ router.post(API_ROUTES.mulmoScript.renderBeat, async (req: Request<object, objec
   }
 });
 
+// Module-level dedup so a foreground SSE call and a fire-and-forget
+// background call can't race on the same script. Keyed by the realpath
+// (absoluteFilePath) so two different wire spellings of the same file
+// still collide. The set is intentionally process-local — a multi-
+// process deployment would need an external lock; that's out of scope.
+const inFlightMovies = new Set<string>();
+
+type MovieGenerationResult = { ok: true; outputPath: string } | { ok: false; error: string };
+
+interface MovieProgressEvent {
+  kind: "image" | "audio";
+  beatIndex: number;
+}
+
+// Shared core for both the SSE-streaming `generateMovie` route and the
+// fire-and-forget `generateMovieBackground` route. Builds the mulmo
+// context, runs images→audio→movie, and reports per-beat progress
+// through the supplied callback. Throws on unexpected pipeline errors;
+// returns a structured failure when the pipeline runs to completion
+// but the output file is missing.
+async function runMovieGeneration(absoluteFilePath: string, onProgressEvent: (event: MovieProgressEvent) => void): Promise<MovieGenerationResult> {
+  const context = await buildContext(absoluteFilePath);
+  if (!context) return { ok: false, error: "Failed to initialize mulmo context" };
+
+  const idToIndex = new Map<string, number>();
+  (context.studio.script.beats as MulmoBeat[]).forEach((beat, index) => {
+    const key = beat.id ?? `__index__${index}`;
+    idToIndex.set(key, index);
+  });
+
+  const onProgress = (event: { kind: string; sessionType: string; id?: string; inSession: boolean }) => {
+    if (event.kind !== "beat" || event.inSession || event.id === undefined) return;
+    const beatIndex = idToIndex.get(event.id);
+    if (beatIndex === undefined) return;
+    if (event.sessionType !== "image" && event.sessionType !== "audio") return;
+    onProgressEvent({ kind: event.sessionType, beatIndex });
+  };
+
+  addSessionProgressCallback(onProgress);
+  try {
+    const imagesContext = await images(context);
+    const audioContext = await audio(imagesContext);
+    await movie(audioContext);
+
+    const outputPath = movieFilePath(audioContext);
+    if (!existsSync(outputPath)) return { ok: false, error: "Movie was not generated" };
+    return { ok: true, outputPath };
+  } finally {
+    removeSessionProgressCallback(onProgress);
+  }
+}
+
 router.post(API_ROUTES.mulmoScript.generateMovie, async (req: Request<object, object, { filePath: string; chatSessionId?: string }>, res: Response) => {
   const { filePath, chatSessionId } = req.body;
 
@@ -504,65 +614,132 @@ router.post(API_ROUTES.mulmoScript.generateMovie, async (req: Request<object, ob
   const absoluteFilePath = resolveStoryPath(filePath, res);
   if (!absoluteFilePath) return;
 
+  if (inFlightMovies.has(absoluteFilePath)) {
+    badRequest(res, "Movie generation is already in progress for this script");
+    return;
+  }
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
   const send = (data: unknown) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
+  inFlightMovies.add(absoluteFilePath);
   publishGeneration(chatSessionId, GENERATION_KINDS.movie, filePath, "", false);
   let genError: string | undefined;
   try {
-    const context = await buildContext(absoluteFilePath);
-    if (!context) {
-      genError = "Failed to initialize mulmo context";
-      send({ type: "error", message: genError });
-      res.end();
+    const result = await runMovieGeneration(absoluteFilePath, (event) => {
+      send({ type: `beat_${event.kind}_done`, beatIndex: event.beatIndex });
+    });
+    if (!result.ok) {
+      genError = result.error;
+      send({ type: "error", message: result.error });
       return;
     }
-
-    // Build id → beatIndex map for the progress callback
-    const idToIndex = new Map<string, number>();
-    (context.studio.script.beats as MulmoBeat[]).forEach((beat, index) => {
-      const key = beat.id ?? `__index__${index}`;
-      idToIndex.set(key, index);
-    });
-
-    const onProgress = (event: { kind: string; sessionType: string; id?: string; inSession: boolean }) => {
-      if (event.kind === "beat" && !event.inSession && event.id !== undefined) {
-        const beatIndex = idToIndex.get(event.id);
-        if (beatIndex !== undefined) {
-          send({ type: `beat_${event.sessionType}_done`, beatIndex });
-        }
-      }
-    };
-
-    addSessionProgressCallback(onProgress);
-    try {
-      const imagesContext = await images(context);
-      const audioContext = await audio(imagesContext);
-      await movie(audioContext);
-
-      const outputPath = movieFilePath(audioContext);
-      if (!existsSync(outputPath)) {
-        genError = "Movie was not generated";
-        send({ type: "error", message: genError });
-        res.end();
-        return;
-      }
-
-      send({ type: "done", moviePath: toStoryRef(outputPath) });
-    } finally {
-      removeSessionProgressCallback(onProgress);
-    }
+    send({ type: "done", moviePath: toStoryRef(result.outputPath) });
   } catch (err) {
     genError = errorMessage(err);
     send({ type: "error", message: genError });
   } finally {
+    inFlightMovies.delete(absoluteFilePath);
     publishGeneration(chatSessionId, GENERATION_KINDS.movie, filePath, "", true, genError);
     res.end();
   }
 });
+
+// Background sibling of `generateMovie`. POST returns 200 immediately;
+// the heavy work runs detached, reporting progress through the same
+// session pendingGenerations channel that the View already watches —
+// so a user opening the canvas mid-generation sees spinners, and a
+// user opening it after completion sees the finished movie loaded
+// from disk by the View's normal mount-time path.
+//
+// Errors are persisted to a `<filename>.error.txt` sidecar next to the
+// script (no synchronous client to alert), and any stale sidecar from
+// a previous failed run is cleared on each new attempt.
+router.post(
+  API_ROUTES.mulmoScript.generateMovieBackground,
+  async (req: Request<object, object, { filePath: string; chatSessionId?: string }>, res: Response) => {
+    const { filePath, chatSessionId } = req.body;
+
+    if (!filePath) {
+      badRequest(res, "filePath is required");
+      return;
+    }
+
+    const absoluteFilePath = resolveStoryPath(filePath, res);
+    if (!absoluteFilePath) return;
+
+    if (inFlightMovies.has(absoluteFilePath)) {
+      badRequest(res, "Movie generation is already in progress for this script");
+      return;
+    }
+
+    inFlightMovies.add(absoluteFilePath);
+    res.json({ ok: true });
+
+    void runBackgroundMovieGeneration(absoluteFilePath, filePath, chatSessionId);
+  },
+);
+
+async function runBackgroundMovieGeneration(absoluteFilePath: string, wireFilePath: string, chatSessionId: string | undefined): Promise<void> {
+  const errorSidecarPath = `${absoluteFilePath}.error.txt`;
+  // Clear stale error from a previous failed run before starting; if it
+  // doesn't exist that's fine. Catch any unexpected fs errors silently —
+  // the worst case is the user sees an out-of-date error file later.
+  try {
+    unlinkSync(errorSidecarPath);
+  } catch {
+    // intentional: ENOENT is the common case, others non-fatal
+  }
+
+  publishGeneration(chatSessionId, GENERATION_KINDS.movie, wireFilePath, "", false);
+  let genError: string | undefined;
+  try {
+    const result = await runMovieGeneration(absoluteFilePath, (event) => {
+      // Mirror per-beat completions through the session channel so the
+      // View's pendingGenerations watcher reloads the asset off disk.
+      // We fire start+finish in two ticks — `setImmediate` lets the SSE
+      // writer flush the start event before the finish removes the
+      // entry, otherwise Vue's batched reactivity could see a net "no
+      // change" and skip the reload.
+      const eventKind = event.kind === "image" ? GENERATION_KINDS.beatImage : GENERATION_KINDS.beatAudio;
+      const key = String(event.beatIndex);
+      publishGeneration(chatSessionId, eventKind, wireFilePath, key, false);
+      setImmediate(() => publishGeneration(chatSessionId, eventKind, wireFilePath, key, true));
+    });
+
+    if (!result.ok) {
+      genError = result.error;
+      writeErrorSidecar(errorSidecarPath, result.error);
+      log.warn("mulmo-script", "background movie generation failed", { filePath: wireFilePath, error: result.error });
+      return;
+    }
+    log.info("mulmo-script", "background movie generation done", {
+      filePath: wireFilePath,
+      outputPath: result.outputPath,
+    });
+  } catch (err) {
+    genError = errorMessage(err);
+    writeErrorSidecar(errorSidecarPath, genError);
+    log.error("mulmo-script", "background movie generation crashed", { filePath: wireFilePath, error: genError });
+  } finally {
+    inFlightMovies.delete(absoluteFilePath);
+    publishGeneration(chatSessionId, GENERATION_KINDS.movie, wireFilePath, "", true, genError);
+  }
+}
+
+function writeErrorSidecar(errorSidecarPath: string, message: string): void {
+  try {
+    writeFileSync(errorSidecarPath, message);
+  } catch (writeErr) {
+    log.error("mulmo-script", "failed to write error sidecar", {
+      errorSidecarPath,
+      error: errorMessage(writeErr),
+    });
+  }
+}
 
 interface CharacterImageQuery {
   filePath?: string;
