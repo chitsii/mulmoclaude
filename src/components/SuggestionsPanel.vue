@@ -1,5 +1,5 @@
 <template>
-  <div v-if="expanded && hasContent" class="border-t border-gray-200 flex flex-col">
+  <div v-if="expanded && hasContent" ref="panelRef" class="border-t border-gray-200 flex flex-col">
     <div ref="listRef" class="px-4 pt-2 pb-2 max-h-64 overflow-y-auto flex flex-col gap-1">
       <template v-if="activeTab === 'suggestions'">
         <button
@@ -47,9 +47,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useSkillsList, type SkillSummary } from "../composables/useSkillsList";
+import { useClickOutside } from "../composables/useClickOutside";
 
 const { t } = useI18n();
 
@@ -59,6 +60,7 @@ const TAB_STORAGE_KEY = "suggestionsPanel.activeTab";
 const props = defineProps<{
   queries: string[];
   expanded: boolean;
+  triggerRef?: HTMLElement | null;
 }>();
 
 const emit = defineEmits<{
@@ -70,6 +72,22 @@ const emit = defineEmits<{
 const { skills } = useSkillsList();
 
 const listRef = ref<HTMLDivElement | null>(null);
+const panelRef = ref<HTMLDivElement | null>(null);
+
+const expandedRef = computed({
+  get: () => props.expanded,
+  set: (value: boolean) => emit("update:expanded", value),
+});
+const triggerElRef = computed(() => props.triggerRef ?? null);
+
+const { handler: onDocumentMousedown } = useClickOutside({
+  isOpen: expandedRef,
+  buttonRef: triggerElRef,
+  popupRef: panelRef,
+});
+
+onMounted(() => document.addEventListener("mousedown", onDocumentMousedown));
+onBeforeUnmount(() => document.removeEventListener("mousedown", onDocumentMousedown));
 
 function readStoredTab(): TabId {
   const raw = localStorage.getItem(TAB_STORAGE_KEY);

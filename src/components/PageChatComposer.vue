@@ -4,6 +4,7 @@
       v-if="showSuggestionsButton"
       v-model:expanded="suggestionsExpanded"
       :queries="suggestions"
+      :trigger-ref="suggestionsBtnRef"
       @send="onSuggestionSend"
       @edit="onSuggestionEdit"
     />
@@ -23,6 +24,7 @@
       <div class="flex flex-col gap-1 shrink-0">
         <button
           v-if="showSuggestionsButton"
+          ref="suggestionsBtnRef"
           :data-testid="`${testIdPrefix}-suggestions`"
           class="rounded w-8 h-8 flex items-center justify-center"
           :class="suggestionsExpanded ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-gray-600'"
@@ -72,6 +74,7 @@ const appApi = useAppApi();
 const draft = ref("");
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const suggestionsExpanded = ref(false);
+const suggestionsBtnRef = ref<HTMLButtonElement | null>(null);
 
 const { skills } = useSkillsList();
 const showSuggestionsButton = computed(() => (props.suggestions?.length ?? 0) > 0 || skills.value.length > 0);

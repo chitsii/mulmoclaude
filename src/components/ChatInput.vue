@@ -1,6 +1,12 @@
 <template>
   <div class="border-t border-gray-200" @dragover.prevent @drop="onDropFile">
-    <SuggestionsPanel v-model:expanded="suggestionsExpanded" :queries="queries" @send="onSuggestionSend" @edit="onSuggestionEdit" />
+    <SuggestionsPanel
+      v-model:expanded="suggestionsExpanded"
+      :queries="queries"
+      :trigger-ref="suggestionsBtnRef"
+      @send="onSuggestionSend"
+      @edit="onSuggestionEdit"
+    />
     <div class="p-2">
       <div v-if="fileError" class="mb-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-1.5" data-testid="file-error">
         {{ fileError }}
@@ -31,6 +37,7 @@
         <div class="flex flex-col gap-1">
           <button
             v-if="showSuggestionsButton"
+            ref="suggestionsBtnRef"
             data-testid="suggestions-btn"
             class="rounded w-8 h-8 flex items-center justify-center"
             :class="suggestionsExpanded ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-gray-600'"
@@ -108,6 +115,7 @@ const textarea = ref<HTMLTextAreaElement | null>(null);
 const fileError = ref<string | null>(null);
 const fileInput = ref<HTMLInputElement | null>(null);
 const suggestionsExpanded = ref(false);
+const suggestionsBtnRef = ref<HTMLButtonElement | null>(null);
 
 const { skills } = useSkillsList();
 const showSuggestionsButton = computed(() => (props.queries?.length ?? 0) > 0 || skills.value.length > 0);
