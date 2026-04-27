@@ -810,6 +810,8 @@ const esMessages = {
     gen: "Generar",
     play: "▶ Reproducir",
     stop: "■ Detener",
+    playPresentation: "Reproducir presentación",
+    regenerateMovie: "Regenerar vídeo",
     errPrefix: "⚠ Error",
     noBeats: "No se encontraron beats en el script",
     editSource: "Editar fuente del script",

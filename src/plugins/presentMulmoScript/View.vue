@@ -16,6 +16,21 @@
         </div>
       </div>
       <div class="ml-4 shrink-0 flex items-center gap-2">
+        <!-- Play presentation: opens the lightbox at beat 0 and starts
+             audio. Same gating as Download Movie — only when a movie has
+             been generated, which is our proxy for "every beat has both
+             an image and audio on disk". Green outline + green icon
+             share the visual idiom with the (filled) Download button so
+             both completed-artifact actions read as the same family. -->
+        <button
+          v-if="moviePath && !movieGenerating"
+          class="h-8 w-8 flex items-center justify-center rounded border border-green-600 text-green-600 hover:bg-green-50 transition-colors"
+          :title="t('pluginMulmoScript.playPresentation')"
+          :aria-label="t('pluginMulmoScript.playPresentation')"
+          @click="playPresentation"
+        >
+          <span class="material-icons text-base">play_arrow</span>
+        </button>
         <!-- Download Movie -->
         <a
           v-if="moviePath && !movieGenerating"
@@ -26,8 +41,23 @@
           <span class="material-icons text-base">download</span>
           <span>{{ t("pluginMulmoScript.movie") }}</span>
         </a>
-        <!-- Generate / Regenerate Movie -->
+        <!-- Regenerate Movie (icon-only): collapses to a square once a
+             movie exists — the adjacent Download / Play already make
+             the subject clear, so the "Movie" label only adds noise. -->
         <button
+          v-if="moviePath && !movieGenerating"
+          class="h-8 w-8 flex items-center justify-center rounded border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors"
+          :title="t('pluginMulmoScript.regenerateMovie')"
+          :aria-label="t('pluginMulmoScript.regenerateMovie')"
+          @click="generateMovie"
+        >
+          <span class="material-icons text-base">refresh</span>
+        </button>
+        <!-- Generate Movie (pill): no movie yet, or one is currently
+             generating. Keeps the label so first-time users know what
+             they're triggering. -->
+        <button
+          v-else
           class="h-8 px-2.5 flex items-center gap-1 text-sm rounded border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           :disabled="movieGenerating"
           @click="generateMovie"
@@ -496,6 +526,18 @@ function openLightbox(index: number) {
 function closeLightbox() {
   stopPlayingAudio();
   lightbox.value = null;
+}
+
+// "Play presentation" toolbar action. Opens the lightbox at beat 0 and
+// kicks off its narration audio; the existing on-ended hook then chains
+// through the rest of the deck (lightboxMove(1) → playAudio if the next
+// beat has audio), so one click runs the whole presentation. Only wired
+// to the toolbar button when moviePath is set, which is our proxy for
+// "every beat has both image and audio on disk".
+function playPresentation() {
+  if (beats.value.length === 0) return;
+  openLightbox(0);
+  if (beatAudios[0]) playAudio(0);
 }
 
 const hasPrev = computed(() => {

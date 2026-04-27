@@ -801,6 +801,8 @@ const jaMessages = {
     gen: "生成",
     play: "▶ 再生",
     stop: "■ 停止",
+    playPresentation: "プレゼンテーション再生",
+    regenerateMovie: "動画を再生成",
     errPrefix: "⚠ エラー",
     noBeats: "スクリプトにビートが見つかりません",
     editSource: "スクリプトソースを編集",

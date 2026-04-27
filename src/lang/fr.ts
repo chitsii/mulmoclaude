@@ -802,6 +802,8 @@ const frMessages = {
     gen: "Générer",
     play: "▶ Lire",
     stop: "■ Arrêter",
+    playPresentation: "Lire la présentation",
+    regenerateMovie: "Régénérer la vidéo",
     errPrefix: "⚠ Erreur",
     noBeats: "Aucun beat trouvé dans le script",
     editSource: "Modifier la source du script",

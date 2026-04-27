@@ -801,6 +801,8 @@ const koMessages = {
     gen: "생성",
     play: "▶ 재생",
     stop: "■ 정지",
+    playPresentation: "프레젠테이션 재생",
+    regenerateMovie: "동영상 재생성",
     errPrefix: "⚠ 오류",
     noBeats: "스크립트에서 비트를 찾을 수 없습니다",
     editSource: "스크립트 원본 편집",
