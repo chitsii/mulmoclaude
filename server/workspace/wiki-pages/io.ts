@@ -46,15 +46,19 @@ export interface WikiPageWriteOptions {
  *  raw `path.join(root, dir, '${slug}.md')` happily resolves
  *  `../../etc/passwd` outside the wiki tree. Today's three callers
  *  derive slugs from `path.basename(...)` so they're already safe;
- *  this guard keeps that property even if a future caller forgets. */
+ *  this guard keeps that property even if a future caller forgets.
+ *
+ *  The rule is intentionally narrow — separators / `..` / NUL /
+ *  empty — so it only rejects unambiguous security violations.
+ *  Aesthetic concerns (e.g. dot-prefixed "hidden" filenames) are
+ *  out of scope: a pre-existing `data/wiki/pages/.foo.md` should
+ *  remain writable through the chokepoint, and over-rejection here
+ *  would turn that into a 500 (codex review iter-2 #883). */
 function isSafeSlug(slug: string): boolean {
   if (slug.length === 0) return false;
-  // Empty / dot-only / starts-with-dot would either resolve to the
-  // pages dir itself, hide the file (`.foo.md`), or risk collisions
-  // with VCS / OS metadata. Reject as a class.
-  if (slug.startsWith(".")) return false;
-  // Any path separator (forward slash, backslash on Windows, or the
-  // literal `..` segment) means the slug spans directories — not
+  if (slug === "." || slug === "..") return false;
+  // Any path separator (forward slash, backslash on Windows) or
+  // literal `..` segment means the slug spans directories — not
   // allowed at the page-write layer.
   if (slug.includes("/") || slug.includes("\\")) return false;
   if (slug.includes("\0")) return false;

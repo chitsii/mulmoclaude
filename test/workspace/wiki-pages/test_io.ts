@@ -10,7 +10,7 @@
 
 import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, realpath, rm, symlink, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
 import { classifyAsWikiPage, readWikiPage, wikiPagePath, writeWikiPage } from "../../../server/workspace/wiki-pages/io.js";
@@ -48,8 +48,17 @@ describe("wiki-pages/io — wikiPagePath", () => {
     assert.throws(() => wikiPagePath("evil\\..\\foo", { workspaceRoot: "/tmp/ws" }), /unsafe slug/);
   });
 
-  it("throws on dot-prefixed slugs (hidden files / VCS metadata)", () => {
-    assert.throws(() => wikiPagePath(".gitignore", { workspaceRoot: "/tmp/ws" }), /unsafe slug/);
+  it("accepts dot-prefixed slugs (e.g. existing `.foo.md` files)", () => {
+    // Codex iter-2 #883: previously rejected. Aesthetic concern,
+    // not security — pre-existing dotfile pages must keep working
+    // through the chokepoint.
+    const out = wikiPagePath(".gitignore", { workspaceRoot: "/tmp/ws" });
+    assert.equal(out, path.join("/tmp/ws", WORKSPACE_DIRS.wikiPages, ".gitignore.md"));
+  });
+
+  it("throws on `.` / `..` slugs (resolve outside or into pagesDir itself)", () => {
+    assert.throws(() => wikiPagePath(".", { workspaceRoot: "/tmp/ws" }), /unsafe slug/);
+    assert.throws(() => wikiPagePath("..", { workspaceRoot: "/tmp/ws" }), /unsafe slug/);
   });
 
   it("throws on the empty slug", () => {
@@ -190,5 +199,77 @@ describe("wiki-pages/io — classifyAsWikiPage", () => {
   it("rejects pagesDir itself (no slug)", () => {
     const out = classifyAsWikiPage(pagesDir, { workspaceRoot: root });
     assert.deepEqual(out, { wiki: false });
+  });
+});
+
+// Symlink regression for codex iter-1 #883 — the bug was that
+// `resolveSafe()` returns a realpath'd absPath while the un-realpath'd
+// `defaultWorkspacePath` is used as the comparison root, so a
+// symlinked workspace silently routed wiki writes through the
+// generic writer. Pin both behaviours: the buggy mismatch returns
+// `{ wiki: false }`, and the fixed call (both sides realpath'd)
+// returns `{ wiki: true }`.
+describe("wiki-pages/io — classifyAsWikiPage symlink consistency", () => {
+  let realRoot: string;
+  let linkRoot: string;
+  let symlinkSupported = true;
+
+  before(async () => {
+    realRoot = await mkdtemp(path.join(tmpdir(), "wiki-pages-real-"));
+    // mkdtemp on macOS returns a path under /var/folders that is
+    // already a symlink to /private/var/folders. Use realpath to
+    // anchor `realRoot` to the actual filesystem location, so the
+    // "fixed call" branch below is genuinely realpath-vs-realpath.
+    realRoot = await realpath(realRoot);
+    linkRoot = path.join(tmpdir(), `wiki-pages-link-${path.basename(realRoot)}`);
+    try {
+      await symlink(realRoot, linkRoot, "dir");
+    } catch (err) {
+      // Windows requires admin / Developer Mode for unprivileged
+      // symlinks. Skip on environments where that fails so CI
+      // (windows-2022) doesn't hard-fail.
+      const code = (err as { code?: string }).code;
+      if (code === "EPERM" || code === "EACCES") {
+        symlinkSupported = false;
+      } else {
+        throw err;
+      }
+    }
+    if (symlinkSupported) {
+      const realPagesDir = path.join(realRoot, WORKSPACE_DIRS.wikiPages);
+      await mkdir(realPagesDir, { recursive: true });
+    }
+  });
+
+  after(async () => {
+    if (symlinkSupported) {
+      await rm(linkRoot, { force: true });
+    }
+    await rm(realRoot, { recursive: true, force: true });
+  });
+
+  it("buggy mismatch (realpath'd absPath, symlinked root) returns wiki:false", (ctx) => {
+    if (!symlinkSupported) {
+      ctx.skip("symlink creation not supported in this environment");
+      return;
+    }
+    const realPagePath = path.join(realRoot, WORKSPACE_DIRS.wikiPages, "topic.md");
+    // Caller forgot to realpath the workspace root — reproduces the
+    // pre-fix behaviour. The classifier returns `wiki: false` and
+    // the generic writer would have been used, bypassing the chokepoint.
+    const out = classifyAsWikiPage(realPagePath, { workspaceRoot: linkRoot });
+    assert.deepEqual(out, { wiki: false });
+  });
+
+  it("fixed call (both sides realpath'd) returns wiki:true", (ctx) => {
+    if (!symlinkSupported) {
+      ctx.skip("symlink creation not supported in this environment");
+      return;
+    }
+    const realPagePath = path.join(realRoot, WORKSPACE_DIRS.wikiPages, "topic.md");
+    // Caller correctly passes the realpath'd root. This is what
+    // `files.ts` does post-fix (`workspaceReal`).
+    const out = classifyAsWikiPage(realPagePath, { workspaceRoot: realRoot });
+    assert.deepEqual(out, { wiki: true, slug: "topic" });
   });
 });
