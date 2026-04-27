@@ -75,6 +75,11 @@ export async function* runAgent(
     await mkdir(dirname(mcpPaths.hostPath), { recursive: true });
   }
 
+  // Names of every MCP server (built-in + user-configured) merged
+  // into the --mcp-config payload. Only populated when `hasMcp` is
+  // true; surfaced in the spawn log under --debug so developers can
+  // verify Settings UI changes actually reach Claude Code.
+  let mcpServerNames: string[] = [];
   if (hasMcp) {
     const mcpConfig = buildMcpConfig({
       chatSessionId: sessionId,
@@ -84,6 +89,7 @@ export async function* runAgent(
       useDocker,
       userServers,
     });
+    mcpServerNames = Object.keys(mcpConfig.mcpServers).sort();
     // Write atomically so a partially-written file can't be picked
     // up by a concurrent claude spawn (they share the --mcp-config
     // path under the session dir).
@@ -100,14 +106,23 @@ export async function* runAgent(
   // debugging and avoids writing identifiers that route back to a
   // specific session into long-lived log files.
   const backend = getActiveBackend();
-  log.info("agent", "spawning agent", {
+  const spawnLog: Record<string, unknown> = {
     backend: backend.id,
     roleId: role.id,
     useDocker,
     hasMcp,
     resumed: Boolean(claudeSessionId),
     hasSessionId: Boolean(sessionId),
-  });
+  };
+  // Under --debug only: dump the merged MCP server list so the
+  // developer can confirm Settings UI changes (catalog installs /
+  // removes, env updates) actually reach Claude Code on the next
+  // spawn. Kept out of the default log to avoid leaking server
+  // names into long-lived sinks.
+  if (process.argv.includes("--debug") && hasMcp) {
+    spawnLog.mcpServers = mcpServerNames;
+  }
+  log.info("agent", "spawning agent", spawnLog);
 
   try {
     yield* backend.runAgent({
