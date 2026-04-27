@@ -11,10 +11,15 @@ export interface SkillSummary {
 // Module-level shared state so consumers (ChatInput, PageChatComposer,
 // SuggestionsPanel) all see the same list. We do not cache: every
 // `refresh()` re-hits /api/skills. The first auto-fetch on mount is
-// a bootstrap so the toggle button's visibility is correct on load;
-// everything beyond that re-reads from disk (deletions in /skills
-// would otherwise leave stale entries here — see issue from #885 review).
+// a bootstrap so the panel has something to show on first open.
+//
+// Error policy: on a failed fetch we keep the previous `skills` value
+// (so a transient blip doesn't visually wipe the list) and surface the
+// failure through `error`. The Skills tab renders that as a banner so
+// the user can tell stale data from current data. A successful refresh
+// clears `error`.
 const skills = ref<SkillSummary[]>([]);
+const error = ref<string | null>(null);
 let bootstrapped = false;
 let inflight: Promise<void> | null = null;
 
@@ -25,6 +30,9 @@ async function refresh(): Promise<void> {
       const result = await apiGet<{ skills: SkillSummary[] }>(API_ROUTES.skills.list);
       if (result.ok && Array.isArray(result.data.skills)) {
         skills.value = result.data.skills;
+        error.value = null;
+      } else if (!result.ok) {
+        error.value = result.error || "Failed to load skills";
       }
     } finally {
       inflight = null;
@@ -35,6 +43,7 @@ async function refresh(): Promise<void> {
 
 export function useSkillsList(): {
   skills: DeepReadonly<Ref<SkillSummary[]>>;
+  error: DeepReadonly<Ref<string | null>>;
   refresh: () => Promise<void>;
 } {
   if (!bootstrapped) {
@@ -43,6 +52,7 @@ export function useSkillsList(): {
   }
   return {
     skills: readonly(skills),
+    error: readonly(error),
     refresh,
   };
 }

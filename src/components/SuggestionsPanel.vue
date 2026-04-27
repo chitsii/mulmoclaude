@@ -13,6 +13,9 @@
         <p v-if="queries.length === 0" class="text-center text-xs text-gray-400 italic py-2">{{ t("suggestionsPanel.emptySuggestions") }}</p>
       </template>
       <template v-else>
+        <p v-if="skillsError" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-1.5" data-testid="suggestions-skills-error">
+          {{ t("suggestionsPanel.skillsError", { error: skillsError }) }}
+        </p>
         <button
           v-for="skill in skills"
           :key="skill.name"
@@ -21,7 +24,9 @@
         >
           /{{ skill.name }}
         </button>
-        <p v-if="skills.length === 0" class="text-center text-xs text-gray-400 italic py-2">{{ t("suggestionsPanel.emptySkills") }}</p>
+        <p v-if="!skillsError && skills.length === 0" class="text-center text-xs text-gray-400 italic py-2">
+          {{ t("suggestionsPanel.emptySkills") }}
+        </p>
       </template>
     </div>
     <p class="text-center text-[10px] text-gray-400 py-0.5">{{ t("suggestionsPanel.sendEditHint") }}</p>
@@ -69,7 +74,7 @@ const emit = defineEmits<{
   edit: [query: string];
 }>();
 
-const { skills, refresh: refreshSkills } = useSkillsList();
+const { skills, error: skillsError, refresh: refreshSkills } = useSkillsList();
 
 const listRef = ref<HTMLDivElement | null>(null);
 const panelRef = ref<HTMLDivElement | null>(null);

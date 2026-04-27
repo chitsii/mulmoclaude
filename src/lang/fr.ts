@@ -869,6 +869,7 @@ const frMessages = {
     tooltip: "Suggestions et compétences",
     emptySuggestions: "Aucune suggestion.",
     emptySkills: "Aucune compétence installée.",
+    skillsError: "Échec du chargement des compétences : {error}",
     sendEditHint: "cliquez pour envoyer · shift+clic pour modifier",
   },
   settingsToolsTab: {

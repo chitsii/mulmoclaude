@@ -867,6 +867,7 @@ const ptBRMessages = {
     tooltip: "Sugestões e habilidades",
     emptySuggestions: "Sem sugestões.",
     emptySkills: "Nenhuma habilidade instalada.",
+    skillsError: "Falha ao carregar habilidades: {error}",
     sendEditHint: "clique para enviar · shift+clique para editar",
   },
   settingsToolsTab: {
