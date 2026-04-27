@@ -291,9 +291,82 @@ const koMessages = {
             },
           },
         },
+        appleNative: {
+          displayName: "Apple 네이티브 앱 (macOS)",
+          description: "AppleScript로 미리 알림 / 캘린더 / 메모 / 메일 / 지도 읽기·쓰기. macOS 전용 — 자격 증명 불필요.",
+        },
+        gmail: {
+          displayName: "Gmail",
+          description: "Gmail 읽기·전송·라벨 지정. 사용자 본인의 Google Cloud 프로젝트에서 발급한 OAuth 클라이언트를 사용 (앱 검수 불필요).",
+          field: {
+            credentials: {
+              label: "credentials.json 경로",
+              help: "Google Cloud Console → APIs & Services → Credentials → OAuth 클라이언트 ID (Desktop app). credentials.json을 다운로드하여 절대 경로를 입력하세요.",
+            },
+          },
+        },
+        googleCalendar: {
+          displayName: "Google 캘린더",
+          description: "Google 캘린더 일정 읽기·생성. Gmail과 동일한 BYO credentials.json 방식.",
+          field: {
+            credentials: {
+              label: "credentials.json 경로",
+              help: "Gmail과 동일한 Google Cloud OAuth 클라이언트를 재사용하거나, 캘린더 전용으로 별도 생성하세요.",
+            },
+          },
+        },
+        googleDrive: {
+          displayName: "Google 드라이브",
+          description: "Google 드라이브 파일 검색·읽기. BYO Google OAuth 자격 증명 — 토큰은 로컬에 캐시됩니다.",
+          field: {
+            credentials: {
+              label: "credentials.json 경로",
+              help: "Google Cloud Console → APIs & Services → Credentials → OAuth 클라이언트 ID (Desktop app). 동일 프로젝트에서 Google Drive API를 활성화하세요.",
+            },
+          },
+        },
+        github: {
+          displayName: "GitHub",
+          description:
+            "Personal Access Token으로 리포지토리 / 이슈 / PR / 검색 액세스. 토큰 범위를 좁게 설정하세요 — 쓰기 범위(`repo` 등)를 부여하면 에이전트가 접근 가능한 모든 리포지토리에 push할 수 있습니다.",
+          field: {
+            token: {
+              label: "Personal Access Token",
+              help: "GitHub → Settings → Developer settings → Personal access tokens. 에이전트가 다룰 리포지토리만 지정하는 fine-grained token을 권장합니다.",
+            },
+          },
+        },
+        linear: {
+          displayName: "Linear",
+          description: "Personal API key로 Linear의 이슈 / 프로젝트 / 사이클 읽기·쓰기.",
+          field: {
+            apiKey: {
+              label: "Linear API 키",
+              help: "Linear → Settings → API → Personal API keys. 🔑 를 눌러 페이지를 열고 Create key 를 클릭하세요.",
+            },
+          },
+        },
         weatherOpenMeteo: {
           displayName: "날씨 (Open-Meteo)",
           description: "전 세계 무료 일기예보와 현재 기상 정보 — API 키 불필요.",
+        },
+        spotify: {
+          displayName: "Spotify",
+          description: "트랙 검색, 플레이리스트 관리, 재생 제어. BYO Spotify 개발자 앱 — Client ID + Client Secret.",
+          field: {
+            clientId: {
+              label: "Client ID",
+              help: "Spotify Developer Dashboard → Create app → Client ID를 복사하세요. 데스크톱 용도에서는 Redirect URI가 실제 사이트와 일치하지 않아도 됩니다.",
+            },
+            clientSecret: {
+              label: "Client Secret",
+              help: "동일한 Developer Dashboard → 앱의 Show client secret. 한 번 붙여 넣으면 로컬에 캐시됩니다.",
+            },
+          },
+        },
+        youtubeTranscript: {
+          displayName: "YouTube 자막",
+          description: "공개된 YouTube 동영상의 URL로 자막을 가져옵니다. 자격 증명 불필요.",
         },
       },
       config: {

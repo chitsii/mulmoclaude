@@ -290,9 +290,82 @@ const jaMessages = {
             },
           },
         },
+        appleNative: {
+          displayName: "Apple ネイティブアプリ（macOS）",
+          description: "AppleScript 経由で リマインダー / カレンダー / メモ / メール / マップ を読み書き。macOS 限定 — 認証情報不要。",
+        },
+        gmail: {
+          displayName: "Gmail",
+          description: "Gmail の読み取り・送信・ラベル付け。自身の Google Cloud プロジェクトで OAuth クライアントを発行して利用（アプリ審査不要）。",
+          field: {
+            credentials: {
+              label: "credentials.json のパス",
+              help: "Google Cloud Console → APIs & Services → Credentials → OAuth クライアント ID（Desktop app）。credentials.json をダウンロードして絶対パスを貼ってください。",
+            },
+          },
+        },
+        googleCalendar: {
+          displayName: "Google カレンダー",
+          description: "Google カレンダーの読み取り・予定作成。Gmail と同じ BYO 方式の credentials.json を使います。",
+          field: {
+            credentials: {
+              label: "credentials.json のパス",
+              help: "Gmail と同じ Google Cloud OAuth クライアントを使い回すか、Calendar 専用に別途作成してください。",
+            },
+          },
+        },
+        googleDrive: {
+          displayName: "Google ドライブ",
+          description: "Google ドライブのファイル検索・読み取り。BYO Google OAuth credentials を使い、リフレッシュトークンはローカルに保存されます。",
+          field: {
+            credentials: {
+              label: "credentials.json のパス",
+              help: "Google Cloud Console → APIs & Services → Credentials → OAuth クライアント ID（Desktop app）。同じプロジェクトで Google Drive API を有効化してください。",
+            },
+          },
+        },
+        github: {
+          displayName: "GitHub",
+          description:
+            "Personal Access Token でリポジトリ / Issue / PR / 検索にアクセス。スコープは絞ってください — 書き込み権限（`repo` 等）を渡すとアクセス可能な全リポジトリに push できてしまいます。",
+          field: {
+            token: {
+              label: "Personal Access Token",
+              help: "GitHub → Settings → Developer settings → Personal access tokens。エージェントに触らせたいリポジトリだけ指定する fine-grained token を推奨。",
+            },
+          },
+        },
+        linear: {
+          displayName: "Linear",
+          description: "Personal API key で Linear の Issue / プロジェクト / サイクルを読み書き。",
+          field: {
+            apiKey: {
+              label: "Linear API キー",
+              help: "Linear → Settings → API → Personal API keys。🔑 から発行ページを開き Create key を押してください。",
+            },
+          },
+        },
         weatherOpenMeteo: {
           displayName: "天気予報（Open-Meteo）",
           description: "世界各地の天気予報と現在の気象情報 — API キー不要で無料利用可能。",
+        },
+        spotify: {
+          displayName: "Spotify",
+          description: "曲の検索、プレイリスト管理、再生操作。BYO Spotify Developer アプリ — Client ID と Client Secret を発行してください。",
+          field: {
+            clientId: {
+              label: "Client ID",
+              help: "Spotify Developer Dashboard → Create app で取得。デスクトップ用途では Redirect URI が実在のサイトに一致する必要はありません。",
+            },
+            clientSecret: {
+              label: "Client Secret",
+              help: "同じ Developer Dashboard → アプリの Show client secret から取得。一度貼ればローカルに保存されます。",
+            },
+          },
+        },
+        youtubeTranscript: {
+          displayName: "YouTube 字幕",
+          description: "公開 YouTube 動画の URL から字幕を取得。認証情報不要。",
         },
       },
       config: {

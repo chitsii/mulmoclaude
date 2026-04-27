@@ -287,9 +287,83 @@ const deMessages = {
             },
           },
         },
+        appleNative: {
+          displayName: "Native Apple-Apps (macOS)",
+          description: "Liest und schreibt Erinnerungen, Kalender, Notizen, Mail und Karten via AppleScript. Nur macOS — keine Zugangsdaten nötig.",
+        },
+        gmail: {
+          displayName: "Gmail",
+          description:
+            "Liest, sendet und beschriftet dein Gmail. Nutzt einen Google-OAuth-Client, den du selbst in deinem eigenen Google-Cloud-Projekt erstellst (keine App-Verifizierung nötig).",
+          field: {
+            credentials: {
+              label: "Pfad zu credentials.json",
+              help: "Google Cloud Console → APIs & Services → Credentials → OAuth-Client-ID (Desktop app). Lade credentials.json herunter und füge den absoluten Pfad ein.",
+            },
+          },
+        },
+        googleCalendar: {
+          displayName: "Google Kalender",
+          description: "Liest und erstellt Termine im Google Kalender. Gleiches BYO-credentials.json-Muster wie Gmail.",
+          field: {
+            credentials: {
+              label: "Pfad zu credentials.json",
+              help: "Verwende denselben Google-Cloud-OAuth-Client wie Gmail, oder erstelle einen separaten nur für Calendar.",
+            },
+          },
+        },
+        googleDrive: {
+          displayName: "Google Drive",
+          description: "Sucht und liest Google-Drive-Dateien. BYO Google-OAuth-Zugangsdaten — Token wird lokal neben der Datei zwischengespeichert.",
+          field: {
+            credentials: {
+              label: "Pfad zu credentials.json",
+              help: "Google Cloud Console → APIs & Services → Credentials → OAuth-Client-ID (Desktop app). Aktiviere die Google-Drive-API im selben Projekt.",
+            },
+          },
+        },
+        github: {
+          displayName: "GitHub",
+          description:
+            "Liest Repos, Issues, PRs und führt Suchen mit einem Personal Access Token aus. Begrenze den Token-Scope — Schreibrechte (z.B. `repo`) erlauben dem Agenten Pushes auf jeden zugänglichen Repo.",
+          field: {
+            token: {
+              label: "Personal Access Token",
+              help: "GitHub → Settings → Developer settings → Personal access tokens. Bevorzuge fine-grained tokens, die nur auf Repos beschränkt sind, in denen der Agent arbeiten soll.",
+            },
+          },
+        },
+        linear: {
+          displayName: "Linear",
+          description: "Liest und aktualisiert Linear-Issues, -Projekte und -Cycles mit einem persönlichen API-Key.",
+          field: {
+            apiKey: {
+              label: "Linear-API-Key",
+              help: "Linear → Settings → API → Personal API keys. Klicke auf 🔑, um die Seite zu öffnen, und dann auf Create key.",
+            },
+          },
+        },
         weatherOpenMeteo: {
           displayName: "Wetter (Open-Meteo)",
           description: "Kostenlose Wettervorhersagen und aktuelle Bedingungen weltweit — ohne API-Key.",
+        },
+        spotify: {
+          displayName: "Spotify",
+          description: "Suche Tracks, verwalte Playlists, steuere die Wiedergabe. BYO Spotify-Developer-App — Client ID + Client Secret.",
+          field: {
+            clientId: {
+              label: "Client ID",
+              help: "Spotify Developer Dashboard → Create app → kopiere die Client ID. Die Redirect URI muss für Desktop-Nutzung keiner echten Seite entsprechen.",
+            },
+            clientSecret: {
+              label: "Client Secret",
+              help: "Selbes Developer Dashboard → in der App auf Show client secret klicken. Einmal eingefügt, lokal gecacht.",
+            },
+          },
+        },
+        youtubeTranscript: {
+          displayName: "YouTube-Transkript",
+          description: "Holt die Untertitel zu jedem öffentlichen YouTube-Video per URL. Keine Zugangsdaten nötig.",
         },
       },
       config: {

@@ -287,9 +287,82 @@ const zhMessages = {
             },
           },
         },
+        appleNative: {
+          displayName: "Apple 原生应用（macOS）",
+          description: "通过 AppleScript 读写 提醒事项 / 日历 / 备忘录 / 邮件 / 地图。仅限 macOS — 无需凭证。",
+        },
+        gmail: {
+          displayName: "Gmail",
+          description: "读取、发送和标记 Gmail 邮件。使用您自己 Google Cloud 项目中创建的 OAuth 客户端（无需应用审核）。",
+          field: {
+            credentials: {
+              label: "credentials.json 路径",
+              help: "Google Cloud Console → APIs & Services → Credentials → OAuth 客户端 ID（Desktop app）。下载 credentials.json 并粘贴其绝对路径。",
+            },
+          },
+        },
+        googleCalendar: {
+          displayName: "Google 日历",
+          description: "读取和创建 Google 日历事件。与 Gmail 相同的 BYO credentials.json 模式。",
+          field: {
+            credentials: {
+              label: "credentials.json 路径",
+              help: "可复用与 Gmail 相同的 Google Cloud OAuth 客户端，或单独创建一个仅供 Calendar 使用的客户端。",
+            },
+          },
+        },
+        googleDrive: {
+          displayName: "Google 云端硬盘",
+          description: "搜索和读取 Google 云端硬盘文件。BYO Google OAuth 凭证 — 令牌缓存在本地凭证文件旁。",
+          field: {
+            credentials: {
+              label: "credentials.json 路径",
+              help: "Google Cloud Console → APIs & Services → Credentials → OAuth 客户端 ID（Desktop app）。在同一项目中启用 Google Drive API。",
+            },
+          },
+        },
+        github: {
+          displayName: "GitHub",
+          description:
+            "通过 Personal Access Token 读取仓库 / Issues / PRs 并执行搜索。请窄化 token 权限 — 写权限（如 `repo`）允许 agent 推送到任何可访问的仓库。",
+          field: {
+            token: {
+              label: "Personal Access Token",
+              help: "GitHub → Settings → Developer settings → Personal access tokens。建议使用 fine-grained token 仅限于希望 agent 操作的仓库。",
+            },
+          },
+        },
+        linear: {
+          displayName: "Linear",
+          description: "通过 Personal API key 读写 Linear 的 Issue / 项目 / 周期。",
+          field: {
+            apiKey: {
+              label: "Linear API 密钥",
+              help: "Linear → Settings → API → Personal API keys。点击 🔑 打开页面并点击 Create key。",
+            },
+          },
+        },
         weatherOpenMeteo: {
           displayName: "天气（Open-Meteo）",
           description: "全球免费天气预报和当前气象 — 无需 API 密钥。",
+        },
+        spotify: {
+          displayName: "Spotify",
+          description: "搜索曲目、管理播放列表、控制播放。BYO Spotify 开发者应用 — Client ID + Client Secret。",
+          field: {
+            clientId: {
+              label: "Client ID",
+              help: "Spotify Developer Dashboard → Create app → 复制 Client ID。桌面用途下 Redirect URI 不需要匹配真实站点。",
+            },
+            clientSecret: {
+              label: "Client Secret",
+              help: "同一 Developer Dashboard → 在应用中点 Show client secret。粘贴一次后会缓存在本地。",
+            },
+          },
+        },
+        youtubeTranscript: {
+          displayName: "YouTube 字幕",
+          description: "通过 URL 获取任意公开 YouTube 视频的字幕。无需凭证。",
         },
       },
       config: {

@@ -307,9 +307,82 @@ const enMessages = {
             },
           },
         },
+        appleNative: {
+          displayName: "Apple Native Apps (macOS)",
+          description: "Read and write Reminders, Calendar, Notes, Mail and Maps via AppleScript. macOS only — no credentials needed.",
+        },
+        gmail: {
+          displayName: "Gmail",
+          description: "Read, send, and label your Gmail. Uses a Google OAuth client you create in your own Google Cloud project (no app verification needed).",
+          field: {
+            credentials: {
+              label: "Path to credentials.json",
+              help: "Google Cloud Console → APIs & Services → Credentials → OAuth client ID (Desktop app). Download credentials.json and paste its absolute path.",
+            },
+          },
+        },
+        googleCalendar: {
+          displayName: "Google Calendar",
+          description: "Read and create Google Calendar events. Same BYO Google OAuth credentials.json pattern as Gmail.",
+          field: {
+            credentials: {
+              label: "Path to credentials.json",
+              help: "Same Google Cloud OAuth client as Gmail. Reuse the file or create a separate Calendar-scoped one.",
+            },
+          },
+        },
+        googleDrive: {
+          displayName: "Google Drive",
+          description: "Search and read Google Drive files. BYO Google OAuth credentials — token is cached locally next to the file.",
+          field: {
+            credentials: {
+              label: "Path to credentials.json",
+              help: "Google Cloud Console → APIs & Services → Credentials → OAuth client ID (Desktop app). Enable the Google Drive API in the same project.",
+            },
+          },
+        },
+        github: {
+          displayName: "GitHub",
+          description:
+            "Read repos, issues, PRs and run searches with a Personal Access Token. Scope the token narrowly — write scopes (e.g. `repo`) let the agent push to any repo you can access.",
+          field: {
+            token: {
+              label: "Personal Access Token",
+              help: "GitHub → Settings → Developer settings → Personal access tokens. Prefer fine-grained tokens limited to the repos you want the agent to touch.",
+            },
+          },
+        },
+        linear: {
+          displayName: "Linear",
+          description: "Read and update Linear issues, projects and cycles via a personal API key.",
+          field: {
+            apiKey: {
+              label: "Linear API key",
+              help: "Linear → Settings → API → Personal API keys. Click 🔑 to open the page and click Create key.",
+            },
+          },
+        },
         weatherOpenMeteo: {
           displayName: "Weather (Open-Meteo)",
           description: "Free weather forecasts and current conditions worldwide — no API key needed.",
+        },
+        spotify: {
+          displayName: "Spotify",
+          description: "Search tracks, manage playlists, control playback. BYO Spotify developer app — Client ID + Client Secret.",
+          field: {
+            clientId: {
+              label: "Client ID",
+              help: "Spotify Developer Dashboard → Create app → copy the Client ID. The redirect URI doesn't need to match an existing site for desktop usage.",
+            },
+            clientSecret: {
+              label: "Client Secret",
+              help: "Same Spotify Developer Dashboard → Show client secret on your app. Pasted once and cached locally.",
+            },
+          },
+        },
+        youtubeTranscript: {
+          displayName: "YouTube transcript",
+          description: "Fetch the captions for any public YouTube video by URL. No credentials needed.",
         },
       },
       config: {
