@@ -187,6 +187,26 @@ export default [
       "no-multi-assign": "error",
       "prefer-rest-params": "error",
       "prefer-spread": "error",
+      "no-self-compare": "error",
+      "no-unmodified-loop-condition": "error",
+      "no-constructor-return": "error",
+      "import/no-duplicates": "error",
+      "array-callback-return": "error",
+      "default-param-last": "error",
+      "no-new-wrappers": "error",
+      "no-octal-escape": "error",
+      "no-proto": "error",
+      "no-script-url": "error",
+      "no-useless-call": "error",
+      "no-useless-concat": "error",
+      "no-useless-rename": "error",
+      radix: "error",
+      "prefer-object-spread": "error",
+      "prefer-numeric-literals": "error",
+      "prefer-promise-reject-errors": "error",
+      "no-lonely-if": "error",
+      "no-floating-decimal": "error",
+      "no-unused-private-class-members": "error",
       quotes: "off",
       "no-shadow": "error",
       "no-param-reassign": "error",
@@ -273,6 +293,9 @@ export default [
       "sonarjs/no-clear-text-protocols": "off",
       // MCP smoke test spawns tsx subprocess — safe in test context.
       "sonarjs/os-command": "off",
+      // Tests deliberately pass `javascript:` URIs to verify guards
+      // reject them.
+      "no-script-url": "off",
       // Playwright / jsdom-style specs commonly use `any`-ish casts
       // against DOM types to build minimal mocks. Keep
       // `no-explicit-any` at `error` in production code; demote to
