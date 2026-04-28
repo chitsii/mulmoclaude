@@ -51,7 +51,7 @@ export function useSessionHistory(): UseSessionHistory {
     } else {
       sessions.value = applySessionDiff(sessions.value, body.sessions, body.deletedIds);
     }
-    cursor = body.cursor;
+    ({ cursor } = body);
     return sessions.value;
   }
 
