@@ -365,7 +365,24 @@
           >
             ‹
           </button>
-          <img :src="lightbox.src" class="max-w-[80vw] max-h-[85vh] object-contain rounded shadow-2xl" />
+          <div class="flex flex-col items-center">
+            <img :src="lightbox.src" class="max-w-[80vw] max-h-[85vh] object-contain rounded shadow-2xl" />
+            <div v-if="!lightbox.isCharacter && beats.length > 1" class="relative w-full h-1.5">
+              <div class="flex gap-1 h-full">
+                <div
+                  v-for="i in beats.length"
+                  :key="i - 1"
+                  class="flex-1"
+                  :class="i - 1 === lightbox.index ? 'bg-white/80' : i - 1 < lightbox.index ? 'bg-white/40' : 'bg-white/20'"
+                />
+              </div>
+              <div
+                v-if="playingAudio && playingAudio.index === lightbox.index"
+                class="absolute top-1/2 w-3.5 h-3.5 rounded-full bg-white shadow ring-2 ring-black/30 -translate-y-1/2 -translate-x-1/2 pointer-events-none"
+                :style="{ left: `${((lightbox.index + audioProgress) / beats.length) * 100}%` }"
+              />
+            </div>
+          </div>
           <button
             v-if="!lightbox.isCharacter"
             class="text-white/60 hover:text-white disabled:opacity-20 text-5xl leading-none"
@@ -466,6 +483,7 @@ const beatAudios = reactive<Record<number, string>>({});
 const audioState = reactive<Record<number, "generating" | "done" | "error">>({});
 const audioErrors = reactive<Record<number, string>>({});
 const playingAudio = ref<{ index: number; audio: HTMLAudioElement } | null>(null);
+const audioProgress = ref(0);
 const beatListEl = ref<HTMLElement | null>(null);
 const lightbox = ref<{
   src: string;
@@ -518,6 +536,7 @@ function stopPlayingAudio() {
   if (!playingAudio.value) return;
   playingAudio.value.audio.pause();
   playingAudio.value = null;
+  audioProgress.value = 0;
 }
 
 function openLightbox(index: number) {
@@ -830,9 +849,15 @@ function playAudio(index: number) {
   if (!src) return;
   const audio = new Audio(src);
   playingAudio.value = { index, audio };
+  audioProgress.value = 0;
+  audio.addEventListener("timeupdate", () => {
+    if (playingAudio.value?.index !== index) return;
+    if (audio.duration > 0) audioProgress.value = audio.currentTime / audio.duration;
+  });
   audio.addEventListener("ended", () => {
     if (playingAudio.value?.index !== index) return;
     playingAudio.value = null;
+    audioProgress.value = 0;
     if (lightbox.value?.index === index) {
       lightboxMove(1);
       const nextIndex = lightbox.value?.index;
