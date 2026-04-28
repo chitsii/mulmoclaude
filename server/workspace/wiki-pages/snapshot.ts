@@ -18,7 +18,7 @@
 // BOTH conditions get unlinked. There is no hard cap.
 
 import path from "node:path";
-import { promises as fsp, type Dirent } from "node:fs";
+import { promises as fsp, constants as fsConstants, type Dirent } from "node:fs";
 import { writeFileAtomic } from "../../utils/files/atomic.js";
 import { mergeFrontmatter, parseFrontmatter, serializeWithFrontmatter } from "../../utils/markdown/frontmatter.js";
 import { shortId } from "../../utils/id.js";
@@ -142,6 +142,31 @@ export function stripSnapshotMeta(meta: Record<string, unknown>): Record<string,
   return out;
 }
 
+/** Refuse to operate on a slug whose history dir is a symlink.
+ *  Returns true when the dir doesn't exist yet (mkdir on first
+ *  write is fine) OR when it exists as a real directory; returns
+ *  false when it exists as a symlink (or any other non-dir kind).
+ *
+ *  Both reads AND writes go through this — a directory symlink
+ *  could otherwise redirect snapshot writes outside the history
+ *  tree, and reads through it would surface contents from the
+ *  symlink target (codex review iter-3 / iter-4 #917). */
+async function historyDirIsSafe(dir: string): Promise<boolean> {
+  try {
+    const stat = await fsp.lstat(dir);
+    return stat.isDirectory();
+  } catch (err) {
+    // Missing dir is fine — appendSnapshot's writeFileAtomic will
+    // mkdir-p it on first write. Any other error means we shouldn't
+    // touch this path.
+    return isErrnoCode(err, "ENOENT");
+  }
+}
+
+function isErrnoCode(err: unknown, code: string): boolean {
+  return typeof err === "object" && err !== null && (err as { code?: unknown }).code === code;
+}
+
 /** Write a snapshot file for a page that just changed. The
  *  snapshot's content == the page's new content (byte-identical
  *  body), with `_snapshot_*` meta merged in. The `_oldContent`
@@ -170,6 +195,9 @@ export async function appendSnapshot(
   const snapshotContent = serializeWithFrontmatter(merged, parsed.body);
 
   const dir = historyDir(slug, opts);
+  if (!(await historyDirIsSafe(dir))) {
+    throw new Error(`refusing to write snapshot: history dir is a symlink or non-directory (${dir})`);
+  }
   await writeFileAtomic(path.join(dir, fileName), snapshotContent);
   await gcSnapshots(slug, now, opts);
 }
@@ -224,18 +252,8 @@ interface SnapshotEntry {
 
 async function readSnapshotEntries(dir: string): Promise<SnapshotEntry[]> {
   // Defence in depth: refuse to read if the directory itself is a
-  // symlink. Filtering symlinked files (below) is not enough — a
-  // planted directory symlink (e.g. `.history/<slug> -> /etc`)
-  // would redirect the readdir wholesale, and entries inside the
-  // target that happen to match FILENAME_RE would be served as
-  // snapshots. lstat reports the link (not the target), so a
-  // symlink fails `isDirectory()` (codex review iter-3 #917).
-  try {
-    const stat = await fsp.lstat(dir);
-    if (!stat.isDirectory()) return [];
-  } catch {
-    return [];
-  }
+  // symlink (codex review iter-3 / iter-4 #917). See historyDirIsSafe.
+  if (!(await historyDirIsSafe(dir))) return [];
 
   let dirents: Dirent[];
   try {
@@ -261,6 +279,28 @@ async function readSnapshotEntries(dir: string): Promise<SnapshotEntry[]> {
     });
   }
   return out;
+}
+
+/** Open a snapshot file with `O_NOFOLLOW` so the read fails if the
+ *  path resolves through a symlink. This closes the TOCTOU window
+ *  between `readdir` (which Dirent-checks the type) and the actual
+ *  read: even if a workspace writer races to swap the entry into
+ *  a symlink between the two, the kernel-level open atomically
+ *  refuses (codex review iter-4 #917). Returns null on any read
+ *  failure (missing file, symlink, decode error) — callers treat
+ *  that as "skip this entry". */
+async function readSnapshotFileNoFollow(filePath: string): Promise<{ raw: string; size: number } | null> {
+  let handle: import("node:fs/promises").FileHandle | null = null;
+  try {
+    handle = await fsp.open(filePath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    const raw = await handle.readFile("utf-8");
+    const stat = await handle.stat();
+    return { raw, size: stat.size };
+  } catch {
+    return null;
+  } finally {
+    if (handle) await handle.close().catch(() => {});
+  }
 }
 
 function entryStringField(meta: Record<string, unknown>, key: string): string | undefined {
@@ -293,24 +333,19 @@ export async function listSnapshots(slug: string, opts: SnapshotPathOptions = {}
 
   const summaries: SnapshotSummary[] = [];
   for (const entry of entries) {
-    try {
-      const filePath = path.join(dir, entry.fileName);
-      const raw = await fsp.readFile(filePath, "utf-8");
-      const stat = await fsp.stat(filePath);
-      const parsed = parseFrontmatter(raw);
-      const tsIso = entryStringField(parsed.meta, "_snapshot_ts") ?? filenameStampToTimestamp(entry.filenameStamp) ?? entry.stamp;
-      summaries.push({
-        stamp: entry.stamp,
-        bytes: stat.size,
-        ts: tsIso,
-        editor: entryEditor(parsed.meta),
-        sessionId: entryStringField(parsed.meta, "_snapshot_session"),
-        reason: entryStringField(parsed.meta, "_snapshot_reason"),
-      });
-    } catch {
-      // Skip unreadable entries — a corrupted snapshot shouldn't
-      // take down the whole list. The next GC run will clean it up.
-    }
+    const filePath = path.join(dir, entry.fileName);
+    const fileData = await readSnapshotFileNoFollow(filePath);
+    if (fileData === null) continue;
+    const parsed = parseFrontmatter(fileData.raw);
+    const tsIso = entryStringField(parsed.meta, "_snapshot_ts") ?? filenameStampToTimestamp(entry.filenameStamp) ?? entry.stamp;
+    summaries.push({
+      stamp: entry.stamp,
+      bytes: fileData.size,
+      ts: tsIso,
+      editor: entryEditor(parsed.meta),
+      sessionId: entryStringField(parsed.meta, "_snapshot_session"),
+      reason: entryStringField(parsed.meta, "_snapshot_reason"),
+    });
   }
   return summaries;
 }
@@ -325,20 +360,14 @@ export async function readSnapshot(slug: string, stamp: string, opts: SnapshotPa
   if (!match) return null;
 
   const filePath = path.join(dir, match.fileName);
-  let raw: string;
-  let stat: { size: number };
-  try {
-    raw = await fsp.readFile(filePath, "utf-8");
-    stat = await fsp.stat(filePath);
-  } catch {
-    return null;
-  }
+  const fileData = await readSnapshotFileNoFollow(filePath);
+  if (fileData === null) return null;
 
-  const parsed = parseFrontmatter(raw);
+  const parsed = parseFrontmatter(fileData.raw);
   const tsIso = entryStringField(parsed.meta, "_snapshot_ts") ?? filenameStampToTimestamp(match.filenameStamp) ?? match.stamp;
   return {
     stamp: match.stamp,
-    bytes: stat.size,
+    bytes: fileData.size,
     ts: tsIso,
     editor: entryEditor(parsed.meta),
     sessionId: entryStringField(parsed.meta, "_snapshot_session"),

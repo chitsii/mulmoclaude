@@ -371,6 +371,26 @@ describe("snapshot reads — symlink protection", () => {
     await rm(workspaceRoot, { recursive: true, force: true });
   });
 
+  it("appendSnapshot refuses to write when the slug's history dir is a symlink", async () => {
+    // Codex review iter-4 #917: the read-side guard alone is not
+    // enough — a planted directory symlink would otherwise let the
+    // write land in the symlink target.
+    const workspaceRoot = await mkdtemp(path.join(tmpdir(), "snap-symlink-write-"));
+    const slug = "evil-page";
+    const historyParent = path.join(workspaceRoot, WORKSPACE_DIRS.wikiHistory);
+    await mkdir(historyParent, { recursive: true });
+    const decoy = path.join(workspaceRoot, "decoy");
+    await mkdir(decoy, { recursive: true });
+    await symlink(decoy, path.join(historyParent, slug));
+
+    await assert.rejects(appendSnapshot(slug, null, "---\n---\nbody\n", { editor: "user" }, { workspaceRoot }), /history dir is a symlink/);
+    // The decoy directory must remain empty — nothing leaked through.
+    const decoyContents = await readdir(decoy);
+    assert.deepEqual(decoyContents, []);
+
+    await rm(workspaceRoot, { recursive: true, force: true });
+  });
+
   it("readSnapshot returns null for a symlink that matches the stamp pattern", async () => {
     const workspaceRoot = await mkdtemp(path.join(tmpdir(), "snap-symlink-read-"));
     const slug = "evil-page";
