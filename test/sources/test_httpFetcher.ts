@@ -211,7 +211,7 @@ describe("fetchPolite — timeout + abort", () => {
     const stub: typeof fetch = (_input, init) =>
       new Promise<Response>((_, reject) => {
         init?.signal?.addEventListener("abort", () => {
-          reject(init!.signal!.reason ?? new DOMException("", "AbortError"));
+          reject(init.signal?.reason ?? new DOMException("", "AbortError"));
         });
       });
     const deps = makeDeps({
