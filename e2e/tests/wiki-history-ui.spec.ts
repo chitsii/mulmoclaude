@@ -14,7 +14,13 @@ const SLUG = "history-demo";
 
 const ORIGINAL_BODY = ["---", "title: History Demo", "---", "", "# Original heading", "", "Original body line.", ""].join("\n");
 
-const RESTORED_BODY = ["---", "title: History Demo", "---", "", "# Restored heading", "", "Restored body line.", ""].join("\n");
+// Includes a `[[another-page]]` wiki link so the toast-bleed test
+// can trigger in-app SPA navigation (router.push, not page.goto)
+// to exercise the slug-change watcher inside the existing app
+// instance.
+const RESTORED_BODY = ["---", "title: History Demo", "---", "", "# Restored heading", "", "Restored body line.", "", "See also: [[another-page]]", ""].join(
+  "\n",
+);
 
 const SNAPSHOT_NEWER = {
   stamp: "2026-04-28T05-19-12-597Z-newer000",
@@ -220,8 +226,14 @@ test.describe("wiki history UI (#763 PR 3 / #944)", () => {
     // Toast is up.
     await expect(page.getByTestId("wiki-history-restore-toast")).toBeVisible();
 
-    // Navigate to a different page BEFORE the 4 s timer fires.
-    await page.goto("/wiki/pages/another-page");
+    // Trigger an in-app SPA navigation by clicking the wiki link
+    // in the restored body (the slug-change watcher fires on
+    // `currentSlugReactive` change, so we MUST keep the same Vue
+    // app instance — `page.goto` would full-reload and the watcher
+    // would never see a transition). Codex iter-2 #946.
+    await page.getByText("another-page").first().click();
+    await page.waitForURL("**/wiki/pages/another-page");
+
     // Toast must be gone — the slug-change watcher cleared it.
     await expect(page.getByTestId("wiki-history-restore-toast")).toHaveCount(0);
   });

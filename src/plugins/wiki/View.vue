@@ -74,44 +74,12 @@
       {{ navError }}
     </div>
 
-    <!-- Empty state: specific page (standalone /wiki route only — inside
-         /chat tool results, spawning a fresh session is confusing, same
-         rationale as the per-page chat composer below) -->
-    <div v-if="!pageExists && !navError && action === 'page'" class="flex-1 flex items-center justify-center text-gray-400 text-sm">
-      <div class="text-center space-y-4">
-        <span class="material-icons text-4xl text-gray-300">article</span>
-        <p>{{ t("pluginWiki.emptyPage", { title: title }) }}</p>
-        <button
-          v-if="isStandaloneWikiRoute"
-          data-testid="wiki-create-page-button"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-          @click="requestCreatePage"
-        >
-          <span class="material-icons text-base">auto_fix_high</span>
-          {{ t("pluginWiki.createPage") }}
-        </button>
-      </div>
-    </div>
-
-    <!-- Empty state: page file exists but has no content -->
-    <div v-else-if="!content && !navError && action === 'page'" class="flex-1 flex items-center justify-center text-gray-400 text-sm">
-      <div class="text-center space-y-4">
-        <span class="material-icons text-4xl text-gray-300">article</span>
-        <p>{{ t("pluginWiki.emptyContent", { title: title }) }}</p>
-        <button
-          v-if="isStandaloneWikiRoute"
-          data-testid="wiki-update-page-button"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-          @click="requestUpdatePage"
-        >
-          <span class="material-icons text-base">auto_fix_high</span>
-          {{ t("pluginWiki.updatePage") }}
-        </button>
-      </div>
-    </div>
-
-    <!-- Empty state: index or other -->
-    <div v-else-if="!content && !navError" class="flex-1 flex items-center justify-center text-gray-400 text-sm">
+    <!-- Empty state: index / log / lint without content. The page
+         action's empty states are rendered INSIDE the Content tab
+         body below so the History tab stays reachable when the
+         live page is missing or empty (codex review iter-2 #946 —
+         history outlives the page). -->
+    <div v-if="!content && !navError && action !== 'page'" class="flex-1 flex items-center justify-center text-gray-400 text-sm">
       <div class="text-center space-y-2">
         <span class="material-icons text-4xl text-gray-300">menu_book</span>
         <p>{{ t("pluginWiki.empty") }}</p>
@@ -209,18 +177,24 @@
       </div>
 
       <!-- Per-page tab strip: Content | History (#763 PR 3 / #944).
-           Only mounted on the page view; log / lint reports keep
-           the legacy single-pane layout. -->
-      <div v-if="action === 'page' && content" data-testid="wiki-page-tabs" class="shrink-0 border-b border-gray-100 px-3 py-2 flex items-center gap-2">
+           Mounted on every page view (including missing / empty
+           pages) so history outlives the live page (codex iter-2
+           #946). Log / lint reports keep the legacy single-pane
+           layout — they have no per-page history concept. -->
+      <div
+        v-if="action === 'page' && currentSlugReactive !== null"
+        data-testid="wiki-page-tabs"
+        class="shrink-0 border-b border-gray-100 px-3 py-2 flex items-center gap-2"
+      >
         <div class="flex border border-gray-300 rounded overflow-hidden">
           <button
             type="button"
             :class="[
               'h-8 px-2.5 flex items-center gap-1 transition-colors',
-              pageTab === 'content' ? 'bg-blue-50 text-blue-600 font-medium' : 'bg-white text-gray-600 hover:bg-gray-50',
+              pageTab === PAGE_TAB.content ? 'bg-blue-50 text-blue-600 font-medium' : 'bg-white text-gray-600 hover:bg-gray-50',
             ]"
             data-testid="wiki-page-tab-content"
-            @click="pageTab = 'content'"
+            @click="pageTab = PAGE_TAB.content"
           >
             <span class="material-icons text-sm">article</span>
             <span>{{ t("pluginWiki.history.tabContent") }}</span>
@@ -229,10 +203,10 @@
             type="button"
             :class="[
               'h-8 px-2.5 flex items-center gap-1 border-l border-gray-200 transition-colors',
-              pageTab === 'history' ? 'bg-blue-50 text-blue-600 font-medium' : 'bg-white text-gray-600 hover:bg-gray-50',
+              pageTab === PAGE_TAB.history ? 'bg-blue-50 text-blue-600 font-medium' : 'bg-white text-gray-600 hover:bg-gray-50',
             ]"
             data-testid="wiki-page-tab-history"
-            @click="pageTab = 'history'"
+            @click="pageTab = PAGE_TAB.history"
           >
             <span class="material-icons text-sm">history</span>
             <span>{{ t("pluginWiki.history.tabHistory") }}</span>
@@ -249,9 +223,51 @@
         </span>
       </div>
 
-      <!-- Content tab body (or non-page action: log / lint_report) -->
+      <!-- Content tab body. For pages, includes the empty-state
+           fallbacks (deleted page / page with no body) so the
+           History tab next to it stays reachable in those states. -->
+      <template v-if="action === 'page'">
+        <div v-show="pageTab === PAGE_TAB.content" class="flex-1 overflow-y-auto flex flex-col">
+          <!-- Empty state: page does not exist. -->
+          <div v-if="!pageExists" class="flex-1 flex items-center justify-center text-gray-400 text-sm">
+            <div class="text-center space-y-4">
+              <span class="material-icons text-4xl text-gray-300">article</span>
+              <p>{{ t("pluginWiki.emptyPage", { title: title }) }}</p>
+              <button
+                v-if="isStandaloneWikiRoute"
+                data-testid="wiki-create-page-button"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                @click="requestCreatePage"
+              >
+                <span class="material-icons text-base">auto_fix_high</span>
+                {{ t("pluginWiki.createPage") }}
+              </button>
+            </div>
+          </div>
+          <!-- Empty state: page exists but has no body. -->
+          <div v-else-if="!content" class="flex-1 flex items-center justify-center text-gray-400 text-sm">
+            <div class="text-center space-y-4">
+              <span class="material-icons text-4xl text-gray-300">article</span>
+              <p>{{ t("pluginWiki.emptyContent", { title: title }) }}</p>
+              <button
+                v-if="isStandaloneWikiRoute"
+                data-testid="wiki-update-page-button"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                @click="requestUpdatePage"
+              >
+                <span class="material-icons text-base">auto_fix_high</span>
+                {{ t("pluginWiki.updatePage") }}
+              </button>
+            </div>
+          </div>
+          <!-- Rendered markdown body. -->
+          <div v-else ref="scrollRef" class="flex-1 px-6 py-4 prose prose-sm max-w-none wiki-content" @click="handleContentClick" v-html="renderedContent" />
+        </div>
+      </template>
+
+      <!-- Non-page action: log / lint_report — single-pane render. -->
       <div
-        v-show="action !== 'page' || pageTab === 'content'"
+        v-else
         ref="scrollRef"
         class="flex-1 overflow-y-auto px-6 py-4 prose prose-sm max-w-none wiki-content"
         @click="handleContentClick"
@@ -259,12 +275,12 @@
       />
 
       <!-- History tab body (kept mounted across tab toggles for state
-           persistence, Q15=B). Mount only when we have a slug — the
-           list/detail components require it. -->
+           persistence, Q15=B). Mount whenever we have a slug — list /
+           detail still work even if the live page was deleted. -->
       <HistoryTab
-        v-if="action === 'page' && content && currentSlug() !== null"
-        v-show="pageTab === 'history'"
-        :slug="currentSlug() ?? ''"
+        v-if="action === 'page' && currentSlugReactive !== null"
+        v-show="pageTab === PAGE_TAB.history"
+        :slug="currentSlugReactive"
         :current-body="mdDoc.body"
         :current-meta="mdDoc.meta"
         @restored="handleRestored"
@@ -279,10 +295,10 @@
          a nested new session from there is confusing. Also hidden on
          the History tab (#944 Q11=C). -->
     <PageChatComposer
-      v-if="action === 'page' && content && isStandaloneWikiRoute && currentSlug() !== null && pageTab === 'content'"
-      :key="currentSlug() ?? ''"
+      v-if="action === 'page' && content && isStandaloneWikiRoute && currentSlugReactive !== null && pageTab === PAGE_TAB.content"
+      :key="currentSlugReactive ?? ''"
       :placeholder="t('pluginWiki.chatPlaceholder')"
-      :prepend-text="`Before answering, read the wiki page at ${WIKI_PAGES_DIR}/${currentSlug()}.md.`"
+      :prepend-text="`Before answering, read the wiki page at ${WIKI_PAGES_DIR}/${currentSlugReactive}.md.`"
       test-id-prefix="wiki-page-chat"
     />
   </div>
@@ -363,7 +379,12 @@ const navError = ref<string | null>(null);
 // the same slug the History tab keeps its own selection state
 // across toggles (Q15=B) because both tabs are kept mounted via
 // v-show.
-const pageTab = ref<"content" | "history">("content");
+const PAGE_TAB = {
+  content: "content",
+  history: "history",
+} as const;
+type PageTab = (typeof PAGE_TAB)[keyof typeof PAGE_TAB];
+const pageTab = ref<PageTab>(PAGE_TAB.content);
 const restoreToastVisible = ref(false);
 const RESTORE_TOAST_MS = 4000;
 let restoreToastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -383,7 +404,7 @@ const currentSlugReactive = computed<string | null>(() => {
 
 watch(currentSlugReactive, (next, prev) => {
   if (next === prev) return;
-  pageTab.value = "content";
+  pageTab.value = PAGE_TAB.content;
   // Drop any in-flight restore-success toast so it doesn't bleed
   // onto a different page (codex iter-1 #946).
   restoreToastVisible.value = false;
@@ -416,7 +437,7 @@ const { refresh, abort: abortFreshFetch } = useFreshPluginData<WikiData>({
 });
 
 function handleRestored(): void {
-  pageTab.value = "content";
+  pageTab.value = PAGE_TAB.content;
   restoreToastVisible.value = true;
   if (restoreToastTimer !== null) clearTimeout(restoreToastTimer);
   restoreToastTimer = setTimeout(() => {

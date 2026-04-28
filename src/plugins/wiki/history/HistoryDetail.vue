@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { formatSmartTime } from "../../../utils/format/date";
 import { fetchHistorySnapshot, restoreHistorySnapshot, type SnapshotContent, type SnapshotSummary } from "./api";
-import { joinFrontmatterAndBody, renderUnifiedDiff, stripAutoStampKeys, type DiffHunk } from "./diff";
+import { DIFF_LINE_KIND, joinFrontmatterAndBody, renderUnifiedDiff, stripAutoStampKeys, type DiffHunk, type DiffLineKind } from "./diff";
 import RestoreConfirm from "./RestoreConfirm.vue";
 
 const props = defineProps<{
@@ -30,14 +30,18 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 
-type CompareTarget = "current" | "previous";
+const COMPARE_TARGET = {
+  current: "current",
+  previous: "previous",
+} as const;
+type CompareTarget = (typeof COMPARE_TARGET)[keyof typeof COMPARE_TARGET];
 
 const loading = ref(true);
 const fetchError = ref<string | null>(null);
 const snapshot = ref<SnapshotContent | null>(null);
 const previousSnapshot = ref<SnapshotContent | null>(null);
 
-const compareTarget = ref<CompareTarget>("current");
+const compareTarget = ref<CompareTarget>(COMPARE_TARGET.current);
 const restoring = ref(false);
 const restoreError = ref<string | null>(null);
 const confirmOpen = ref(false);
@@ -63,18 +67,25 @@ watch(
 );
 
 watch(compareTarget, async (target) => {
-  if (target === "previous" && previousSnapshot.value === null && props.previousSummary !== null) {
+  if (target === COMPARE_TARGET.previous && previousSnapshot.value === null && props.previousSummary !== null) {
     await loadPreviousSnapshot();
   }
 });
 
 async function loadThisSnapshot(): Promise<void> {
   const myToken = ++loadToken;
+  // Invalidate any in-flight previous-snapshot load too — codex
+  // iter-2 #946: a slow `previousSnapshot` response was otherwise
+  // able to land after the user switched to a different snapshot,
+  // surfacing a comparison against the wrong base. Bumping
+  // `previousLoadToken` here guarantees that lingering response
+  // sees its token as stale and drops on the floor.
+  previousLoadToken += 1;
   loading.value = true;
   fetchError.value = null;
   snapshot.value = null;
   previousSnapshot.value = null;
-  compareTarget.value = "current";
+  compareTarget.value = COMPARE_TARGET.current;
   restoreError.value = null;
   const result = await fetchHistorySnapshot(props.slug, props.summary.stamp);
   if (myToken !== loadToken) return;
@@ -100,9 +111,9 @@ async function loadPreviousSnapshot(): Promise<void> {
 
 const editorBadge = computed(() => editorBadgeFor(props.summary.editor));
 
-function markerFor(kind: "add" | "del" | "context"): string {
-  if (kind === "add") return "+";
-  if (kind === "del") return "-";
+function markerFor(kind: DiffLineKind): string {
+  if (kind === DIFF_LINE_KIND.add) return "+";
+  if (kind === DIFF_LINE_KIND.del) return "-";
   return " "; // non-breaking space — keeps the column aligned
 }
 
@@ -122,7 +133,7 @@ const hunks = computed<DiffHunk[]>(() => {
   const rightMeta = stripAutoStampKeys(stripSnapshotMetaPatchKeys(snapshot.value.meta));
   const right = joinFrontmatterAndBody(rightMeta, snapshot.value.body);
 
-  if (compareTarget.value === "current") {
+  if (compareTarget.value === COMPARE_TARGET.current) {
     const leftMeta = stripAutoStampKeys(props.currentMeta);
     const left = joinFrontmatterAndBody(leftMeta, props.currentBody);
     return renderUnifiedDiff(left, right, 3);
@@ -134,11 +145,11 @@ const hunks = computed<DiffHunk[]>(() => {
   return renderUnifiedDiff(left, right, 3);
 });
 
-const showNoPreviousMessage = computed(() => compareTarget.value === "previous" && props.previousSummary === null);
+const showNoPreviousMessage = computed(() => compareTarget.value === COMPARE_TARGET.previous && props.previousSummary === null);
 const showNoChangesMessage = computed(() => {
   if (loading.value) return false;
   if (snapshot.value === null) return false;
-  if (compareTarget.value === "previous" && (props.previousSummary === null || previousSnapshot.value === null)) return false;
+  if (compareTarget.value === COMPARE_TARGET.previous && (props.previousSummary === null || previousSnapshot.value === null)) return false;
   return hunks.value.length === 0;
 });
 
@@ -220,20 +231,20 @@ async function performRestore(): Promise<void> {
         <button
           :class="[
             'h-8 px-2.5 transition-colors',
-            compareTarget === 'current' ? 'bg-blue-50 text-blue-600 font-medium' : 'bg-white text-gray-600 hover:bg-gray-50',
+            compareTarget === COMPARE_TARGET.current ? 'bg-blue-50 text-blue-600 font-medium' : 'bg-white text-gray-600 hover:bg-gray-50',
           ]"
           data-testid="wiki-history-compare-current"
-          @click="compareTarget = 'current'"
+          @click="compareTarget = COMPARE_TARGET.current"
         >
           {{ t("pluginWiki.history.compareCurrent") }}
         </button>
         <button
           :class="[
             'h-8 px-2.5 border-l border-gray-200 transition-colors',
-            compareTarget === 'previous' ? 'bg-blue-50 text-blue-600 font-medium' : 'bg-white text-gray-600 hover:bg-gray-50',
+            compareTarget === COMPARE_TARGET.previous ? 'bg-blue-50 text-blue-600 font-medium' : 'bg-white text-gray-600 hover:bg-gray-50',
           ]"
           data-testid="wiki-history-compare-previous"
-          @click="compareTarget = 'previous'"
+          @click="compareTarget = COMPARE_TARGET.previous"
         >
           {{ t("pluginWiki.history.comparePrevious") }}
         </button>
@@ -268,14 +279,19 @@ async function performRestore(): Promise<void> {
             :key="`${hunkIdx}-${lineIdx}`"
             :class="[
               'whitespace-pre-wrap px-2 py-0.5 leading-snug',
-              line.kind === 'add' && 'bg-green-50 text-green-800',
-              line.kind === 'del' && 'bg-red-50 text-red-800',
-              line.kind === 'context' && 'text-gray-700',
+              line.kind === DIFF_LINE_KIND.add && 'bg-green-50 text-green-800',
+              line.kind === DIFF_LINE_KIND.del && 'bg-red-50 text-red-800',
+              line.kind === DIFF_LINE_KIND.context && 'text-gray-700',
             ]"
             :data-testid="`wiki-history-diff-line-${line.kind}`"
           >
             <span
-              :class="['mr-1', line.kind === 'add' && 'text-green-600', line.kind === 'del' && 'text-red-600', line.kind === 'context' && 'text-gray-300']"
+              :class="[
+                'mr-1',
+                line.kind === DIFF_LINE_KIND.add && 'text-green-600',
+                line.kind === DIFF_LINE_KIND.del && 'text-red-600',
+                line.kind === DIFF_LINE_KIND.context && 'text-gray-300',
+              ]"
               >{{ markerFor(line.kind) }}</span
             >{{ line.text }}
           </div>

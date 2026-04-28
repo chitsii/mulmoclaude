@@ -5,7 +5,12 @@ import { diffLines } from "diff";
 // user touched nothing meaningful (Q5 in the PR 3 plan).
 const AUTO_STAMP_KEYS = ["updated", "editor"] as const;
 
-export type DiffLineKind = "context" | "add" | "del";
+export const DIFF_LINE_KIND = {
+  context: "context",
+  add: "add",
+  del: "del",
+} as const;
+export type DiffLineKind = (typeof DIFF_LINE_KIND)[keyof typeof DIFF_LINE_KIND];
 
 export interface DiffLine {
   kind: DiffLineKind;
@@ -41,7 +46,7 @@ export function renderUnifiedDiff(left: string, right: string, contextLines = 3)
   const changes = diffLines(left, right);
   const lines: DiffLine[] = [];
   for (const change of changes) {
-    const kind: DiffLineKind = change.added ? "add" : change.removed ? "del" : "context";
+    const kind: DiffLineKind = change.added ? DIFF_LINE_KIND.add : change.removed ? DIFF_LINE_KIND.del : DIFF_LINE_KIND.context;
     for (const text of splitLines(change.value)) {
       lines.push({ kind, text });
     }
@@ -49,7 +54,7 @@ export function renderUnifiedDiff(left: string, right: string, contextLines = 3)
 
   const changedIndices: number[] = [];
   lines.forEach((line, idx) => {
-    if (line.kind !== "context") changedIndices.push(idx);
+    if (line.kind !== DIFF_LINE_KIND.context) changedIndices.push(idx);
   });
   if (changedIndices.length === 0) return [];
 
