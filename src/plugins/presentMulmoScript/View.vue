@@ -351,42 +351,42 @@
     </div>
 
     <!-- Lightbox -->
-    <div v-if="lightbox" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80" @click="closeLightbox">
-      <div class="flex items-center gap-4" @click.stop>
-        <button
-          v-if="!lightbox.isCharacter"
-          class="text-white/60 hover:text-white disabled:opacity-20 text-4xl leading-none"
-          :disabled="!hasPrev"
-          @click="lightboxMove(-1)"
-        >
-          ‹
-        </button>
-        <div class="flex flex-col items-center gap-3">
-          <img :src="lightbox.src" class="max-w-[80vw] max-h-[80vh] object-contain rounded shadow-2xl" />
-          <div class="flex items-center gap-4">
-            <p v-if="lightbox.text" class="max-w-[80vw] text-center text-white text-2xl leading-relaxed">
-              {{ lightbox.text }}
-            </p>
-            <button
-              v-if="beatAudios[lightbox.index]"
-              class="shrink-0 text-sm px-3 py-1 rounded border"
-              :class="
-                playingAudio?.index === lightbox.index ? 'border-red-400 text-red-400 hover:bg-red-400/20' : 'border-white/60 text-white/60 hover:bg-white/20'
-              "
-              @click="playAudio(lightbox.index)"
-            >
-              {{ playingAudio?.index === lightbox.index ? t("pluginMulmoScript.stop") : t("pluginMulmoScript.play") }}
-            </button>
-          </div>
+    <div v-if="lightbox" class="fixed inset-0 z-50 bg-black/80 overflow-y-auto" @click="closeLightbox">
+      <button class="fixed top-2 right-4 z-10 text-white/60 hover:text-white text-3xl leading-none" :title="t('common.close')" @click.stop="closeLightbox">
+        ✕
+      </button>
+      <div class="flex flex-col items-center gap-4 pt-4 pb-8" @click.stop>
+        <div class="flex items-center gap-4">
+          <button
+            v-if="!lightbox.isCharacter"
+            class="text-white/60 hover:text-white disabled:opacity-20 text-5xl leading-none"
+            :disabled="!hasPrev"
+            @click="lightboxMove(-1)"
+          >
+            ‹
+          </button>
+          <img :src="lightbox.src" class="max-w-[80vw] max-h-[85vh] object-contain rounded shadow-2xl" />
+          <button
+            v-if="!lightbox.isCharacter"
+            class="text-white/60 hover:text-white disabled:opacity-20 text-5xl leading-none"
+            :disabled="!hasNext"
+            @click="lightboxMove(1)"
+          >
+            ›
+          </button>
         </div>
-        <button
-          v-if="!lightbox.isCharacter"
-          class="text-white/60 hover:text-white disabled:opacity-20 text-4xl leading-none"
-          :disabled="!hasNext"
-          @click="lightboxMove(1)"
-        >
-          ›
-        </button>
+        <div v-if="lightbox.text || beatAudios[lightbox.index]" class="relative w-screen flex justify-center px-16">
+          <p v-if="lightbox.text" class="max-w-[80vw] text-center text-white leading-relaxed text-[clamp(0.8rem,1.76vw,1.6rem)]">
+            {{ lightbox.text }}
+          </p>
+          <button
+            v-if="beatAudios[lightbox.index]"
+            class="absolute top-0 right-4 text-sm px-3 py-1 rounded border border-white/60 text-white/60 hover:bg-white/20"
+            @click="playAudio(lightbox.index)"
+          >
+            {{ playingAudio?.index === lightbox.index ? t("pluginMulmoScript.stop") : t("pluginMulmoScript.play") }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
