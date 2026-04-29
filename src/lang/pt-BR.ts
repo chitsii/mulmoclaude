@@ -152,6 +152,11 @@ const ptBRMessages = {
     switchToSingle: "Alternar para visão única",
     switchToStack: "Alternar para visão em pilha",
   },
+  stack: {
+    showOlder: "Mostrar {count} anteriores",
+    showAll: "Mostrar tudo",
+    olderHidden: "({count} ocultos)",
+  },
   sessionHistoryToggle: {
     showTooltip: "Mostrar o painel de histórico de sessões à esquerda",
     hideTooltip: "Ocultar o painel de histórico de sessões",

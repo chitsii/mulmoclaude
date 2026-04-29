@@ -158,6 +158,11 @@ const esMessages = {
     switchToSingle: "Cambiar a vista única",
     switchToStack: "Cambiar a vista apilada",
   },
+  stack: {
+    showOlder: "Mostrar {count} anteriores",
+    showAll: "Mostrar todo",
+    olderHidden: "({count} ocultos)",
+  },
   sessionHistoryToggle: {
     showTooltip: "Mostrar el panel de historial de sesiones a la izquierda",
     hideTooltip: "Ocultar el panel de historial de sesiones",

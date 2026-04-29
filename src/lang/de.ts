@@ -152,6 +152,11 @@ const deMessages = {
     switchToSingle: "Zur Einzelansicht wechseln",
     switchToStack: "Zur Stapelansicht wechseln",
   },
+  stack: {
+    showOlder: "{count} ältere anzeigen",
+    showAll: "Alle anzeigen",
+    olderHidden: "({count} ausgeblendet)",
+  },
   sessionHistoryToggle: {
     showTooltip: "Sitzungsverlauf-Panel links anzeigen",
     hideTooltip: "Sitzungsverlauf-Panel ausblenden",

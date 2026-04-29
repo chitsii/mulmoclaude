@@ -174,6 +174,11 @@ const enMessages = {
     switchToSingle: "Switch to Single view",
     switchToStack: "Switch to Stack view",
   },
+  stack: {
+    showOlder: "Show {count} older",
+    showAll: "Show all",
+    olderHidden: "({count} older hidden)",
+  },
   sessionHistoryToggle: {
     showTooltip: "Show session history panel on the left",
     hideTooltip: "Hide session history panel",

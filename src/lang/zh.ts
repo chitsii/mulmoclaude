@@ -155,6 +155,11 @@ const zhMessages = {
     switchToSingle: "切换到单一视图",
     switchToStack: "切换到堆叠视图",
   },
+  stack: {
+    showOlder: "显示更早的 {count} 条",
+    showAll: "全部显示",
+    olderHidden: "({count} 条已隐藏)",
+  },
   sessionHistoryToggle: {
     showTooltip: "在左侧显示会话历史面板",
     hideTooltip: "隐藏会话历史面板",

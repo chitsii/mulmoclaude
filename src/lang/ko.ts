@@ -158,6 +158,11 @@ const koMessages = {
     switchToSingle: "단일 보기로 전환",
     switchToStack: "스택 보기로 전환",
   },
+  stack: {
+    showOlder: "이전 {count}개 표시",
+    showAll: "전체 표시",
+    olderHidden: "({count}개 숨김)",
+  },
   sessionHistoryToggle: {
     showTooltip: "왼쪽에 세션 기록 패널 표시",
     hideTooltip: "세션 기록 패널 숨기기",

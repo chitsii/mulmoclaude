@@ -157,6 +157,11 @@ const jaMessages = {
     switchToSingle: "Single 表示に切替",
     switchToStack: "Stack 表示に切替",
   },
+  stack: {
+    showOlder: "古い {count} 件を表示",
+    showAll: "すべて表示",
+    olderHidden: "({count} 件非表示)",
+  },
   sessionHistoryToggle: {
     showTooltip: "左側にセッション履歴パネルを表示",
     hideTooltip: "セッション履歴パネルを閉じる",

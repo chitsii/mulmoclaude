@@ -152,6 +152,11 @@ const frMessages = {
     switchToSingle: "Passer à la vue simple",
     switchToStack: "Passer à la vue empilée",
   },
+  stack: {
+    showOlder: "Afficher {count} plus anciens",
+    showAll: "Tout afficher",
+    olderHidden: "({count} masqués)",
+  },
   sessionHistoryToggle: {
     showTooltip: "Afficher le panneau d'historique des sessions à gauche",
     hideTooltip: "Masquer le panneau d'historique des sessions",

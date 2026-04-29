@@ -25,26 +25,43 @@
       {{ t("common.noResultsYet") }}
     </div>
     <div v-else ref="containerRef" class="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-3" data-testid="stack-scroll">
-      <div
-        v-for="result in toolResults"
-        :key="result.uuid"
-        :ref="(element) => setItemRef(result.uuid, element as HTMLElement | null)"
-        class="bg-white rounded-lg border transition-colors"
-        :class="result.uuid === selectedResultUuid ? 'border-blue-400 ring-2 ring-blue-200' : 'border-gray-200'"
-      >
-        <button
-          class="w-full flex items-center gap-2 px-3 py-2 border-b border-gray-100 text-left hover:bg-gray-50"
-          :title="result.title || result.toolName"
-          @click="emit('select', result.uuid)"
-        >
-          <span class="material-icons text-sm text-gray-400">{{ iconFor(result.toolName) }}</span>
-          <span class="text-sm font-medium text-gray-800 truncate">{{ result.title || result.toolName }}</span>
-          <span v-if="resultTimestamps.get(result.uuid)" class="text-[10px] text-gray-400 shrink-0">{{
-            formatSmartTime(resultTimestamps.get(result.uuid)!)
-          }}</span>
-          <span class="font-mono text-xs text-gray-400 shrink-0">{{ result.toolName }}</span>
+      <!-- Collapsed-older banner. Shown only when some older results
+           are still hidden. Pinned at the top of the scroll so the
+           user can find it without scrolling. -->
+      <div v-if="collapsedCount > 0" class="flex items-center gap-2 pt-3 text-xs text-gray-500" data-testid="stack-show-older">
+        <button type="button" class="px-2.5 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50" @click="showOlder">
+          {{ t("stack.showOlder", { count: Math.min(collapsedCount, EXPAND_BATCH_SIZE) }) }}
         </button>
-        <!-- text-response: render the message as Markdown via the
+        <button type="button" class="text-blue-600 hover:underline" @click="showAll">{{ t("stack.showAll") }}</button>
+        <span class="text-gray-400">{{ t("stack.olderHidden", { count: collapsedCount }) }}</span>
+      </div>
+      <template v-for="(result, index) in toolResults" :key="result.uuid">
+        <CollapsedResultCard
+          v-if="!shouldRenderFull(result.uuid, toolResults.length - 1 - index)"
+          :result="result"
+          :selected="result.uuid === selectedResultUuid"
+          :timestamp="resultTimestamps.get(result.uuid)"
+          @expand="expandSingle"
+        />
+        <div
+          v-else
+          :ref="(element) => setItemRef(result.uuid, element as HTMLElement | null)"
+          class="bg-white rounded-lg border transition-colors"
+          :class="result.uuid === selectedResultUuid ? 'border-blue-400 ring-2 ring-blue-200' : 'border-gray-200'"
+        >
+          <button
+            class="w-full flex items-center gap-2 px-3 py-2 border-b border-gray-100 text-left hover:bg-gray-50"
+            :title="result.title || result.toolName"
+            @click="emit('select', result.uuid)"
+          >
+            <span class="material-icons text-sm text-gray-400">{{ iconFor(result.toolName) }}</span>
+            <span class="text-sm font-medium text-gray-800 truncate">{{ result.title || result.toolName }}</span>
+            <span v-if="resultTimestamps.get(result.uuid)" class="text-[10px] text-gray-400 shrink-0">{{
+              formatSmartTime(resultTimestamps.get(result.uuid)!)
+            }}</span>
+            <span class="font-mono text-xs text-gray-400 shrink-0">{{ result.toolName }}</span>
+          </button>
+          <!-- text-response: render the message as Markdown via the
            underlying plugin View. The .stack-text-response class below
            collapses the plugin's own card chrome (outer p-6, inner
            rounded/border/shadow box, role header) so only the stack
@@ -55,40 +72,41 @@
            "open external links in a new tab" click handler. Attach
            the same handler here via @click.capture so cross-origin
            links in assistant Markdown don't navigate the SPA away. -->
-        <div v-if="isTextResponse(result)" class="stack-text-response" @click.capture="handleExternalLinkClick">
-          <TextResponseOriginalView :selected-result="result" />
-        </div>
-        <!-- Document-like plugins: let the content flow at its natural
+          <div v-if="isTextResponse(result)" class="stack-text-response" @click.capture="handleExternalLinkClick">
+            <TextResponseOriginalView :selected-result="result" />
+          </div>
+          <!-- Document-like plugins: let the content flow at its natural
            height by overriding the plugin's internal h-full / overflow
            / flex-1 via the .stack-natural scoped styles below. For
            plugins that embed iframes (e.g. presentHtml) we also size
            each iframe to its content after load. -->
-        <div
-          v-else-if="isStackNatural(result.toolName)"
-          :ref="(element) => setNaturalWrapperRef(result.uuid, element as HTMLElement | null)"
-          class="stack-natural"
-        >
-          <component
-            :is="getPlugin(result.toolName)?.viewComponent"
-            v-if="getPlugin(result.toolName)?.viewComponent"
-            :selected-result="result"
-            :send-text-message="sendTextMessage"
-            @update-result="(r: ToolResultComplete) => emit('updateResult', r)"
-          />
-        </div>
-        <!-- Other plugins: fixed height wrapper so plugins that rely on
+          <div
+            v-else-if="isStackNatural(result.toolName)"
+            :ref="(element) => setNaturalWrapperRef(result.uuid, element as HTMLElement | null)"
+            class="stack-natural"
+          >
+            <component
+              :is="getPlugin(result.toolName)?.viewComponent"
+              v-if="getPlugin(result.toolName)?.viewComponent"
+              :selected-result="result"
+              :send-text-message="sendTextMessage"
+              @update-result="(r: ToolResultComplete) => emit('updateResult', r)"
+            />
+          </div>
+          <!-- Other plugins: fixed height wrapper so plugins that rely on
            h-full continue to render properly. -->
-        <div v-else :style="{ height: PLUGIN_HEIGHT }">
-          <component
-            :is="getPlugin(result.toolName)?.viewComponent"
-            v-if="getPlugin(result.toolName)?.viewComponent"
-            :selected-result="result"
-            :send-text-message="sendTextMessage"
-            @update-result="(r: ToolResultComplete) => emit('updateResult', r)"
-          />
-          <pre v-else class="h-full overflow-auto p-4 text-xs text-gray-500 whitespace-pre-wrap">{{ JSON.stringify(result, null, 2) }}</pre>
+          <div v-else :style="{ height: PLUGIN_HEIGHT }">
+            <component
+              :is="getPlugin(result.toolName)?.viewComponent"
+              v-if="getPlugin(result.toolName)?.viewComponent"
+              :selected-result="result"
+              :send-text-message="sendTextMessage"
+              @update-result="(r: ToolResultComplete) => emit('updateResult', r)"
+            />
+            <pre v-else class="h-full overflow-auto p-4 text-xs text-gray-500 whitespace-pre-wrap">{{ JSON.stringify(result, null, 2) }}</pre>
+          </div>
         </div>
-      </div>
+      </template>
     </div>
   </div>
 </template>
@@ -104,6 +122,8 @@ import type { TextResponseData } from "../plugins/textResponse/types";
 import { formatSmartTime } from "../utils/format/date";
 import { isRecord } from "../utils/types";
 import CanvasViewToggle from "./CanvasViewToggle.vue";
+import CollapsedResultCard from "./CollapsedResultCard.vue";
+import { INITIAL_VISIBLE_RESULTS, EXPAND_BATCH_SIZE } from "../config/uiLimits";
 import type { LayoutMode } from "../utils/canvas/layoutMode";
 
 const { t } = useI18n();
@@ -156,6 +176,67 @@ const emit = defineEmits<{
 const containerRef = ref<HTMLDivElement | null>(null);
 const itemRefs = new Map<string, HTMLElement>();
 const naturalWrapperRefs = new Map<string, HTMLElement>();
+
+// How many of the newest results render as full plugin views. Older
+// ones show as 1-line collapsed cards the user can click to expand
+// individually, or expand in batches via the "show older" button.
+// Starts at INITIAL_VISIBLE_RESULTS; "show older" bumps it by
+// EXPAND_BATCH_SIZE (or to Infinity for "show all").
+const fullRenderTail = ref(INITIAL_VISIBLE_RESULTS);
+
+// Individually-expanded uuids (clicked on a collapsed card). These
+// stay expanded even when older than the tail threshold.
+const manuallyExpandedUuids = ref<Set<string>>(new Set());
+
+// True when this result should render its full plugin view: either
+// it's within the tail window, or the user clicked its collapsed
+// card to expand it in place.
+function shouldRenderFull(uuid: string, indexFromEnd: number): boolean {
+  if (indexFromEnd < fullRenderTail.value) return true;
+  return manuallyExpandedUuids.value.has(uuid);
+}
+
+// Number of results currently kept collapsed (used by the "show older"
+// banner — only shown when there are some).
+const collapsedCount = computed(() => {
+  const total = props.toolResults.length;
+  if (total <= fullRenderTail.value) return 0;
+  // Subtract any that the user manually expanded — those still
+  // render full and shouldn't count toward the "older hidden" total.
+  let expandedFromOlder = 0;
+  const tailStart = total - fullRenderTail.value;
+  for (let i = 0; i < tailStart; i += 1) {
+    if (manuallyExpandedUuids.value.has(props.toolResults[i].uuid)) expandedFromOlder += 1;
+  }
+  return tailStart - expandedFromOlder;
+});
+
+function showOlder(): void {
+  fullRenderTail.value += EXPAND_BATCH_SIZE;
+}
+
+function showAll(): void {
+  fullRenderTail.value = Number.POSITIVE_INFINITY;
+}
+
+function expandSingle(uuid: string): void {
+  manuallyExpandedUuids.value.add(uuid);
+  manuallyExpandedUuids.value = new Set(manuallyExpandedUuids.value);
+  emit("select", uuid);
+}
+
+// Reset when the tool-results list shrinks (= switching sessions or
+// the session was cleared). Without this, a session with 10 results
+// would inherit the previous session's expanded uuids.
+watch(
+  () => props.toolResults.length,
+  (newLen, oldLen) => {
+    if (newLen < oldLen) {
+      fullRenderTail.value = INITIAL_VISIBLE_RESULTS;
+      manuallyExpandedUuids.value = new Set();
+    }
+  },
+);
 
 function setItemRef(uuid: string, element: HTMLElement | null): void {
   if (element) itemRefs.set(uuid, element);
