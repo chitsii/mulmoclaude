@@ -78,6 +78,7 @@ const koMessages = {
     todayJournal: "오늘의 요약",
     todayJournalNotFound: "아직 요약이 없습니다 — 잠시 대화하면 journal이 생성합니다.",
     todayJournalLoadFailed: "journal 로드에 실패했습니다 (status {status}): {error}",
+    disconnected: "서버 연결이 끊어졌습니다 — 재연결 중…",
   },
   rightSidebar: {
     toggleSystemPrompt: "시스템 프롬프트 토글",

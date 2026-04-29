@@ -21,6 +21,15 @@
         @update:open="lockPopupOpen = $event"
         @test-query="(q) => emit('testQuery', q)"
       />
+      <div
+        v-if="!connected"
+        class="h-8 w-8 flex items-center justify-center rounded text-amber-500"
+        :title="t('sidebarHeader.disconnected')"
+        :aria-label="t('sidebarHeader.disconnected')"
+        data-testid="connection-disconnected"
+      >
+        <span class="material-icons text-base leading-none">cloud_off</span>
+      </div>
       <NotificationBell :force-close="lockPopupOpen" @navigate="(action) => emit('notificationNavigate', action)" @update:open="onNotificationOpen" />
       <button
         class="h-8 w-8 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -58,6 +67,7 @@ import LockStatusPopup from "./LockStatusPopup.vue";
 import NotificationBell from "./NotificationBell.vue";
 import { useClickOutside } from "../composables/useClickOutside";
 import { useLatestDaily } from "../composables/useLatestDaily";
+import { usePubSub } from "../composables/usePubSub";
 import type { NotificationPayload } from "../types/notification";
 import logoUrl from "../assets/mulmo_bw.png";
 
@@ -85,6 +95,11 @@ const emit = defineEmits<{
 // tree just announces "Settings" and the whole point of the
 // attention signal is lost.
 const settingsLabel = computed(() => (props.geminiAvailable ? t("sidebarHeader.settings") : t("sidebarHeader.settingsGeminiMissing")));
+
+// Live socket.io connection status — when down, the chrome shows a
+// `cloud_off` icon next to the bell so the user knows tool calls
+// and session events won't reach the UI until the link recovers.
+const { connected } = usePubSub();
 
 const { openLatestDaily, loading: todayJournalLoading } = useLatestDaily();
 

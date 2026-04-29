@@ -78,6 +78,7 @@ const jaMessages = {
     todayJournal: "今日のまとめ",
     todayJournalNotFound: "まだまとめがありません — しばらく会話するとjournalが生成します。",
     todayJournalLoadFailed: "journal の読み込みに失敗しました (status {status}): {error}",
+    disconnected: "サーバーから切断 — 再接続中…",
   },
   rightSidebar: {
     toggleSystemPrompt: "システムプロンプトの表示切替",

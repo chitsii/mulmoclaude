@@ -71,6 +71,7 @@ const deMessages = {
     todayJournal: "Heutige Zusammenfassung",
     todayJournalNotFound: "Noch keine Zusammenfassung — chatte etwas und das Journal erstellt eine.",
     todayJournalLoadFailed: "Journal konnte nicht geladen werden (Status {status}): {error}",
+    disconnected: "Vom Server getrennt — Verbindung wird wiederhergestellt…",
   },
   rightSidebar: {
     toggleSystemPrompt: "System-Prompt umschalten",

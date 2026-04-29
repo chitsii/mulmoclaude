@@ -28,7 +28,7 @@ export function useSessionSync(opts: {
   onCurrentSessionDeleted?: () => void;
 }) {
   const { sessionMap, currentSessionId, fetchSessions, onCurrentSessionDeleted } = opts;
-  const { subscribe } = usePubSub();
+  const { subscribe, onReconnect } = usePubSub();
 
   async function refreshSessionStates(): Promise<void> {
     let summaries: SessionSummary[];
@@ -74,6 +74,17 @@ export function useSessionSync(opts: {
     void refreshSessionStates();
   });
   if (typeof unsub === "function") onScopeDispose(unsub);
+
+  // After a socket reconnect, the server may have emitted session
+  // state changes we missed (claude exited, status changed, unread
+  // flipped). Pubsub events during disconnect are lost, so pull the
+  // latest summaries explicitly. Without this, isRunning can stay
+  // stuck on `true` after a transient WS drop and the UI never
+  // recovers until the next manual interaction.
+  const unsubReconnect = onReconnect(() => {
+    void refreshSessionStates();
+  });
+  if (typeof unsubReconnect === "function") onScopeDispose(unsubReconnect);
 
   return { refreshSessionStates, markSessionRead };
 }

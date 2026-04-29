@@ -76,6 +76,7 @@ const zhMessages = {
     todayJournal: "今日总结",
     todayJournalNotFound: "暂无总结 — 多聊一会儿，journal 会自动生成。",
     todayJournalLoadFailed: "加载 journal 失败 (status {status}): {error}",
+    disconnected: "已与服务器断开连接 — 正在重连…",
   },
   rightSidebar: {
     toggleSystemPrompt: "切换系统提示词",
