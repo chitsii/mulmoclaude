@@ -261,11 +261,13 @@
             </div>
           </div>
           <!-- Rendered markdown body. -->
+          <!-- eslint-disable-next-line vue/no-v-html -- marked.parse output of app-owned wiki page body; trusted in-process render -->
           <div v-else ref="scrollRef" class="flex-1 px-6 py-4 prose prose-sm max-w-none wiki-content" @click="handleContentClick" v-html="renderedContent" />
         </div>
       </template>
 
       <!-- Non-page action: log / lint_report — single-pane render. -->
+      <!-- eslint-disable vue/no-v-html -- marked.parse output of app-owned wiki log/lint-report content; trusted in-process render -->
       <div
         v-else
         ref="scrollRef"
@@ -273,6 +275,7 @@
         @click="handleContentClick"
         v-html="renderedContent"
       />
+      <!-- eslint-enable vue/no-v-html -->
 
       <!-- History tab body (kept mounted across tab toggles for state
            persistence, Q15=B). Mount whenever we have a slug — list /
