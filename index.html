@@ -17,6 +17,23 @@
     <title>MulmoClaude</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='30' height='30' x='1' y='1' rx='6' fill='%236B7280'/><text x='16' y='17' text-anchor='middle' dominant-baseline='central' font-family='sans-serif' font-weight='bold' font-size='20' fill='white'>M</text></svg>" />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!--
+      Theme bootstrap. Sets `theme-dark` class on <html> BEFORE Vue
+      mounts so the user doesn't see a flash of light content (FOUC)
+      while the JS bundle parses. Reads localStorage('mulmoclaude-theme'),
+      falls back to OS `prefers-color-scheme: dark`. Vue's useTheme
+      composable manages runtime updates from here.
+    -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem("mulmoclaude-theme");
+          var theme = saved === "light" || saved === "dark" ? saved : "auto";
+          var dark = theme === "dark" || (theme === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) document.documentElement.classList.add("theme-dark");
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

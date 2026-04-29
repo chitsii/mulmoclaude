@@ -79,6 +79,9 @@ const koMessages = {
     todayJournalNotFound: "아직 요약이 없습니다 — 잠시 대화하면 journal이 생성합니다.",
     todayJournalLoadFailed: "journal 로드에 실패했습니다 (status {status}): {error}",
     disconnected: "서버 연결이 끊어졌습니다 — 재연결 중…",
+    themeAuto: "테마: 자동(시스템 따라가기) — 클릭하면 다크로",
+    themeDark: "테마: 다크 — 클릭하면 라이트로",
+    themeLight: "테마: 라이트 — 클릭하면 자동으로",
   },
   rightSidebar: {
     toggleSystemPrompt: "시스템 프롬프트 토글",

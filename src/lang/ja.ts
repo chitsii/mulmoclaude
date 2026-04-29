@@ -79,6 +79,9 @@ const jaMessages = {
     todayJournalNotFound: "まだまとめがありません — しばらく会話するとjournalが生成します。",
     todayJournalLoadFailed: "journal の読み込みに失敗しました (status {status}): {error}",
     disconnected: "サーバーから切断 — 再接続中…",
+    themeAuto: "テーマ: 自動（システム設定に追従） — クリックでダーク",
+    themeDark: "テーマ: ダーク — クリックでライト",
+    themeLight: "テーマ: ライト — クリックで自動",
   },
   rightSidebar: {
     toggleSystemPrompt: "システムプロンプトの表示切替",

@@ -72,6 +72,9 @@ const frMessages = {
     todayJournalNotFound: "Pas encore de résumé — discutez un peu et le journal en générera un.",
     todayJournalLoadFailed: "Échec du chargement du journal (status {status}) : {error}",
     disconnected: "Déconnecté du serveur — reconnexion en cours…",
+    themeAuto: "Thème : automatique (suivre le système) — cliquer pour sombre",
+    themeDark: "Thème : sombre — cliquer pour clair",
+    themeLight: "Thème : clair — cliquer pour automatique",
   },
   rightSidebar: {
     toggleSystemPrompt: "Basculer le system prompt",

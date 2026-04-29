@@ -77,6 +77,9 @@ const zhMessages = {
     todayJournalNotFound: "暂无总结 — 多聊一会儿，journal 会自动生成。",
     todayJournalLoadFailed: "加载 journal 失败 (status {status}): {error}",
     disconnected: "已与服务器断开连接 — 正在重连…",
+    themeAuto: "主题: 自动（跟随系统） — 点击切换到深色",
+    themeDark: "主题: 深色 — 点击切换到浅色",
+    themeLight: "主题: 浅色 — 点击切换到自动",
   },
   rightSidebar: {
     toggleSystemPrompt: "切换系统提示词",

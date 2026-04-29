@@ -72,6 +72,9 @@ const ptBRMessages = {
     todayJournalNotFound: "Ainda sem resumo — converse um pouco e o journal será gerado.",
     todayJournalLoadFailed: "Falha ao carregar o journal (status {status}): {error}",
     disconnected: "Desconectado do servidor — reconectando…",
+    themeAuto: "Tema: automático (seguir sistema) — clique para escuro",
+    themeDark: "Tema: escuro — clique para claro",
+    themeLight: "Tema: claro — clique para automático",
   },
   rightSidebar: {
     toggleSystemPrompt: "Alternar system prompt",

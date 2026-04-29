@@ -77,6 +77,9 @@ const esMessages = {
     todayJournalNotFound: "Aún no hay resumen — chatea un rato y el journal lo generará.",
     todayJournalLoadFailed: "Error al cargar el journal (status {status}): {error}",
     disconnected: "Desconectado del servidor — reconectando…",
+    themeAuto: "Tema: automático (seguir sistema) — clic para oscuro",
+    themeDark: "Tema: oscuro — clic para claro",
+    themeLight: "Tema: claro — clic para automático",
   },
   rightSidebar: {
     toggleSystemPrompt: "Alternar system prompt",

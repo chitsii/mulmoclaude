@@ -502,4 +502,85 @@ async function downloadPdf() {
 .cancel-btn:hover {
   background: #d0d0d0;
 }
+
+/* ─── Dark mode overrides ─────────────────────────────────────
+ * The scoped CSS above hard-codes light colors at specificity
+ * 0.3.0 (Vue's `:deep()` + scoped attribute). Global rules in
+ * src/index.css sit at 0.2.0 and lose, so they can't recolor
+ * the chat Markdown — we have to re-declare each value here.
+ * `:global(...)` opts the html selector out of Vue's scoping. */
+:global(html.theme-dark) .markdown-content :deep(code) {
+  background-color: #334155;
+  color: #e2e8f0;
+}
+:global(html.theme-dark) .markdown-content :deep(pre) {
+  background-color: #334155;
+  color: #e2e8f0;
+}
+:global(html.theme-dark) .markdown-content :deep(blockquote) {
+  border-left-color: #475569;
+  color: #94a3b8;
+}
+:global(html.theme-dark) .markdown-content :deep(a) {
+  color: #60a5fa;
+}
+:global(html.theme-dark) .markdown-content :deep(a:hover) {
+  color: #93c5fd;
+}
+:global(html.theme-dark) .markdown-content :deep(th),
+:global(html.theme-dark) .markdown-content :deep(td) {
+  border-color: #475569;
+}
+:global(html.theme-dark) .markdown-content :deep(th) {
+  background-color: #1e293b;
+}
+:global(html.theme-dark) .markdown-content :deep(hr) {
+  border-top-color: #475569;
+}
+:global(html.theme-dark) .markdown-content :deep(.think-block) {
+  color: #94a3b8;
+  background-color: #1e293b;
+  border-left-color: #475569;
+}
+:global(html.theme-dark) .markdown-content :deep(.think-block p) {
+  color: #94a3b8;
+}
+:global(html.theme-dark) .markdown-content :deep(.think-block code) {
+  background-color: #475569;
+  color: #cbd5e1;
+}
+
+/* Editor panel — collapsible "テキストを編集 / Edit content". */
+:global(html.theme-dark) .text-response-source {
+  background: #1e293b;
+  border-top-color: #334155;
+}
+:global(html.theme-dark) .text-response-source summary {
+  background: #334155;
+  color: #e2e8f0;
+}
+:global(html.theme-dark) .text-response-source summary:hover {
+  background: #475569;
+}
+:global(html.theme-dark) .text-response-editor {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+:global(html.theme-dark) .text-response-editor:focus {
+  border-color: #4ade80;
+}
+:global(html.theme-dark) .copy-btn {
+  color: #cbd5e1;
+}
+:global(html.theme-dark) .copy-btn:hover {
+  color: #f1f5f9;
+}
+:global(html.theme-dark) .cancel-btn {
+  background: #334155;
+  color: #e2e8f0;
+}
+:global(html.theme-dark) .cancel-btn:hover {
+  background: #475569;
+}
 </style>

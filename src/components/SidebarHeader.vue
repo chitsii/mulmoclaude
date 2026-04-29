@@ -32,6 +32,15 @@
       </div>
       <NotificationBell :force-close="lockPopupOpen" @navigate="(action) => emit('notificationNavigate', action)" @update:open="onNotificationOpen" />
       <button
+        class="h-8 w-8 flex items-center justify-center rounded text-gray-400 hover:text-gray-700"
+        data-testid="theme-toggle-btn"
+        :title="themeLabel"
+        :aria-label="themeLabel"
+        @click="cycleTheme"
+      >
+        <span class="material-icons text-base leading-none">{{ themeIcon }}</span>
+      </button>
+      <button
         class="h-8 w-8 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
         data-testid="today-journal-btn"
         :title="t('sidebarHeader.todayJournal')"
@@ -68,6 +77,7 @@ import NotificationBell from "./NotificationBell.vue";
 import { useClickOutside } from "../composables/useClickOutside";
 import { useLatestDaily } from "../composables/useLatestDaily";
 import { usePubSub } from "../composables/usePubSub";
+import { useTheme } from "../composables/useTheme";
 import type { NotificationPayload } from "../types/notification";
 import logoUrl from "../assets/mulmo_bw.png";
 
@@ -100,6 +110,20 @@ const settingsLabel = computed(() => (props.geminiAvailable ? t("sidebarHeader.s
 // `cloud_off` icon next to the bell so the user knows tool calls
 // and session events won't reach the UI until the link recovers.
 const { connected } = usePubSub();
+
+// Theme toggle (auto / light / dark). Reflects current preference
+// in the icon + tooltip; click cycles to the next.
+const { theme, cycle: cycleTheme } = useTheme();
+const themeIcon = computed(() => {
+  if (theme.value === "dark") return "dark_mode";
+  if (theme.value === "light") return "light_mode";
+  return "brightness_auto";
+});
+const themeLabel = computed(() => {
+  if (theme.value === "dark") return t("sidebarHeader.themeDark");
+  if (theme.value === "light") return t("sidebarHeader.themeLight");
+  return t("sidebarHeader.themeAuto");
+});
 
 const { openLatestDaily, loading: todayJournalLoading } = useLatestDaily();
 

@@ -72,6 +72,9 @@ const deMessages = {
     todayJournalNotFound: "Noch keine Zusammenfassung — chatte etwas und das Journal erstellt eine.",
     todayJournalLoadFailed: "Journal konnte nicht geladen werden (Status {status}): {error}",
     disconnected: "Vom Server getrennt — Verbindung wird wiederhergestellt…",
+    themeAuto: "Thema: automatisch (System folgen) — klicken für dunkel",
+    themeDark: "Thema: dunkel — klicken für hell",
+    themeLight: "Thema: hell — klicken für automatisch",
   },
   rightSidebar: {
     toggleSystemPrompt: "System-Prompt umschalten",

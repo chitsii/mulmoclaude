@@ -94,6 +94,9 @@ const enMessages = {
     todayJournalNotFound: "No journal summary yet — chat for a while and the journal will generate one.",
     todayJournalLoadFailed: "Failed to load journal (status {status}): {error}",
     disconnected: "Disconnected from server — reconnecting…",
+    themeAuto: "Theme: auto (follow system) — click to use dark",
+    themeDark: "Theme: dark — click to use light",
+    themeLight: "Theme: light — click to use auto",
   },
   rightSidebar: {
     toggleSystemPrompt: "Toggle system prompt",

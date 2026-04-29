@@ -119,3 +119,167 @@
   background: #f9fafb;
   font-weight: 600;
 }
+
+/* ─── Dark mode (eye-friendly, OS- + manual-driven) ─────────────
+ * Activated by the `theme-dark` class on <html>, set by the inline
+ * boot script in index.html (FOUC-free) and the `useTheme`
+ * composable at runtime. Out-of-the-box behaviour follows OS
+ * `prefers-color-scheme` because the boot script reads it.
+ *
+ * Specificity stays at 0.2.0 (html.theme-dark + utility class).
+ * Wins over Tailwind utilities at 0.1.0 by both specificity and
+ * cascade order. No `!important` needed.
+ *
+ * Plugin views (charts, iframes, presentHtml AI HTML) keep their
+ * own colors — AI-generated SVG / HTML expects light backgrounds.
+ *
+ * Reverting: delete this block + the inline boot script in
+ * index.html + `useTheme` in App.vue / SidebarHeader.
+ */
+html.theme-dark {
+  background-color: #0f172a; /* slate-900 — same family as App.vue's outer frame */
+  color: #e2e8f0; /* slate-200 */
+  /* Tells the browser to use dark variants for native form
+   * controls (<input>, <select>, <textarea>, scrollbars, autofill
+   * bg). Without this, native UI stays light even though our
+   * Tailwind overrides flip the surrounding chrome. */
+  color-scheme: dark;
+}
+html.theme-dark body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* Surfaces — white card → dark elevated card. */
+html.theme-dark .bg-white,
+html.theme-dark .bg-gray-50,
+html.theme-dark .bg-gray-100 {
+  background-color: #1e293b; /* slate-800 */
+}
+html.theme-dark .bg-gray-200 {
+  background-color: #334155; /* slate-700 */
+}
+
+/* Hover states — one shade lighter than the resting bg. */
+html.theme-dark .hover\:bg-gray-50:hover {
+  background-color: #2d3a4f;
+}
+html.theme-dark .hover\:bg-gray-100:hover {
+  background-color: #334155;
+}
+html.theme-dark .hover\:bg-gray-200:hover {
+  background-color: #475569;
+}
+
+/* Text — flip the gray ramp. */
+html.theme-dark .text-gray-900 {
+  color: #f1f5f9;
+}
+html.theme-dark .text-gray-800 {
+  color: #e2e8f0;
+}
+html.theme-dark .text-gray-700 {
+  color: #cbd5e1;
+}
+html.theme-dark .text-gray-600,
+html.theme-dark .text-gray-500 {
+  color: #94a3b8;
+}
+html.theme-dark .text-gray-400 {
+  color: #64748b;
+}
+
+html.theme-dark .placeholder-gray-400::placeholder {
+  color: #64748b;
+}
+
+/* Borders — collapse the light-mode tonal range to one mid slate
+ * shade. The chrome rarely needs to distinguish 100/200/300 in
+ * dark mode; keep it readable, not fussy. */
+html.theme-dark .border-gray-100,
+html.theme-dark .border-gray-200,
+html.theme-dark .border-gray-300 {
+  border-color: #334155;
+}
+
+/* Tinted backgrounds (status / callout boxes). */
+html.theme-dark .bg-blue-50 {
+  background-color: #1e3a5f;
+}
+html.theme-dark .bg-yellow-50,
+html.theme-dark .bg-amber-50 {
+  background-color: #4a3a1a;
+}
+html.theme-dark .bg-red-50 {
+  background-color: #4c1d24;
+}
+html.theme-dark .bg-green-50,
+html.theme-dark .bg-emerald-50 {
+  background-color: #1a3a2a;
+}
+
+html.theme-dark .text-blue-900,
+html.theme-dark .text-blue-800,
+html.theme-dark .text-blue-700 {
+  color: #93c5fd;
+}
+html.theme-dark .text-yellow-900,
+html.theme-dark .text-yellow-800,
+html.theme-dark .text-amber-900,
+html.theme-dark .text-amber-800 {
+  color: #fcd34d;
+}
+html.theme-dark .text-red-900,
+html.theme-dark .text-red-800,
+html.theme-dark .text-red-700,
+html.theme-dark .text-red-600 {
+  color: #fca5a5;
+}
+html.theme-dark .text-green-900,
+html.theme-dark .text-green-800,
+html.theme-dark .text-emerald-900,
+html.theme-dark .text-emerald-800 {
+  color: #86efac;
+}
+
+/* Bare <pre> / <code> outside `.markdown-content`. */
+html.theme-dark pre,
+html.theme-dark code {
+  background-color: #334155;
+  color: #e2e8f0;
+}
+html.theme-dark pre code {
+  background: transparent;
+}
+
+/* Markdown content (rendered chat replies, file previews). */
+html.theme-dark .markdown-content h1 {
+  color: #f1f5f9;
+}
+html.theme-dark .markdown-content h2 {
+  color: #e2e8f0;
+  border-bottom-color: #334155;
+}
+html.theme-dark .markdown-content h3,
+html.theme-dark .markdown-content h4 {
+  color: #cbd5e1;
+}
+html.theme-dark .markdown-content code,
+html.theme-dark .markdown-content pre {
+  background: #334155;
+}
+html.theme-dark .markdown-content blockquote {
+  border-left-color: #475569;
+  color: #94a3b8;
+}
+html.theme-dark .markdown-content hr,
+html.theme-dark .markdown-content th,
+html.theme-dark .markdown-content td {
+  border-color: #334155;
+}
+html.theme-dark .markdown-content th {
+  background: #1e293b;
+}
+html.theme-dark .markdown-content a {
+  color: #60a5fa;
+}
