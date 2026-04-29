@@ -41,6 +41,7 @@
           </div>
 
           <!-- Spreadsheet table -->
+          <!-- eslint-disable-next-line vue/no-v-html -- XLSX.utils.sheet_to_html output of app-owned sheet data; trusted in-process render -->
           <div ref="tableContainer" class="table-container" @click="handleTableClick" v-html="renderedHtml"></div>
         </div>
       </div>
