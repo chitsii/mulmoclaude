@@ -50,6 +50,7 @@ const granularity = (() => {
   } catch (err) {
     console.error(`[slack] ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
+    return undefined as never;
   }
 })();
 
@@ -59,6 +60,7 @@ const ackEmoji = (() => {
   } catch (err) {
     console.error(`[slack] ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
+    return undefined as never;
   }
 })();
 
