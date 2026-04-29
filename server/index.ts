@@ -110,7 +110,10 @@ app.use(requireSameOrigin);
 // tags in rendered markdown can't attach Authorization headers.
 // The CSRF origin check + loopback-only binding still apply.
 app.use("/api", (req, res, next) => {
-  if (req.path.startsWith("/files/")) return next();
+  if (req.path.startsWith("/files/")) {
+    next();
+    return;
+  }
   bearerAuth(req, res, next);
 });
 

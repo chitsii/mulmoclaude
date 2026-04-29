@@ -133,7 +133,7 @@ export async function runDailyPass(state: JournalState, deps: DailyPassDeps): Pr
       result.topicsUpdated.push(...dayResult.topicsUpdated);
       result.sessionsIngested.push(...dayResult.sessionsIngested);
     }
-    nextState = dayResult.nextState;
+    ({ nextState } = dayResult);
   }
 
   await maybeExtractMemory(plan.perSessionExcerpts, plan.workspaceRoot, deps);
